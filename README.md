@@ -27,15 +27,12 @@
 
 ## Download
 
-Grab the latest release for your platform:
+| Platform | |
+|----------|-|
+| **Mac** (Intel + Apple Silicon) | [Portfolio-Tracker-Mac.dmg](https://github.com/mertdemiir/portfolio-tracker/releases/latest) |
+| **Windows** | [Portfolio-Tracker-Windows.exe](https://github.com/mertdemiir/portfolio-tracker/releases/latest) |
 
-| Platform | File |
-|----------|------|
-| macOS (Apple Silicon) | `Portfolio Tracker-*-arm64.dmg` |
-| macOS (Intel) | `Portfolio Tracker-*-x64.dmg` |
-| Windows | `Portfolio Tracker Setup *.exe` |
-
-> **macOS note:** Since the app isn't code-signed, right-click the app and select "Open" the first time.
+> **Mac users:** Right-click the app and select "Open" the first time.
 
 ## Getting Started
 

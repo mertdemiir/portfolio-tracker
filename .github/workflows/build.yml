@@ -39,24 +39,19 @@ jobs:
       - name: Package Electron app
         run: npx electron-builder --${{ matrix.platform }} --publish never
 
-      - name: Upload Mac artifacts
+      - name: Upload Mac installer
         if: matrix.platform == 'mac'
         uses: actions/upload-artifact@v4
         with:
-          name: release-mac
-          path: |
-            release/*-arm64.dmg
-            release/*-x64.dmg
-            !release/*.blockmap
+          name: mac
+          path: release/Portfolio-Tracker-Mac.dmg
 
-      - name: Upload Windows artifacts
+      - name: Upload Windows installer
         if: matrix.platform == 'win'
         uses: actions/upload-artifact@v4
         with:
-          name: release-win
-          path: |
-            release/*.exe
-            !release/*.blockmap
+          name: win
+          path: release/Portfolio-Tracker-Windows.exe
 
   release:
     needs: build
@@ -68,20 +63,16 @@ jobs:
           path: artifacts
           merge-multiple: true
 
-      - name: List artifacts
-        run: find artifacts -type f | head -20
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/**/*
+          files: |
+            artifacts/Portfolio-Tracker-Mac.dmg
+            artifacts/Portfolio-Tracker-Windows.exe
           body: |
             ## Download
 
-            | Platform | File |
-            |----------|------|
-            | **Mac (Apple Silicon)** | `Portfolio-Tracker-*-arm64.dmg` |
-            | **Mac (Intel)** | `Portfolio-Tracker-*-x64.dmg` |
-            | **Windows** | `Portfolio-Tracker-Setup-*.exe` |
+            **Mac** — `Portfolio-Tracker-Mac.dmg` (Intel + Apple Silicon)
+            **Windows** — `Portfolio-Tracker-Windows.exe`
 
-            > **Mac users:** Right-click the app and select "Open" the first time (the app is not code-signed).
+            > Mac users: Right-click the app and select "Open" the first time.

@@ -23,6 +23,7 @@
       "dist/**/*",
       "dist-electron/**/*"
     ],
+    "artifactName": "${productName}-${version}-${arch}.${ext}",
     "mac": {
       "category": "public.app-category.finance",
       "target": [
@@ -33,6 +34,7 @@
       ]
     },
     "win": {
+      "artifactName": "${productName}-Setup-${version}.${ext}",
       "target": [
         {
           "target": "nsis",

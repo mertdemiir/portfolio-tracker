@@ -25,11 +25,11 @@
     ],
     "mac": {
       "category": "public.app-category.finance",
-      "artifactName": "${productName}-Mac.${ext}",
+      "artifactName": "Portfolio-Tracker-Mac.${ext}",
       "target": "dmg"
     },
     "win": {
-      "artifactName": "${productName}-Windows.${ext}",
+      "artifactName": "Portfolio-Tracker-Windows.${ext}",
       "target": "nsis"
     },
     "nsis": {

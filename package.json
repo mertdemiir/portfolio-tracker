@@ -26,21 +26,11 @@
     "mac": {
       "category": "public.app-category.finance",
       "artifactName": "${productName}-Mac.${ext}",
-      "target": [
-        {
-          "target": "dmg",
-          "arch": ["universal"]
-        }
-      ]
+      "target": "dmg"
     },
     "win": {
       "artifactName": "${productName}-Windows.${ext}",
-      "target": [
-        {
-          "target": "nsis",
-          "arch": ["x64"]
-        }
-      ]
+      "target": "nsis"
     },
     "nsis": {
       "oneClick": true,

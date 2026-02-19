@@ -72,7 +72,9 @@ jobs:
           body: |
             ## Download
 
-            **Mac** — `Portfolio-Tracker-Mac.dmg` (Intel + Apple Silicon)
-            **Windows** — `Portfolio-Tracker-Windows.exe`
+            | Platform | |
+            |----------|-|
+            | **Mac** | `Portfolio-Tracker-Mac.dmg` |
+            | **Windows** | `Portfolio-Tracker-Windows.exe` |
 
-            > Mac users: Right-click the app and select "Open" the first time.
+            > **Mac users:** Right-click the app and select "Open" the first time.

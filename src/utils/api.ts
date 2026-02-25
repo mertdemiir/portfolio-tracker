@@ -2,6 +2,11 @@ import type { StockQuote, FinnhubSearchResult, CoinGeckoSearchResult, Holding, A
 
 const FINNHUB_BASE = 'https://finnhub.io/api/v1';
 const COINGECKO_BASE = 'https://api.coingecko.com/api/v3';
+const SWISSQUOTE_BASE = 'https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument';
+
+/** Metal tickers that have live Swissquote pricing */
+export const LIVE_METAL_TICKERS = ['XAU', 'XAG'] as const;
+const TROY_OZ_TO_GRAMS = 31.1035;
 
 async function finnhubFetch(endpoint: string, apiKey: string): Promise<Response> {
   const url = `${FINNHUB_BASE}${endpoint}&token=${apiKey}`;
@@ -83,6 +88,33 @@ export async function fetchCryptoPrice(coinGeckoId: string): Promise<StockQuote>
   };
 }
 
+export async function fetchMetalPrice(ticker: string): Promise<StockQuote> {
+  const res = await fetch(`${SWISSQUOTE_BASE}/${ticker}/USD`);
+  if (!res.ok) throw new Error(`Swissquote error: ${res.status}`);
+  const data = await res.json();
+
+  if (!Array.isArray(data) || data.length === 0) {
+    throw new Error(`No Swissquote data for ${ticker}/USD`);
+  }
+
+  // Use the first platform entry, pick the first spread profile (most common)
+  const entry = data[0];
+  const profile = entry.spreadProfilePrices?.[0];
+  if (!profile) throw new Error(`No spread profile for ${ticker}/USD`);
+
+  const mid = (profile.bid + profile.ask) / 2;
+
+  // XAG: Swissquote returns price per troy ounce — convert to per gram
+  const price = ticker === 'XAG' ? mid / TROY_OZ_TO_GRAMS : mid;
+
+  return {
+    currentPrice: price,
+    change: 0,
+    changePercent: 0,
+    lastUpdated: Date.now(),
+  };
+}
+
 export async function fetchPriceForHolding(
   holding: Holding,
   apiKey: string
@@ -102,6 +134,17 @@ export async function fetchPriceForHolding(
         lastUpdated: Date.now(),
       };
     case 'metal':
+      // XAU & XAG: live prices from Swissquote
+      if ((LIVE_METAL_TICKERS as readonly string[]).includes(holding.ticker)) {
+        return fetchMetalPrice(holding.ticker);
+      }
+      // XPT, XPD, etc.: manual price
+      return {
+        currentPrice: holding.manualPrice ?? holding.buyPrice,
+        change: 0,
+        changePercent: 0,
+        lastUpdated: Date.now(),
+      };
     case 'custom':
       return {
         currentPrice: holding.manualPrice ?? holding.buyPrice,

@@ -1,4 +1,6 @@
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { usePortfolioContext } from '../context/PortfolioContext';
+import { getChartColors } from '../hooks/useTheme';
 import type { EnrichedHolding } from '../types';
 import { formatCurrency } from '../utils/formatters';
 
@@ -12,6 +14,8 @@ interface AllocationPieChartProps {
 }
 
 export function AllocationPieChart({ holdings }: AllocationPieChartProps) {
+  const { theme } = usePortfolioContext();
+  const cc = getChartColors(theme);
   const data = holdings.map((h) => ({
     name: h.ticker,
     value: h.marketValue,
@@ -19,8 +23,8 @@ export function AllocationPieChart({ holdings }: AllocationPieChartProps) {
   }));
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-5">
-      <h3 className="text-sm font-semibold text-slate-900 mb-4">Portfolio Allocation</h3>
+    <div className="bg-surface-card rounded-xl border border-b-default p-5">
+      <h3 className="text-sm font-semibold text-t-primary mb-4">Portfolio Allocation</h3>
       <ResponsiveContainer width="100%" height={300}>
         <PieChart>
           <Pie
@@ -40,8 +44,10 @@ export function AllocationPieChart({ holdings }: AllocationPieChartProps) {
             formatter={(value) => formatCurrency(value as number)}
             contentStyle={{
               borderRadius: '8px',
-              border: '1px solid #e2e8f0',
+              border: `1px solid ${cc.tooltipBorder}`,
               fontSize: '13px',
+              backgroundColor: cc.tooltipBg,
+              color: cc.tooltipText,
             }}
           />
           <Legend

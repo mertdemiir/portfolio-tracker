@@ -4,7 +4,7 @@ import { SymbolSearch } from './SymbolSearch';
 import { CryptoSearch } from './CryptoSearch';
 import { ApiKeyPrompt } from './ApiKeyPrompt';
 import { usePortfolioContext } from '../context/PortfolioContext';
-import { ASSET_TYPE_CONFIG, getDefaultCategory } from '../types';
+import { ASSET_TYPE_CONFIG, getDefaultCategory, DEFAULT_PORTFOLIO_ID } from '../types';
 import type { Holding, AssetType } from '../types';
 
 const METALS = [
@@ -42,7 +42,7 @@ interface AddEditStockModalProps {
 }
 
 export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditStockModalProps) {
-  const { allCategories, addCustomCategory, setApiKey, hasApiKey } = usePortfolioContext();
+  const { allCategories, addCustomCategory, setApiKey, hasApiKey, addTransaction, portfolios, activePortfolioId } = usePortfolioContext();
 
   const [assetType, setAssetType] = useState<AssetType>(holding?.assetType ?? 'stock');
   const [ticker, setTicker] = useState(holding?.ticker ?? '');
@@ -53,8 +53,12 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
   const [manualPrice, setManualPrice] = useState(holding?.manualPrice?.toString() ?? '');
   const [coinGeckoId, setCoinGeckoId] = useState(holding?.coinGeckoId ?? '');
   const [inPortfolio, setInPortfolio] = useState(holding?.inPortfolio ?? true);
+  const [skipStaleCheck, setSkipStaleCheck] = useState(holding?.skipStaleCheck ?? false);
   const [category, setCategory] = useState(holding?.category ?? getDefaultCategory(holding?.assetType ?? 'stock'));
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [portfolioId, setPortfolioId] = useState(
+    holding?.portfolioId ?? (activePortfolioId !== 'all' ? activePortfolioId : DEFAULT_PORTFOLIO_ID)
+  );
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategoryLabel, setNewCategoryLabel] = useState('');
   const [showApiKeyPrompt, setShowApiKeyPrompt] = useState(false);
@@ -103,18 +107,35 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
+    const parsedShares = parseFloat(shares);
+    const parsedPrice = assetType === 'cash' ? 1 : parseFloat(buyPrice);
     onSave({
       ticker,
       name: name || ticker,
-      shares: parseFloat(shares),
-      buyPrice: assetType === 'cash' ? 1 : parseFloat(buyPrice),
+      shares: parsedShares,
+      buyPrice: parsedPrice,
       buyDate,
       assetType,
       inPortfolio,
       category,
-      ...(manualPrice ? { manualPrice: parseFloat(manualPrice) } : {}),
+      skipStaleCheck,
+      portfolioId,
+      ...(holding?.isFavorite ? { isFavorite: true } : {}),
+      ...(manualPrice ? { manualPrice: parseFloat(manualPrice), lastManualPriceUpdate: new Date().toISOString().split('T')[0] } : {}),
       ...(coinGeckoId ? { coinGeckoId } : {}),
     });
+    // Auto-log transaction for new holdings
+    if (!holding) {
+      addTransaction({
+        date: buyDate,
+        ticker,
+        name: name || ticker,
+        type: 'buy',
+        shares: parsedShares,
+        pricePerShare: parsedPrice,
+        total: parsedShares * parsedPrice,
+      });
+    }
   }
 
   function handleAddCategory(e: React.FormEvent) {
@@ -136,12 +157,12 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
     if (isEdit) {
       return (
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">Symbol</label>
+          <label className="block text-sm font-medium text-t-secondary mb-1.5">Symbol</label>
           <input
             type="text"
             value={ticker}
             disabled
-            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-500"
+            className="w-full px-3 py-2 border border-b-default rounded-lg text-sm bg-surface text-t-muted"
           />
         </div>
       );
@@ -153,7 +174,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
         if (needsApiKey && !showApiKeyPrompt) {
           return (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Symbol</label>
+              <label className="block text-sm font-medium text-t-secondary mb-1.5">Symbol</label>
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
                 <p className="text-sm text-amber-800 mb-2">
                   An API key is needed for stock/ETF search & live prices.
@@ -211,7 +232,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
       case 'metal':
         return (
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Metal</label>
+            <label className="block text-sm font-medium text-t-secondary mb-1.5">Metal</label>
             <select
               value={ticker}
               onChange={(e) => {
@@ -219,7 +240,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
                 setTicker(e.target.value);
                 setName(metal?.name ?? e.target.value);
               }}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Select a metal</option>
               {METALS.map((m) => (
@@ -234,7 +255,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
       case 'cash':
         return (
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Currency</label>
+            <label className="block text-sm font-medium text-t-secondary mb-1.5">Currency</label>
             <select
               value={ticker}
               onChange={(e) => {
@@ -242,7 +263,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
                 setTicker(e.target.value);
                 setName(currency?.name ?? e.target.value);
               }}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Select a currency</option>
               {CURRENCIES.map((c) => (
@@ -258,24 +279,24 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
         return (
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Ticker</label>
+              <label className="block text-sm font-medium text-t-secondary mb-1.5">Ticker</label>
               <input
                 type="text"
                 value={ticker}
                 onChange={(e) => setTicker(e.target.value.toUpperCase())}
                 placeholder="e.g. PRIV-FUND"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
               {errors.ticker && <p className="text-red-500 text-xs mt-1">{errors.ticker}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Name</label>
+              <label className="block text-sm font-medium text-t-secondary mb-1.5">Name</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Private Equity Fund"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
           </div>
@@ -286,16 +307,16 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+      <div className="relative bg-surface-card rounded-xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-semibold text-slate-900">
+          <h2 className="text-lg font-semibold text-t-primary">
             {isEdit ? 'Edit Holding' : 'Add Holding'}
           </h2>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
+            className="p-1 hover:bg-surface-alt rounded-lg transition-colors"
           >
-            <X className="w-5 h-5 text-slate-500" />
+            <X className="w-5 h-5 text-t-muted" />
           </button>
         </div>
 
@@ -303,7 +324,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
           {/* Asset type selector */}
           {!isEdit && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Asset Type</label>
+              <label className="block text-sm font-medium text-t-secondary mb-2">Asset Type</label>
               <div className="grid grid-cols-3 gap-2">
                 {(Object.keys(ASSET_TYPE_CONFIG) as AssetType[]).map((type) => {
                   const Icon = ASSET_TYPE_ICONS[type];
@@ -324,7 +345,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
                       className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
                         isSelected
                           ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                          : 'border-b-default text-t-muted hover:bg-surface'
                       }`}
                     >
                       <Icon className="w-4 h-4" />
@@ -342,7 +363,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
           {/* Quantity and Buy Price */}
           <div className={`grid gap-4 ${assetType === 'cash' ? 'grid-cols-1' : 'grid-cols-2'}`}>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              <label className="block text-sm font-medium text-t-secondary mb-1.5">
                 {config.quantityLabel}
               </label>
               <input
@@ -352,7 +373,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
                 value={shares}
                 onChange={(e) => setShares(e.target.value)}
                 placeholder="0"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
               {errors.shares && (
                 <p className="text-red-500 text-xs mt-1">{errors.shares}</p>
@@ -360,7 +381,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
             </div>
             {assetType !== 'cash' && (
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                <label className="block text-sm font-medium text-t-secondary mb-1.5">
                   Buy Price ($)
                 </label>
                 <input
@@ -370,7 +391,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
                   value={buyPrice}
                   onChange={(e) => setBuyPrice(e.target.value)}
                   placeholder="0.00"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
                 {errors.buyPrice && (
                   <p className="text-red-500 text-xs mt-1">{errors.buyPrice}</p>
@@ -382,7 +403,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
           {/* Manual price for metal/custom */}
           {(assetType === 'metal' || assetType === 'custom') && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              <label className="block text-sm font-medium text-t-secondary mb-1.5">
                 Current Price ($)
               </label>
               <input
@@ -392,12 +413,12 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
                 value={manualPrice}
                 onChange={(e) => setManualPrice(e.target.value)}
                 placeholder="Enter current market price"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
               {errors.manualPrice && (
                 <p className="text-red-500 text-xs mt-1">{errors.manualPrice}</p>
               )}
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-t-faint mt-1">
                 This price will be used for valuation until you update it.
               </p>
             </div>
@@ -405,14 +426,14 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
 
           {/* Buy Date */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label className="block text-sm font-medium text-t-secondary mb-1.5">
               {assetType === 'cash' ? 'Date Added' : 'Buy Date'}
             </label>
             <input
               type="date"
               value={buyDate}
               onChange={(e) => setBuyDate(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
             {errors.buyDate && (
               <p className="text-red-500 text-xs mt-1">{errors.buyDate}</p>
@@ -421,11 +442,11 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
 
           {/* Category dropdown */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Category</label>
+            <label className="block text-sm font-medium text-t-secondary mb-1.5">Category</label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               {allCategories.map((cat) => (
                 <option key={cat.key} value={cat.key}>
@@ -449,7 +470,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
                   value={newCategoryLabel}
                   onChange={(e) => setNewCategoryLabel(e.target.value)}
                   placeholder="Category name"
-                  className="flex-1 px-2 py-1.5 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="flex-1 px-2 py-1.5 border border-b-input rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
@@ -468,7 +489,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
                 <button
                   type="button"
                   onClick={() => { setShowAddCategory(false); setNewCategoryLabel(''); }}
-                  className="px-2 py-1.5 text-slate-500 text-xs hover:text-slate-700"
+                  className="px-2 py-1.5 text-t-muted text-xs hover:text-t-secondary"
                 >
                   Cancel
                 </button>
@@ -476,33 +497,72 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
             )}
           </div>
 
-          {/* In Portfolio toggle */}
-          <div className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
+          {/* Portfolio selector */}
+          {portfolios.length > 1 && (
             <div>
-              <p className="text-sm font-medium text-slate-700">Include in Portfolio</p>
-              <p className="text-xs text-slate-500">Track as an investment, not just net worth</p>
+              <label className="block text-sm font-medium text-t-secondary mb-1.5">Portfolio</label>
+              <select
+                value={portfolioId}
+                onChange={(e) => setPortfolioId(e.target.value)}
+                className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+              >
+                {portfolios.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* In Portfolio toggle */}
+          <div className="flex items-center justify-between py-2 px-3 bg-surface rounded-lg">
+            <div>
+              <p className="text-sm font-medium text-t-secondary">Include in Portfolio</p>
+              <p className="text-xs text-t-muted">Track as an investment, not just net worth</p>
             </div>
             <button
               type="button"
               onClick={() => setInPortfolio(!inPortfolio)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                inPortfolio ? 'bg-blue-600' : 'bg-slate-300'
+                inPortfolio ? 'bg-blue-600' : 'bg-surface-active'
               }`}
             >
               <span
-                className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
+                className={`inline-block h-4 w-4 rounded-full bg-surface-card transition-transform ${
                   inPortfolio ? 'translate-x-6' : 'translate-x-1'
                 }`}
               />
             </button>
           </div>
 
+          {/* Skip stale price check toggle */}
+          {assetType !== 'cash' && (
+            <div className="flex items-center justify-between py-2 px-3 bg-surface rounded-lg">
+              <div>
+                <p className="text-sm font-medium text-t-secondary">Skip Stale Price Warning</p>
+                <p className="text-xs text-t-muted">Don't warn if price hasn't been updated</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSkipStaleCheck(!skipStaleCheck)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  skipStaleCheck ? 'bg-blue-600' : 'bg-surface-active'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 rounded-full bg-surface-card transition-transform ${
+                    skipStaleCheck ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          )}
+
           {/* Buttons */}
           <div className="flex gap-3 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+              className="flex-1 px-4 py-2.5 border border-b-input rounded-lg text-sm font-medium text-t-secondary hover:bg-surface transition-colors"
             >
               Cancel
             </button>

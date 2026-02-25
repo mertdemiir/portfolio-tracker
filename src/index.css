@@ -1,8 +1,120 @@
 @import "tailwindcss";
 
+/* ═══ Theme Variables ═══ */
+:root,
+[data-theme="light"] {
+  --surface: #f8fafc;
+  --surface-card: #ffffff;
+  --surface-alt: #f1f5f9;
+  --surface-hover: #f1f5f9;
+  --surface-active: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --text-faint: #94a3b8;
+  --border-default: #e2e8f0;
+  --border-subtle: #f1f5f9;
+  --border-input: #cbd5e1;
+  --input-bg: #ffffff;
+  --overlay: rgba(0, 0, 0, 0.4);
+  --chart-grid: #f1f5f9;
+  --chart-axis: #94a3b8;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --accent-light: #eff6ff;
+}
+
+[data-theme="dark"] {
+  --surface: #1e293b;
+  --surface-card: #334155;
+  --surface-alt: #3f4f63;
+  --surface-hover: #3f4f63;
+  --surface-active: #4b5e75;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-faint: #64748b;
+  --border-default: #475569;
+  --border-subtle: #3f4f63;
+  --border-input: #64748b;
+  --input-bg: #2d3d50;
+  --overlay: rgba(0, 0, 0, 0.6);
+  --chart-grid: #3f4f63;
+  --chart-axis: #64748b;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --accent-light: rgba(59, 130, 246, 0.15);
+}
+
+[data-theme="midnight"] {
+  --surface: #020617;
+  --surface-card: #0f172a;
+  --surface-alt: #1e293b;
+  --surface-hover: #1e293b;
+  --surface-active: #334155;
+  --text-primary: #f8fafc;
+  --text-secondary: #e2e8f0;
+  --text-muted: #94a3b8;
+  --text-faint: #64748b;
+  --border-default: #1e293b;
+  --border-subtle: #172032;
+  --border-input: #334155;
+  --input-bg: #0f172a;
+  --overlay: rgba(0, 0, 0, 0.7);
+  --chart-grid: #1e293b;
+  --chart-axis: #475569;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --accent-light: rgba(59, 130, 246, 0.15);
+}
+
+/* ═══ Register as Tailwind Colors ═══ */
+@theme {
+  --color-surface: var(--surface);
+  --color-surface-card: var(--surface-card);
+  --color-surface-alt: var(--surface-alt);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-active: var(--surface-active);
+  --color-t-primary: var(--text-primary);
+  --color-t-secondary: var(--text-secondary);
+  --color-t-muted: var(--text-muted);
+  --color-t-faint: var(--text-faint);
+  --color-b-default: var(--border-default);
+  --color-b-subtle: var(--border-subtle);
+  --color-b-input: var(--border-input);
+  --color-input-bg: var(--input-bg);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-light: var(--accent-light);
+}
+
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: #f8fafc;
+  background-color: var(--surface);
   font-family: system-ui, -apple-system, sans-serif;
+  color: var(--text-primary);
+}
+
+/* ═══ Form Element Theming ═══ */
+input,
+textarea,
+select {
+  background-color: var(--input-bg);
+  color: var(--text-primary);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-faint);
+}
+
+/* Recharts Legend text */
+.recharts-legend-item-text {
+  color: var(--text-secondary) !important;
+}
+
+/* Recharts tooltip label */
+.recharts-tooltip-label {
+  color: var(--text-primary) !important;
 }

@@ -1,4 +1,5 @@
-import { LayoutDashboard, List, BarChart3, Settings } from 'lucide-react';
+import { LayoutDashboard, List, BarChart3, Receipt, FlaskConical, Settings, Eye } from 'lucide-react';
+import { PortfolioSelector } from './PortfolioSelector';
 import type { TabId } from '../types';
 
 interface LayoutProps {
@@ -12,16 +13,19 @@ const tabs: { id: TabId; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'holdings', label: 'Holdings', icon: List },
   { id: 'charts', label: 'Charts', icon: BarChart3 },
+  { id: 'transactions', label: 'Transactions', icon: Receipt },
+  { id: 'simulator', label: 'Simulator', icon: FlaskConical },
+  { id: 'watchlist', label: 'Watchlist', icon: Eye },
 ];
 
 export function Layout({ activeTab, onTabChange, onSettingsClick, children }: LayoutProps) {
   return (
-    <div className="min-h-screen bg-slate-50 pb-20 md:pb-0">
+    <div className="min-h-screen bg-surface pb-20 md:pb-0">
       {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
+      <header className="bg-surface-card border-b border-b-default sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-blue-600" />
+          <h1 className="text-lg font-bold text-t-primary flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-accent" />
             Wealth Tracker
           </h1>
           <div className="flex items-center gap-1">
@@ -34,8 +38,8 @@ export function Layout({ activeTab, onTabChange, onSettingsClick, children }: La
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2
                     ${
                       activeTab === tab.id
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'text-slate-600 hover:bg-slate-100'
+                        ? 'bg-accent-light text-accent'
+                        : 'text-t-muted hover:bg-surface-alt'
                     }`}
                 >
                   <tab.icon className="w-4 h-4" />
@@ -46,21 +50,26 @@ export function Layout({ activeTab, onTabChange, onSettingsClick, children }: La
             {onSettingsClick && (
               <button
                 onClick={onSettingsClick}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors ml-1"
+                className="p-2 hover:bg-surface-alt rounded-lg transition-colors ml-1"
                 title="Settings"
               >
-                <Settings className="w-5 h-5 text-slate-500" />
+                <Settings className="w-5 h-5 text-t-muted" />
               </button>
             )}
           </div>
         </div>
       </header>
 
+      {/* Portfolio Selector */}
+      <div className="max-w-6xl mx-auto px-4 pt-3">
+        <PortfolioSelector />
+      </div>
+
       {/* Content */}
-      <main className="max-w-6xl mx-auto px-4 py-6">{children}</main>
+      <main className="max-w-6xl mx-auto px-4 py-4">{children}</main>
 
       {/* Mobile bottom nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-30">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-surface-card border-t border-b-default z-30">
         <div className="flex">
           {tabs.map((tab) => (
             <button
@@ -69,8 +78,8 @@ export function Layout({ activeTab, onTabChange, onSettingsClick, children }: La
               className={`flex-1 flex flex-col items-center gap-1 py-3 text-xs font-medium transition-colors
                 ${
                   activeTab === tab.id
-                    ? 'text-blue-700'
-                    : 'text-slate-500'
+                    ? 'text-accent'
+                    : 'text-t-muted'
                 }`}
             >
               <tab.icon className="w-5 h-5" />

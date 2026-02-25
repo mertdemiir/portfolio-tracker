@@ -2,7 +2,7 @@ import { useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useLocalStorage } from './useLocalStorage';
 import { todayDateString } from '../utils/formatters';
-import { getDefaultCategory } from '../types';
+import { getDefaultCategory, DEFAULT_PORTFOLIO_ID } from '../types';
 import type { Holding, PortfolioSnapshot, CustomCategory } from '../types';
 
 export function usePortfolio() {
@@ -16,10 +16,10 @@ export function usePortfolio() {
     []
   );
 
-  // Migration: add assetType, inPortfolio, category to existing holdings
+  // Migration: add assetType, inPortfolio, category, portfolioId to existing holdings
   useEffect(() => {
     const needsMigration = holdings.some(
-      (h) => !h.assetType || h.inPortfolio === undefined || h.category === undefined
+      (h) => !h.assetType || h.inPortfolio === undefined || h.category === undefined || h.portfolioId === undefined
     );
     if (needsMigration) {
       setHoldings((prev) =>
@@ -28,23 +28,47 @@ export function usePortfolio() {
           assetType: h.assetType || ('stock' as const),
           inPortfolio: h.inPortfolio ?? true,
           category: h.category ?? getDefaultCategory(h.assetType || 'stock'),
+          portfolioId: h.portfolioId ?? DEFAULT_PORTFOLIO_ID,
         }))
       );
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Migration: backfill netWorthValue/portfolioValue on old snapshots
+  // Migration: backfill netWorthValue on old snapshots (pre-migration ones lack netWorthValue)
+  // Only backfill portfolioValue on truly old snapshots where netWorthValue was also missing,
+  // NOT on manual entries that intentionally omit portfolioValue.
+  // Cleanup: strip portfolioValue from manual NW-only entries where the old migration
+  // incorrectly set portfolioValue = totalValue = netWorthValue.
   useEffect(() => {
-    const needsMigration = snapshots.some(
-      (s) => s.netWorthValue === undefined || s.portfolioValue === undefined
+    const needsMigration = snapshots.some((s) => s.netWorthValue === undefined);
+    const needsCleanup = snapshots.some(
+      (s) =>
+        s.portfolioValue !== undefined &&
+        s.portfolioValue === s.totalValue &&
+        s.totalValue === s.netWorthValue
     );
-    if (needsMigration) {
+    if (needsMigration || needsCleanup) {
       setSnapshots((prev) =>
-        prev.map((s) => ({
-          ...s,
-          netWorthValue: s.netWorthValue ?? s.totalValue,
-          portfolioValue: s.portfolioValue ?? s.totalValue,
-        }))
+        prev.map((s) => {
+          // Old pre-migration snapshot: backfill both fields
+          if (s.netWorthValue === undefined) {
+            return {
+              ...s,
+              netWorthValue: s.totalValue,
+              portfolioValue: s.portfolioValue ?? s.totalValue,
+            };
+          }
+          // Cleanup: manual NW-only entry that was incorrectly given portfolioValue
+          if (
+            s.portfolioValue !== undefined &&
+            s.portfolioValue === s.totalValue &&
+            s.totalValue === s.netWorthValue
+          ) {
+            const { portfolioValue: _, ...rest } = s;
+            return rest as PortfolioSnapshot;
+          }
+          return s;
+        })
       );
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -73,7 +97,7 @@ export function usePortfolio() {
   );
 
   const saveSnapshot = useCallback(
-    (netWorthValue: number, portfolioValue: number) => {
+    (netWorthValue: number, portfolioValue: number, totalLiabilities?: number) => {
       const today = todayDateString();
       setSnapshots((prev) => {
         const existing = prev.find((s) => s.date === today);
@@ -82,12 +106,40 @@ export function usePortfolio() {
           totalValue: netWorthValue,
           netWorthValue,
           portfolioValue,
+          ...(totalLiabilities !== undefined && totalLiabilities > 0 && { totalLiabilities }),
         };
         if (existing) {
           return prev.map((s) => (s.date === today ? snapshot : s));
         }
         return [...prev, snapshot];
       });
+    },
+    [setSnapshots]
+  );
+
+  const addManualSnapshot = useCallback(
+    (date: string, netWorthValue: number, portfolioValue?: number, name?: string) => {
+      setSnapshots((prev) => {
+        const existing = prev.find((s) => s.date === date);
+        const snapshot: PortfolioSnapshot = {
+          date,
+          totalValue: netWorthValue,
+          netWorthValue,
+          ...(portfolioValue !== undefined && { portfolioValue }),
+          ...(name && { name }),
+        };
+        const updated = existing
+          ? prev.map((s) => (s.date === date ? { ...snapshot, ...(s.name && !name ? { name: s.name } : {}) } : s))
+          : [...prev, snapshot];
+        return updated.sort((a, b) => a.date.localeCompare(b.date));
+      });
+    },
+    [setSnapshots]
+  );
+
+  const deleteSnapshot = useCallback(
+    (date: string) => {
+      setSnapshots((prev) => prev.filter((s) => s.date !== date));
     },
     [setSnapshots]
   );
@@ -122,6 +174,8 @@ export function usePortfolio() {
     updateHolding,
     deleteHolding,
     saveSnapshot,
+    addManualSnapshot,
+    deleteSnapshot,
     customCategories,
     addCustomCategory,
     deleteCustomCategory,

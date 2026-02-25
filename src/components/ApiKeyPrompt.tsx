@@ -16,14 +16,14 @@ export function ApiKeyPrompt({ onSave, onClose }: ApiKeyPromptProps) {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 max-w-md w-full">
+    <div className="bg-surface-card rounded-xl shadow-sm border border-b-default p-6 max-w-md w-full">
       <div className="flex items-center justify-center w-12 h-12 bg-blue-50 rounded-full mb-4 mx-auto">
         <Key className="w-6 h-6 text-blue-600" />
       </div>
-      <h3 className="text-lg font-bold text-slate-900 text-center mb-1">
+      <h3 className="text-lg font-bold text-t-primary text-center mb-1">
         Finnhub API Key
       </h3>
-      <p className="text-slate-500 text-center text-sm mb-4">
+      <p className="text-t-muted text-center text-sm mb-4">
         Enter your free Finnhub API key for live stock & ETF prices.
       </p>
       <form onSubmit={handleSubmit}>
@@ -32,14 +32,14 @@ export function ApiKeyPrompt({ onSave, onClose }: ApiKeyPromptProps) {
           value={key}
           onChange={(e) => setKey(e.target.value)}
           placeholder="Enter your Finnhub API key"
-          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         />
         <div className="flex gap-2 mt-3">
           {onClose && (
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+              className="flex-1 px-4 py-2 border border-b-input rounded-lg text-sm font-medium text-t-secondary hover:bg-surface transition-colors"
             >
               Skip for now
             </button>

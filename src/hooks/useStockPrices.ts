@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useLocalStorage } from './useLocalStorage';
-import { fetchPriceForHolding, delay } from '../utils/api';
+import { fetchPriceForHolding, delay, LIVE_METAL_TICKERS } from '../utils/api';
 import type { PriceCache, Holding } from '../types';
 
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -37,8 +37,9 @@ export function useStockPrices(apiKey: string) {
       abortRef.current = false;
 
       // Separate holdings that need network requests from instant ones
-      const needsApi = stale.filter((h) => h.assetType === 'stock' || h.assetType === 'etf' || h.assetType === 'crypto');
-      const instant = stale.filter((h) => h.assetType === 'cash' || h.assetType === 'metal' || h.assetType === 'custom');
+      const isLiveMetal = (h: Holding) => h.assetType === 'metal' && (LIVE_METAL_TICKERS as readonly string[]).includes(h.ticker);
+      const needsApi = stale.filter((h) => h.assetType === 'stock' || h.assetType === 'etf' || h.assetType === 'crypto' || isLiveMetal(h));
+      const instant = stale.filter((h) => (h.assetType === 'cash' || h.assetType === 'custom') || (h.assetType === 'metal' && !isLiveMetal(h)));
 
       try {
         // Process instant types immediately

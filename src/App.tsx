@@ -5,8 +5,12 @@ import { SettingsModal } from './components/SettingsModal';
 import { Dashboard } from './components/Dashboard';
 import { HoldingsTable } from './components/HoldingsTable';
 import { Charts } from './components/Charts';
+import { TransactionLog } from './components/TransactionLog';
+import { Simulator } from './components/Simulator';
+import { Watchlist } from './components/Watchlist';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { useLocalStorage } from './hooks/useLocalStorage';
+import { useAutoBackup } from './hooks/useAutoBackup';
 import type { TabId } from './types';
 
 function AppContent() {
@@ -21,6 +25,9 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<TabId>('holdings');
   const [showSettings, setShowSettings] = useState(false);
   const [welcomeDismissed, setWelcomeDismissed] = useLocalStorage('welcome-dismissed', false);
+
+  // Auto-backup scheduling (Electron only, runs silently)
+  useAutoBackup();
 
   if (!welcomeDismissed && !apiKey) {
     return (
@@ -44,6 +51,9 @@ function AppContent() {
       {activeTab === 'dashboard' && <Dashboard />}
       {activeTab === 'holdings' && <HoldingsTable />}
       {activeTab === 'charts' && <Charts />}
+      {activeTab === 'transactions' && <TransactionLog />}
+      {activeTab === 'simulator' && <Simulator />}
+      {activeTab === 'watchlist' && <Watchlist />}
       {showSettings && (
         <SettingsModal
           apiKey={apiKey}

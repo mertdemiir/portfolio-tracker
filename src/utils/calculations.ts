@@ -1,42 +1,60 @@
-import type { Holding, EnrichedHolding, PortfolioSummary, PriceCache, NetWorthSummary, CategoryBreakdown, CustomCategory } from '../types';
+import type { Holding, EnrichedHolding, PortfolioSummary, PriceCache, NetWorthSummary, CategoryBreakdown, CustomCategory, Liability } from '../types';
 import { DEFAULT_CATEGORIES } from '../types';
+import { LIVE_METAL_TICKERS } from './api';
 
-function resolvePrice(h: Holding, prices: PriceCache): { currentPrice: number; change: number; changePercent: number } {
+export type ConvertFn = (amount: number, fromCurrency?: string) => number;
+const identityConvert: ConvertFn = (amount) => amount;
+
+function resolvePrice(
+  h: Holding,
+  prices: PriceCache,
+  convert: ConvertFn = identityConvert
+): { currentPrice: number; change: number; changePercent: number } {
   const key = `${h.assetType}:${h.ticker}`;
   const quote = prices[key];
+  const holdingCurrency = h.currency || 'USD';
 
   if (h.assetType === 'cash') {
-    return { currentPrice: 1, change: 0, changePercent: 0 };
+    // Cash: 1 unit of the currency, convert to base
+    return { currentPrice: convert(1, holdingCurrency), change: 0, changePercent: 0 };
   }
 
   if (quote?.currentPrice) {
+    // API prices are in USD for stocks/crypto/live metals; convert to base
+    const isLiveMetal = h.assetType === 'metal' && (LIVE_METAL_TICKERS as readonly string[]).includes(h.ticker);
+    const priceCurrency = (h.assetType === 'stock' || h.assetType === 'etf' || h.assetType === 'crypto' || isLiveMetal) ? 'USD' : holdingCurrency;
     return {
-      currentPrice: quote.currentPrice,
-      change: quote.change ?? 0,
+      currentPrice: convert(quote.currentPrice, priceCurrency),
+      change: convert(quote.change ?? 0, priceCurrency),
       changePercent: quote.changePercent ?? 0,
     };
   }
 
   if ((h.assetType === 'metal' || h.assetType === 'custom') && h.manualPrice) {
-    return { currentPrice: h.manualPrice, change: 0, changePercent: 0 };
+    return { currentPrice: convert(h.manualPrice, holdingCurrency), change: 0, changePercent: 0 };
   }
 
-  return { currentPrice: h.buyPrice, change: 0, changePercent: 0 };
+  return { currentPrice: convert(h.buyPrice, holdingCurrency), change: 0, changePercent: 0 };
 }
 
 export function enrichHoldings(
   holdings: Holding[],
-  prices: PriceCache
+  prices: PriceCache,
+  convertToBase?: ConvertFn
 ): EnrichedHolding[] {
+  const convert = convertToBase || identityConvert;
+
   const totalValue = holdings.reduce((sum, h) => {
-    const { currentPrice } = resolvePrice(h, prices);
+    const { currentPrice } = resolvePrice(h, prices, convert);
     return sum + currentPrice * h.shares;
   }, 0);
 
   return holdings.map((h) => {
-    const { currentPrice, change, changePercent } = resolvePrice(h, prices);
+    const { currentPrice, change, changePercent } = resolvePrice(h, prices, convert);
+    const holdingCurrency = h.currency || 'USD';
+    const buyPriceConverted = convert(h.buyPrice, holdingCurrency);
     const marketValue = currentPrice * h.shares;
-    const costBasis = h.buyPrice * h.shares;
+    const costBasis = buyPriceConverted * h.shares;
     const gainLoss = marketValue - costBasis;
     const gainLossPercent = costBasis > 0 ? (gainLoss / costBasis) * 100 : 0;
     const dailyChange = change * h.shares;
@@ -81,12 +99,19 @@ export function calculateSummary(enriched: EnrichedHolding[]): PortfolioSummary 
 
 export function calculateNetWorthSummary(
   allEnriched: EnrichedHolding[],
-  customCategories: CustomCategory[]
+  customCategories: CustomCategory[],
+  liabilities: Liability[] = [],
+  convertToBase: ConvertFn = identityConvert
 ): NetWorthSummary {
-  const totalNetWorth = allEnriched.reduce((sum, h) => sum + h.marketValue, 0);
+  const totalAssets = allEnriched.reduce((sum, h) => sum + h.marketValue, 0);
+  const totalLiabilities = liabilities.reduce(
+    (sum, l) => sum + convertToBase(l.balance, l.currency || undefined),
+    0
+  );
+  const totalNetWorth = totalAssets - totalLiabilities;
   const portfolioHoldings = allEnriched.filter((h) => h.inPortfolio);
   const totalPortfolioValue = portfolioHoldings.reduce((sum, h) => sum + h.marketValue, 0);
-  const totalNonPortfolioValue = totalNetWorth - totalPortfolioValue;
+  const totalNonPortfolioValue = totalAssets - totalPortfolioValue;
 
   const allCategories = [...DEFAULT_CATEGORIES, ...customCategories];
   const categoryMap = new Map<string, { value: number; holdingCount: number }>();
@@ -106,7 +131,7 @@ export function calculateNetWorthSummary(
       key,
       label: catDef?.label ?? key,
       value: data.value,
-      percentage: totalNetWorth > 0 ? (data.value / totalNetWorth) * 100 : 0,
+      percentage: totalAssets > 0 ? (data.value / totalAssets) * 100 : 0,
       holdingCount: data.holdingCount,
     });
   }
@@ -115,6 +140,8 @@ export function calculateNetWorthSummary(
 
   return {
     totalNetWorth,
+    totalAssets,
+    totalLiabilities,
     totalPortfolioValue,
     totalNonPortfolioValue,
     categoryBreakdown,

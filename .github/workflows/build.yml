@@ -74,7 +74,11 @@ jobs:
 
             | Platform | |
             |----------|-|
-            | **Mac** | `Portfolio-Tracker-Mac.dmg` |
+            | **Mac** (Intel + Apple Silicon) | `Portfolio-Tracker-Mac.dmg` |
             | **Windows** | `Portfolio-Tracker-Windows.exe` |
 
             > **Mac users:** Right-click the app and select "Open" the first time.
+
+            ## What's Inside
+
+            Multi-asset portfolio & net worth tracker with live prices, liabilities, multiple portfolios, 11 chart types, benchmark comparisons, timeline annotations, PDF reports, theme-aware share cards, and more. All data stored locally.

@@ -68,6 +68,7 @@ interface PortfolioContextValue {
   transactions: Transaction[];
   addTransaction: (data: Omit<Transaction, 'id'>) => void;
   deleteTransaction: (id: string) => void;
+  realizedPnl: number;
   // Benchmarks
   benchmarkData: { spx: BenchmarkDataPoint[]; btc: BenchmarkDataPoint[]; gold: BenchmarkDataPoint[] };
   benchmarkEnabled: BenchmarkEnabled;
@@ -228,6 +229,14 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     [customCategories]
   );
 
+  // Realized P&L: sum of (sellPrice - costBasis) * shares for all sell transactions
+  const realizedPnl = useMemo(
+    () => transactions
+      .filter((t) => t.type === 'sell' && t.costBasisPerShare !== undefined)
+      .reduce((sum, t) => sum + (t.pricePerShare - t.costBasisPerShare!) * t.shares, 0),
+    [transactions]
+  );
+
   // Save daily snapshot with NW, portfolio, and liabilities values
   useEffect(() => {
     if (allEnrichedHoldings.length > 0 && netWorthSummary.totalAssets > 0) {
@@ -267,6 +276,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     transactions,
     addTransaction,
     deleteTransaction,
+    realizedPnl,
     benchmarkData,
     benchmarkEnabled,
     toggleBenchmark,

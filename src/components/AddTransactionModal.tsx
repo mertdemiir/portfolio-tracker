@@ -56,6 +56,7 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
     if (!date || !ticker.trim() || isNaN(s) || s <= 0 || isNaN(p) || p <= 0) return;
 
     const tickerNorm = ticker.trim().toUpperCase();
+    const match = holdings.find((h) => h.ticker.toUpperCase() === tickerNorm);
 
     addTransaction({
       date,
@@ -66,10 +67,8 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
       pricePerShare: p,
       total: s * p,
       ...(notes.trim() && { notes: notes.trim() }),
+      ...(type === 'sell' && match ? { costBasisPerShare: match.buyPrice } : {}),
     });
-
-    // Apply transaction to matching holding
-    const match = holdings.find((h) => h.ticker.toUpperCase() === tickerNorm);
     if (match) {
       const { id, ...data } = match;
       if (type === 'sell') {

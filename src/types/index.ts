@@ -71,6 +71,7 @@ export interface Transaction {
   pricePerShare: number;
   total: number;
   notes?: string;
+  costBasisPerShare?: number; // recorded on sell txns for realized P&L
 }
 
 export interface FinnhubSearchResult {

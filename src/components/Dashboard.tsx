@@ -43,6 +43,7 @@ export function Dashboard() {
     baseCurrency,
     activePortfolioId,
     portfolios,
+    realizedPnl,
   } = usePortfolioContext();
 
   const [milestones, setMilestones] = useLocalStorage<NWMilestone[]>('nw-milestones', []);
@@ -91,6 +92,7 @@ export function Dashboard() {
     : portfolios.find((p) => p.id === activePortfolioId)?.name;
 
   const ps = filteredPortfolioSummary;
+  const totalPnl = ps.totalGainLoss + realizedPnl;
   const portfolioCards = [
     {
       title: 'Portfolio Value',
@@ -99,12 +101,27 @@ export function Dashboard() {
       color: 'bg-blue-50 text-blue-600',
     },
     {
-      title: 'Total P&L',
+      title: 'Unrealized P&L',
       value: formatSignedCurrency(ps.totalGainLoss),
       subtitle: formatPercent(ps.totalGainLossPercent),
       icon: ps.totalGainLoss >= 0 ? TrendingUp : TrendingDown,
       color: ps.totalGainLoss >= 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600',
       valueColor: ps.totalGainLoss >= 0 ? 'text-green-600' : 'text-red-600',
+    },
+    {
+      title: 'Realized P&L',
+      value: formatSignedCurrency(realizedPnl),
+      icon: realizedPnl >= 0 ? TrendingUp : TrendingDown,
+      color: realizedPnl >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600',
+      valueColor: realizedPnl >= 0 ? 'text-emerald-600' : 'text-red-600',
+    },
+    {
+      title: 'Total P&L',
+      value: formatSignedCurrency(totalPnl),
+      subtitle: `Cost basis: ${formatCurrency(ps.totalCostBasis)}`,
+      icon: totalPnl >= 0 ? TrendingUp : TrendingDown,
+      color: totalPnl >= 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600',
+      valueColor: totalPnl >= 0 ? 'text-green-600' : 'text-red-600',
     },
     {
       title: "Today's Change",
@@ -113,13 +130,6 @@ export function Dashboard() {
       icon: Clock,
       color: ps.totalDailyChange >= 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600',
       valueColor: ps.totalDailyChange >= 0 ? 'text-green-600' : 'text-red-600',
-    },
-    {
-      title: 'Holdings',
-      value: ps.holdingCount.toString(),
-      subtitle: `Cost basis: ${formatCurrency(ps.totalCostBasis)}`,
-      icon: BarChart3,
-      color: 'bg-purple-50 text-purple-600',
     },
   ];
 
@@ -315,7 +325,7 @@ export function Dashboard() {
           Showing <span className="font-medium text-t-secondary">{activeName}</span> portfolio
         </p>
       )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
         {portfolioCards.map((card) => (
           <div
             key={card.title}

@@ -4,7 +4,7 @@ import { SymbolSearch } from './SymbolSearch';
 import { CryptoSearch } from './CryptoSearch';
 import { ApiKeyPrompt } from './ApiKeyPrompt';
 import { usePortfolioContext } from '../context/PortfolioContext';
-import { ASSET_TYPE_CONFIG, getDefaultCategory, DEFAULT_PORTFOLIO_ID } from '../types';
+import { ASSET_TYPE_CONFIG, getDefaultCategory, DEFAULT_PORTFOLIO_ID, SUPPORTED_CURRENCIES } from '../types';
 import type { Holding, AssetType } from '../types';
 
 const METALS = [
@@ -59,6 +59,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
   const [portfolioId, setPortfolioId] = useState(
     holding?.portfolioId ?? (activePortfolioId !== 'all' ? activePortfolioId : DEFAULT_PORTFOLIO_ID)
   );
+  const [currency, setCurrency] = useState(holding?.currency || 'USD');
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategoryLabel, setNewCategoryLabel] = useState('');
   const [showApiKeyPrompt, setShowApiKeyPrompt] = useState(false);
@@ -120,6 +121,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
       category,
       skipStaleCheck,
       portfolioId,
+      ...(currency !== 'USD' ? { currency } : {}),
       ...(holding?.isFavorite ? { isFavorite: true } : {}),
       ...(manualPrice ? { manualPrice: parseFloat(manualPrice), lastManualPriceUpdate: new Date().toISOString().split('T')[0] } : {}),
       ...(coinGeckoId ? { coinGeckoId } : {}),
@@ -439,6 +441,24 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
               <p className="text-red-500 text-xs mt-1">{errors.buyDate}</p>
             )}
           </div>
+
+          {/* Currency denomination */}
+          {assetType !== 'cash' && (
+            <div>
+              <label className="block text-sm font-medium text-t-secondary mb-1.5">Currency</label>
+              <select
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                {SUPPORTED_CURRENCIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.name} ({c.symbol})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Category dropdown */}
           <div>

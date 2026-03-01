@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { DollarSign, TrendingUp, TrendingDown, BarChart3, Clock, Wallet, Target, Plus, Trash2, Check, X, Share2 } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Clock, Wallet, Target, Plus, Trash2, Check, X, Share2 } from 'lucide-react';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { formatCurrency, formatSignedCurrency, formatPercent } from '../utils/formatters';

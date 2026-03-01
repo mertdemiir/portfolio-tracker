@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Plus, Trash2, X, Check, ArrowUpDown } from 'lucide-react';
 import { usePortfolioContext } from '../context/PortfolioContext';
-import { formatCurrency, formatDate } from '../utils/formatters';
+import { formatCurrency, formatSignedCurrency, formatDate } from '../utils/formatters';
 import { AddTransactionModal } from './AddTransactionModal';
 type SortKey = 'date' | 'ticker' | 'type' | 'total';
 
@@ -57,6 +57,9 @@ export function TransactionLog() {
 
   const totalBuys = transactions.filter((t) => t.type === 'buy').reduce((s, t) => s + t.total, 0);
   const totalSells = transactions.filter((t) => t.type === 'sell').reduce((s, t) => s + t.total, 0);
+  const totalRealizedPnl = transactions
+    .filter((t) => t.type === 'sell' && t.costBasisPerShare !== undefined)
+    .reduce((s, t) => s + (t.pricePerShare - t.costBasisPerShare!) * t.shares, 0);
 
   const SortHeader = ({ label, field }: { label: string; field: SortKey }) => (
     <th
@@ -84,7 +87,7 @@ export function TransactionLog() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         <div className="bg-surface-card rounded-xl border border-b-default p-4">
           <p className="text-xs text-t-muted mb-1">Total Transactions</p>
           <p className="text-xl font-bold text-t-primary">{transactions.length}</p>
@@ -96,6 +99,12 @@ export function TransactionLog() {
         <div className="bg-surface-card rounded-xl border border-b-default p-4">
           <p className="text-xs text-t-muted mb-1">Total Sold</p>
           <p className="text-xl font-bold text-red-600">{formatCurrency(totalSells)}</p>
+        </div>
+        <div className="bg-surface-card rounded-xl border border-b-default p-4">
+          <p className="text-xs text-t-muted mb-1">Realized P&L</p>
+          <p className={`text-xl font-bold ${totalRealizedPnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {formatSignedCurrency(totalRealizedPnl)}
+          </p>
         </div>
       </div>
 
@@ -144,6 +153,7 @@ export function TransactionLog() {
                   <th className="pb-2 font-medium text-t-muted text-xs text-right">Shares</th>
                   <th className="pb-2 font-medium text-t-muted text-xs text-right">Price</th>
                   <SortHeader label="Total" field="total" />
+                  <th className="pb-2 font-medium text-t-muted text-xs text-right">P&L</th>
                   <th className="pb-2 font-medium text-t-muted text-xs">Notes</th>
                   <th className="pb-2 w-10"></th>
                 </tr>
@@ -168,6 +178,15 @@ export function TransactionLog() {
                     <td className="py-2 text-right text-t-secondary">{t.shares}</td>
                     <td className="py-2 text-right text-t-secondary">{formatCurrency(t.pricePerShare)}</td>
                     <td className="py-2 text-right font-medium text-t-primary">{formatCurrency(t.total)}</td>
+                    <td className="py-2 text-right text-sm">
+                      {t.type === 'sell' && t.costBasisPerShare !== undefined ? (
+                        <span className={`font-medium ${(t.pricePerShare - t.costBasisPerShare) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {formatSignedCurrency((t.pricePerShare - t.costBasisPerShare) * t.shares)}
+                        </span>
+                      ) : (
+                        <span className="text-t-faint">-</span>
+                      )}
+                    </td>
                     <td className="py-2 text-t-muted text-xs truncate max-w-[100px]">{t.notes || '-'}</td>
                     <td className="py-2 text-right">
                       {confirmDelete === t.id ? (

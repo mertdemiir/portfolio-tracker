@@ -6,7 +6,7 @@ import { AddTransactionModal } from './AddTransactionModal';
 type SortKey = 'date' | 'ticker' | 'type' | 'total';
 
 export function TransactionLog() {
-  const { transactions, deleteTransaction } = usePortfolioContext();
+  const { transactions, deleteTransaction, holdings, updateHolding, addHolding } = usePortfolioContext();
   const [showModal, setShowModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'buy' | 'sell'>('all');
@@ -174,6 +174,35 @@ export function TransactionLog() {
                         <div className="flex items-center gap-1 justify-end">
                           <button
                             onClick={() => {
+                              // Reverse the holding effect before deleting
+                              const match = holdings.find((h) => h.ticker.toUpperCase() === t.ticker.toUpperCase());
+                              if (match) {
+                                const { id, ...data } = match;
+                                if (t.type === 'buy') {
+                                  // Undo buy: reduce shares, recalculate cost basis
+                                  const newShares = match.shares - t.shares;
+                                  if (newShares > 0) {
+                                    const newCost = match.shares * match.buyPrice - t.shares * t.pricePerShare;
+                                    updateHolding(id, { ...data, shares: newShares, buyPrice: newCost / newShares });
+                                  }
+                                  // If newShares <= 0, the buy created this holding entirely — just let it stay
+                                } else {
+                                  // Undo sell: restore shares
+                                  updateHolding(id, { ...data, shares: match.shares + t.shares });
+                                }
+                              } else if (t.type === 'sell') {
+                                // Holding was fully sold and deleted — recreate it
+                                addHolding({
+                                  ticker: t.ticker,
+                                  name: t.name,
+                                  shares: t.shares,
+                                  buyPrice: t.pricePerShare,
+                                  buyDate: t.date,
+                                  assetType: 'custom',
+                                  inPortfolio: true,
+                                  category: 'other',
+                                });
+                              }
                               deleteTransaction(t.id);
                               setConfirmDelete(null);
                             }}

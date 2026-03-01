@@ -8,7 +8,7 @@ interface AddTransactionModalProps {
 }
 
 export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
-  const { holdings, addTransaction } = usePortfolioContext();
+  const { holdings, addTransaction, updateHolding, deleteHolding } = usePortfolioContext();
   const [date, setDate] = useState(todayDateString());
   const [ticker, setTicker] = useState('');
   const [name, setName] = useState('');
@@ -55,16 +55,40 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
     const p = parseFloat(pricePerShare);
     if (!date || !ticker.trim() || isNaN(s) || s <= 0 || isNaN(p) || p <= 0) return;
 
+    const tickerNorm = ticker.trim().toUpperCase();
+
     addTransaction({
       date,
-      ticker: ticker.trim().toUpperCase(),
-      name: name.trim() || ticker.trim().toUpperCase(),
+      ticker: tickerNorm,
+      name: name.trim() || tickerNorm,
       type,
       shares: s,
       pricePerShare: p,
       total: s * p,
       ...(notes.trim() && { notes: notes.trim() }),
     });
+
+    // Apply transaction to matching holding
+    const match = holdings.find((h) => h.ticker.toUpperCase() === tickerNorm);
+    if (match) {
+      const { id, ...data } = match;
+      if (type === 'sell') {
+        const remaining = match.shares - s;
+        if (remaining <= 0) {
+          deleteHolding(id);
+        } else {
+          updateHolding(id, { ...data, shares: remaining });
+        }
+      } else {
+        // Buy: increase shares and recalculate weighted average cost basis
+        const oldCost = match.shares * match.buyPrice;
+        const newCost = s * p;
+        const newShares = match.shares + s;
+        const avgPrice = (oldCost + newCost) / newShares;
+        updateHolding(id, { ...data, shares: newShares, buyPrice: avgPrice, buyDate: date });
+      }
+    }
+
     onClose();
   }
 

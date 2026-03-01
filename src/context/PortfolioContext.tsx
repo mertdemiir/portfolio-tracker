@@ -230,30 +230,40 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   );
 
   // Realized P&L: sum of (sellPrice - costBasis) * shares for sell transactions
-  // filtered by active portfolio (match ticker to holdings in active portfolio)
+  // filtered by active portfolio using the transaction's own portfolioId metadata,
+  // falling back to matching against current holdings for older transactions
   const realizedPnl = useMemo(() => {
     const sellTxns = transactions.filter((t) => t.type === 'sell' && t.costBasisPerShare !== undefined);
 
-    // If viewing a specific portfolio, only include sells whose ticker matches a holding in that portfolio
-    const filteredSells = activePortfolioId === 'all'
-      ? sellTxns
-      : sellTxns.filter((t) => {
-          return holdings.some(
-            (h) =>
-              h.ticker.toUpperCase() === t.ticker.toUpperCase() &&
-              (h.portfolioId || DEFAULT_PORTFOLIO_ID) === activePortfolioId
-          );
-        });
+    if (activePortfolioId === 'all') {
+      return sellTxns.reduce((sum, t) => sum + (t.pricePerShare - t.costBasisPerShare!) * t.shares, 0);
+    }
+
+    // For specific portfolio: use transaction's stored portfolioId if available,
+    // otherwise fall back to matching against current holdings
+    const filteredSells = sellTxns.filter((t) => {
+      if (t.portfolioId) {
+        return t.portfolioId === activePortfolioId;
+      }
+      // Fallback for older transactions without portfolioId metadata
+      return holdings.some(
+        (h) =>
+          h.ticker.toUpperCase() === t.ticker.toUpperCase() &&
+          (h.portfolioId || DEFAULT_PORTFOLIO_ID) === activePortfolioId
+      );
+    });
 
     return filteredSells.reduce((sum, t) => sum + (t.pricePerShare - t.costBasisPerShare!) * t.shares, 0);
   }, [transactions, activePortfolioId, holdings]);
 
   // Save daily snapshot with NW, portfolio, and liabilities values
+  // Save when there are holdings OR liabilities (even if prices haven't loaded yet,
+  // the snapshot captures liabilities and any manually-priced assets)
   useEffect(() => {
-    if (allEnrichedHoldings.length > 0 && netWorthSummary.totalAssets > 0) {
+    if (allEnrichedHoldings.length > 0 || liabilities.length > 0) {
       saveSnapshot(netWorthSummary.totalNetWorth, netWorthSummary.totalPortfolioValue, netWorthSummary.totalLiabilities);
     }
-  }, [allEnrichedHoldings.length, netWorthSummary.totalNetWorth, netWorthSummary.totalPortfolioValue, netWorthSummary.totalLiabilities, netWorthSummary.totalAssets, saveSnapshot]);
+  }, [allEnrichedHoldings.length, liabilities.length, netWorthSummary.totalNetWorth, netWorthSummary.totalPortfolioValue, netWorthSummary.totalLiabilities, saveSnapshot]);
 
   const value: PortfolioContextValue = useMemo(() => ({
     apiKey,

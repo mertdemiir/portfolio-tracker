@@ -36,11 +36,13 @@ export function AllocationTargetChart() {
       const actual = netWorthSummary.categoryBreakdown.find((c) => c.key === cat.key);
       const target = targetAllocations.find((t) => t.categoryKey === cat.key);
       if (!actual && !target) return null;
+      const actualPct = actual ? Math.round(actual.percentage * 10) / 10 : 0;
+      const targetPct = target ? target.targetPercent : 0;
       return {
         name: cat.label,
-        actual: actual ? parseFloat(actual.percentage.toFixed(1)) : 0,
-        target: target ? target.targetPercent : 0,
-        deviation: (actual?.percentage ?? 0) - (target?.targetPercent ?? 0),
+        actual: actualPct,
+        target: targetPct,
+        deviation: Math.round((actualPct - targetPct) * 10) / 10,
       };
     })
     .filter(Boolean) as { name: string; actual: number; target: number; deviation: number }[];

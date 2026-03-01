@@ -15,7 +15,7 @@ export function GainLossBarChart({ holdings }: GainLossBarChartProps) {
     .sort((a, b) => b.gainLoss - a.gainLoss)
     .map((h) => ({
       name: h.ticker,
-      gainLoss: parseFloat(h.gainLoss.toFixed(2)),
+      gainLoss: Math.round(h.gainLoss * 100) / 100,
       percent: h.gainLossPercent,
     }));
 

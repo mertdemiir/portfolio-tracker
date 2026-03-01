@@ -11,17 +11,19 @@ export function getBaseCurrency(): string {
 
 export function formatCurrency(value: number, currency?: string): string {
   const cur = currency || _baseCurrency;
+  const safeValue = Number.isFinite(value) ? value : 0;
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: cur,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(value);
+  }).format(safeValue);
 }
 
 export function formatPercent(value: number): string {
-  const sign = value >= 0 ? '+' : '';
-  return `${sign}${value.toFixed(2)}%`;
+  const safeValue = Number.isFinite(value) ? value : 0;
+  const sign = safeValue >= 0 ? '+' : '';
+  return `${sign}${safeValue.toFixed(2)}%`;
 }
 
 export function formatSignedCurrency(value: number, currency?: string): string {
@@ -38,6 +40,7 @@ export function formatDate(dateStr: string): string {
 }
 
 export function formatCompactCurrency(value: number, currency?: string): string {
+  if (!Number.isFinite(value)) return formatCurrency(0, currency);
   const cur = currency || _baseCurrency;
   const symbol = getCurrencySymbol(cur);
   const sign = value < 0 ? '-' : '';

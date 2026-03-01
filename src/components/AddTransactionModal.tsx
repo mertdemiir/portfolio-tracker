@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { todayDateString } from '../utils/formatters';
+import { DEFAULT_PORTFOLIO_ID } from '../types';
 
 interface AddTransactionModalProps {
   onClose: () => void;
@@ -60,7 +61,7 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
     const tickerNorm = ticker.trim().toUpperCase();
     // Find matching holding — prefer active portfolio, then any
     const allMatches = holdings.filter((h) => h.ticker.toUpperCase() === tickerNorm);
-    const match = allMatches.find((h) => (h.portfolioId || 'default') === activePortfolioId)
+    const match = allMatches.find((h) => (h.portfolioId || DEFAULT_PORTFOLIO_ID) === activePortfolioId)
       || allMatches[0]
       || null;
 
@@ -85,7 +86,13 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
       pricePerShare: p,
       total: s * p,
       ...(notes.trim() && { notes: notes.trim() }),
-      ...(type === 'sell' && match ? { costBasisPerShare: match.buyPrice } : {}),
+      ...(type === 'sell' && match ? {
+        costBasisPerShare: match.buyPrice,
+        assetType: match.assetType,
+        category: match.category,
+        currency: match.currency,
+        portfolioId: match.portfolioId,
+      } : {}),
     });
     if (match) {
       const { id, ...data } = match;

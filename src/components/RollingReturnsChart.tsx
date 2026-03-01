@@ -21,7 +21,7 @@ export function RollingReturnsChart({ snapshots, timeRange }: Props) {
     // Build date → value map from ALL snapshots so year-ago lookups work
     const dateMap = new Map<string, number>();
     for (const s of snapshots) {
-      dateMap.set(s.date, s.netWorthValue);
+      dateMap.set(s.date, s.netWorthValue ?? s.totalValue);
     }
 
     const result: { date: string; return1Y: number }[] = [];
@@ -42,7 +42,7 @@ export function RollingReturnsChart({ snapshots, timeRange }: Props) {
       }
 
       if (closest && closest.value > 0) {
-        const ret = ((s.netWorthValue - closest.value) / closest.value) * 100;
+        const ret = (((s.netWorthValue ?? s.totalValue) - closest.value) / closest.value) * 100;
         result.push({
           date: s.date,
           return1Y: Math.round(ret * 100) / 100,

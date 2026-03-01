@@ -23,7 +23,7 @@ function computeNWCAGR(snapshots: PortfolioSnapshot[]): number | null {
   const sorted = [...snapshots].sort((a, b) => a.date.localeCompare(b.date));
   const startValue = sorted[0].netWorthValue ?? sorted[0].totalValue;
   const endValue = sorted[sorted.length - 1].netWorthValue ?? sorted[sorted.length - 1].totalValue;
-  if (startValue <= 0) return null;
+  if (!startValue || !endValue || startValue <= 0) return null;
   const days =
     (new Date(sorted[sorted.length - 1].date).getTime() - new Date(sorted[0].date).getTime()) /
     (1000 * 60 * 60 * 24);

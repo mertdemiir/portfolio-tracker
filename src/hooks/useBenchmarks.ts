@@ -76,7 +76,7 @@ export function useBenchmarks() {
           const timeVal = Number(row[timeHeader]);
           const closeVal = Number(row[closeHeader]);
 
-          if (isNaN(timeVal) || isNaN(closeVal) || closeVal <= 0) continue;
+          if (isNaN(timeVal) || isNaN(closeVal) || closeVal <= 0 || timeVal <= 0) continue;
 
           // Convert Unix timestamp (seconds) to YYYY-MM-DD
           const date = new Date(timeVal * 1000).toISOString().split('T')[0];

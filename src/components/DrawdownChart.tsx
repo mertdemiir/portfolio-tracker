@@ -20,7 +20,7 @@ export function DrawdownChart({ snapshots, timeRange }: Props) {
 
     let ath = 0;
     return filtered.map((s) => {
-      const value = s.netWorthValue;
+      const value = s.netWorthValue ?? s.totalValue;
       if (value > ath) ath = value;
       const drawdown = ath > 0 ? ((value - ath) / ath) * 100 : 0;
       return {

@@ -42,7 +42,7 @@ function buildSummaries(
     const currentKey = keys[i];
     const currentGroup = groups.get(currentKey)!;
     const endValue = currentGroup[currentGroup.length - 1].value;
-    const startValue = i > 0 ? groups.get(keys[i - 1])![groups.get(keys[i - 1])!.length - 1].value : endValue;
+    const startValue = i > 0 ? groups.get(keys[i - 1])![groups.get(keys[i - 1])!.length - 1].value : currentGroup[0].value;
     const change = endValue - startValue;
     const changePercent = startValue > 0 ? (change / startValue) * 100 : 0;
 

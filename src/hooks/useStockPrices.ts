@@ -44,6 +44,7 @@ export function useStockPrices(apiKey: string) {
       const needsApi = stale.filter((h) => h.assetType === 'stock' || h.assetType === 'etf' || h.assetType === 'crypto' || isLiveMetal(h));
       const instant = stale.filter((h) => (h.assetType === 'cash' || h.assetType === 'custom') || (h.assetType === 'metal' && !isLiveMetal(h)));
 
+      const failedTickers: string[] = [];
       try {
         for (const holding of instant) {
           const key = cacheKey(holding);
@@ -58,18 +59,31 @@ export function useStockPrices(apiKey: string) {
           try {
             const key = cacheKey(holding);
             const quote = await fetchPriceForHolding(holding, apiKey);
+            // For metals (which return change: 0 from API), compute daily change
+            // from previously cached price if available
+            if (isLiveMetal(holding) && quote.change === 0) {
+              const prev = currentCache[key];
+              if (prev && prev.currentPrice > 0) {
+                quote.change = quote.currentPrice - prev.currentPrice;
+                quote.changePercent = (quote.change / prev.currentPrice) * 100;
+              }
+            }
             setPriceCache((prev) => ({ ...prev, [key]: quote }));
           } catch (err) {
             if (err instanceof Error && err.message.includes('Rate limit')) {
               setError(err.message);
               break;
             }
+            failedTickers.push(holding.ticker);
           }
           if (needsApi.indexOf(holding) < needsApi.length - 1) {
             await delay(REQUEST_DELAY);
           }
         }
       } finally {
+        if (failedTickers.length > 0) {
+          setError(`Failed to fetch prices for ${failedTickers.join(', ')}`);
+        }
         setLoading(false);
       }
     },

@@ -29,7 +29,7 @@ export function CurrencyExposureChart({ holdings }: Props) {
     }
 
     const total = Array.from(currencyMap.values()).reduce((a, b) => a + b, 0);
-    if (total === 0) return [];
+    if (total <= 0) return [];
 
     return Array.from(currencyMap.entries())
       .map(([currency, value]) => ({

@@ -3,10 +3,11 @@ import { Plus, Trash2, X, Check, ArrowUpDown } from 'lucide-react';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { formatCurrency, formatSignedCurrency, formatDate } from '../utils/formatters';
 import { AddTransactionModal } from './AddTransactionModal';
+import { DEFAULT_PORTFOLIO_ID } from '../types';
 type SortKey = 'date' | 'ticker' | 'type' | 'total';
 
 export function TransactionLog() {
-  const { transactions, deleteTransaction, holdings, updateHolding, addHolding, deleteHolding } = usePortfolioContext();
+  const { transactions, deleteTransaction, holdings, updateHolding, addHolding, deleteHolding, activePortfolioId } = usePortfolioContext();
   const [showModal, setShowModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'buy' | 'sell'>('all');
@@ -194,7 +195,11 @@ export function TransactionLog() {
                           <button
                             onClick={() => {
                               // Reverse the holding effect before deleting
-                              const match = holdings.find((h) => h.ticker.toUpperCase() === t.ticker.toUpperCase());
+                              // Prefer matching by portfolio, then fall back to any match
+                              const allMatches = holdings.filter((h) => h.ticker.toUpperCase() === t.ticker.toUpperCase());
+                              const match = allMatches.find((h) => (h.portfolioId || DEFAULT_PORTFOLIO_ID) === activePortfolioId)
+                                || allMatches[0]
+                                || null;
                               if (match) {
                                 const { id, ...data } = match;
                                 if (t.type === 'buy') {
@@ -214,15 +219,18 @@ export function TransactionLog() {
                                 }
                               } else if (t.type === 'sell') {
                                 // Holding was fully sold and deleted — recreate it
+                                // Use stored metadata from transaction, or sensible defaults
                                 addHolding({
                                   ticker: t.ticker,
                                   name: t.name,
                                   shares: t.shares,
                                   buyPrice: t.costBasisPerShare ?? t.pricePerShare,
                                   buyDate: t.date,
-                                  assetType: 'custom',
+                                  assetType: t.assetType ?? 'stock',
                                   inPortfolio: true,
-                                  category: 'other',
+                                  category: t.category ?? 'investments',
+                                  ...(t.currency ? { currency: t.currency } : {}),
+                                  ...(t.portfolioId ? { portfolioId: t.portfolioId } : {}),
                                 });
                               }
                               deleteTransaction(t.id);

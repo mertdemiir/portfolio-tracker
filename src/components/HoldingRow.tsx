@@ -40,11 +40,17 @@ function getStaleWarning(holding: EnrichedHolding, priceCache: PriceCache): stri
   if (holding.assetType === 'metal' || holding.assetType === 'custom') {
     const lastUpdate = holding.lastManualPriceUpdate;
     if (lastUpdate) {
-      const days = (Date.now() - new Date(lastUpdate).getTime()) / (1000 * 60 * 60 * 24);
-      if (days > 30) return `Manual price last updated ${Math.floor(days)}d ago`;
+      const parsed = new Date(lastUpdate).getTime();
+      if (!isNaN(parsed)) {
+        const days = (Date.now() - parsed) / (1000 * 60 * 60 * 24);
+        if (days > 30) return `Manual price last updated ${Math.floor(days)}d ago`;
+      }
     } else {
-      const days = (Date.now() - new Date(holding.buyDate).getTime()) / (1000 * 60 * 60 * 24);
-      if (days > 30) return 'Manual price may be outdated';
+      const parsed = new Date(holding.buyDate).getTime();
+      if (!isNaN(parsed)) {
+        const days = (Date.now() - parsed) / (1000 * 60 * 60 * 24);
+        if (days > 30) return 'Manual price may be outdated';
+      }
     }
     return null;
   }

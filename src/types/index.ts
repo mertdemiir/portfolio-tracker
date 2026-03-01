@@ -72,6 +72,11 @@ export interface Transaction {
   total: number;
   notes?: string;
   costBasisPerShare?: number; // recorded on sell txns for realized P&L
+  // Metadata for undo reconstruction (recorded on sell txns)
+  assetType?: AssetType;
+  category?: string;
+  currency?: string;
+  portfolioId?: string;
 }
 
 export interface FinnhubSearchResult {

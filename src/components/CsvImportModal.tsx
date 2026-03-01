@@ -147,15 +147,27 @@ export function CsvImportModal({ onClose }: CsvImportModalProps) {
         const shares = parseFloat(getRowValue(row, 'shares'));
         const buyPrice = parseFloat(getRowValue(row, 'buyPrice')) || 0;
         const buyDate = getRowValue(row, 'buyDate').trim() || todayDateString();
+        const rawAssetType = getRowValue(row, 'assetType').trim().toLowerCase();
+        const validTypes = ['stock', 'etf', 'crypto', 'metal', 'cash', 'custom'];
+        const mappedAssetType = validTypes.includes(rawAssetType) ? rawAssetType as import('../types').AssetType : 'stock';
+        const rawCategory = getRowValue(row, 'category').trim();
+        const mappedCategory = rawCategory || (() => {
+          switch (mappedAssetType) {
+            case 'stock': case 'etf': case 'crypto': return 'investments';
+            case 'metal': return 'precious-metals';
+            case 'cash': return 'cash-savings';
+            default: return 'other';
+          }
+        })();
         addHolding({
           ticker,
           name,
           shares,
           buyPrice,
           buyDate,
-          assetType: 'stock',
+          assetType: mappedAssetType,
           inPortfolio: true,
-          category: 'investments',
+          category: mappedCategory,
         });
         imported++;
       } else {

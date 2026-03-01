@@ -124,6 +124,8 @@ export function SettingsModal({
       portfolios: JSON.parse(localStorage.getItem('portfolios') || '[]'),
       liabilities: JSON.parse(localStorage.getItem('liabilities') || '[]'),
       annotations: JSON.parse(localStorage.getItem('timeline-annotations') || '[]'),
+      theme: localStorage.getItem('theme')?.replace(/^"|"$/g, '') || 'dark',
+      benchmarkEnabled: JSON.parse(localStorage.getItem('benchmark-enabled') || '{}'),
     };
 
     if (isElectron) {
@@ -197,6 +199,8 @@ export function SettingsModal({
       if (backup.portfolios) localStorage.setItem('portfolios', JSON.stringify(backup.portfolios));
       if (backup.liabilities) localStorage.setItem('liabilities', JSON.stringify(backup.liabilities));
       if (backup.annotations) localStorage.setItem('timeline-annotations', JSON.stringify(backup.annotations));
+      if (backup.theme) localStorage.setItem('theme', JSON.stringify(backup.theme));
+      if (backup.benchmarkEnabled) localStorage.setItem('benchmark-enabled', JSON.stringify(backup.benchmarkEnabled));
 
       window.location.reload();
     } catch {
@@ -469,7 +473,7 @@ export function SettingsModal({
             </button>
           </div>
           {backupStatus && (
-            <p className="text-xs text-emerald-600 mt-2">{backupStatus}</p>
+            <p className={`text-xs mt-2 ${backupStatus.includes('failed') || backupStatus.includes('Invalid') || backupStatus.includes('Failed') ? 'text-red-500' : 'text-emerald-600'}`}>{backupStatus}</p>
           )}
         </div>
 

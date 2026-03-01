@@ -3,7 +3,7 @@ import { usePortfolioContext } from '../context/PortfolioContext';
 import { getChartColors } from '../hooks/useTheme';
 import type { PortfolioSnapshot, NWMilestone, BenchmarkDataPoint, BenchmarkEnabled, BenchmarkId, TimeRange, TimelineAnnotation } from '../types';
 import { BENCHMARK_CONFIG } from '../types';
-import { formatCurrency } from '../utils/formatters';
+import { formatCurrency, formatCompactCurrency } from '../utils/formatters';
 
 interface NetWorthLineChartProps {
   snapshots: PortfolioSnapshot[];
@@ -288,7 +288,7 @@ export function NetWorthLineChart({
           <XAxis dataKey="date" fontSize={12} stroke={cc.axis} />
           <YAxis
             domain={[yMin, yMax]}
-            tickFormatter={(v) => `$${(v / 1000).toFixed(0)}K`}
+            tickFormatter={(v) => formatCompactCurrency(v)}
             fontSize={12}
             stroke={cc.axis}
           />

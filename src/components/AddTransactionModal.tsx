@@ -8,7 +8,7 @@ interface AddTransactionModalProps {
 }
 
 export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
-  const { holdings, addTransaction, updateHolding, deleteHolding } = usePortfolioContext();
+  const { holdings, addTransaction, updateHolding, deleteHolding, activePortfolioId } = usePortfolioContext();
   const [date, setDate] = useState(todayDateString());
   const [ticker, setTicker] = useState('');
   const [name, setName] = useState('');
@@ -17,6 +17,7 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
   const [pricePerShare, setPricePerShare] = useState('');
   const [notes, setNotes] = useState('');
   const [suggestions, setSuggestions] = useState<{ ticker: string; name: string }[]>([]);
+  const [sellError, setSellError] = useState('');
 
   useEffect(() => {
     function handleEsc(e: KeyboardEvent) {
@@ -51,12 +52,29 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setSellError('');
     const s = parseFloat(shares);
     const p = parseFloat(pricePerShare);
     if (!date || !ticker.trim() || isNaN(s) || s <= 0 || isNaN(p) || p <= 0) return;
 
     const tickerNorm = ticker.trim().toUpperCase();
-    const match = holdings.find((h) => h.ticker.toUpperCase() === tickerNorm);
+    // Find matching holding — prefer active portfolio, then any
+    const allMatches = holdings.filter((h) => h.ticker.toUpperCase() === tickerNorm);
+    const match = allMatches.find((h) => (h.portfolioId || 'default') === activePortfolioId)
+      || allMatches[0]
+      || null;
+
+    // Sell validation: must have a matching holding with enough shares
+    if (type === 'sell') {
+      if (!match) {
+        setSellError(`No holding found for ${tickerNorm}. Cannot sell what you don't own.`);
+        return;
+      }
+      if (s > match.shares) {
+        setSellError(`You only own ${match.shares} shares of ${tickerNorm}. Cannot sell ${s}.`);
+        return;
+      }
+    }
 
     addTransaction({
       date,
@@ -84,7 +102,8 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
         const newCost = s * p;
         const newShares = match.shares + s;
         const avgPrice = (oldCost + newCost) / newShares;
-        updateHolding(id, { ...data, shares: newShares, buyPrice: avgPrice, buyDate: date });
+        // Preserve original buyDate on DCA — don't overwrite with today's date
+        updateHolding(id, { ...data, shares: newShares, buyPrice: avgPrice });
       }
     }
 
@@ -229,6 +248,11 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
               className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
             />
           </div>
+
+          {/* Sell error */}
+          {sellError && (
+            <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{sellError}</p>
+          )}
 
           {/* Submit */}
           <button

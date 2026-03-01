@@ -40,13 +40,20 @@ export function formatDate(dateStr: string): string {
 export function formatCompactCurrency(value: number, currency?: string): string {
   const cur = currency || _baseCurrency;
   const symbol = getCurrencySymbol(cur);
-  if (Math.abs(value) >= 1_000_000) {
-    return `${symbol}${(value / 1_000_000).toFixed(2)}M`;
+  const sign = value < 0 ? '-' : '';
+  const abs = Math.abs(value);
+  if (abs >= 1_000_000) {
+    return `${sign}${symbol}${(abs / 1_000_000).toFixed(2)}M`;
   }
-  if (Math.abs(value) >= 1_000) {
-    return `${symbol}${(value / 1_000).toFixed(1)}K`;
+  if (abs >= 1_000) {
+    return `${sign}${symbol}${(abs / 1_000).toFixed(1)}K`;
   }
   return formatCurrency(value, cur);
+}
+
+/** Get the currency symbol for the current base currency */
+export function getBaseCurrencySymbol(): string {
+  return getCurrencySymbol(_baseCurrency);
 }
 
 export function todayDateString(): string {

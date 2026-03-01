@@ -146,7 +146,7 @@ export function Charts() {
 
           {/* Currency Exposure */}
           <div className="mb-6">
-            <CurrencyExposureChart holdings={allEnrichedHoldings} />
+            <CurrencyExposureChart holdings={filteredEnrichedHoldings} />
           </div>
 
           {/* Allocation vs Targets */}
@@ -175,29 +175,39 @@ export function Charts() {
       )}
 
       {/* Generate Report Button */}
-      <div className="flex justify-end mb-4 mt-6">
-        <button
-          onClick={() => setShowPdfModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors"
-        >
-          <FileText className="w-4 h-4" />
-          Generate Report
-        </button>
-      </div>
+      {hasHoldings && (
+        <div className="flex justify-end mb-4 mt-6">
+          <button
+            onClick={() => setShowPdfModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors"
+          >
+            <FileText className="w-4 h-4" />
+            Generate Report
+          </button>
+        </div>
+      )}
 
       {/* Monthly/Yearly Summary */}
-      <h2 className="text-lg font-semibold text-t-primary mb-4">Summary</h2>
-      <MonthlySummary />
+      {hasHoldings && (
+        <>
+          <h2 className="text-lg font-semibold text-t-primary mb-4">Summary</h2>
+          <MonthlySummary />
+        </>
+      )}
 
       {/* Snapshot History - collapsible */}
-      <button
-        onClick={() => setShowHistory((v) => !v)}
-        className="flex items-center gap-1.5 text-lg font-semibold text-t-primary mt-6 mb-4 hover:text-t-secondary transition-colors"
-      >
-        {showHistory ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
-        History
-      </button>
-      {showHistory && <SnapshotManager />}
+      {hasHoldings && (
+        <>
+          <button
+            onClick={() => setShowHistory((v) => !v)}
+            className="flex items-center gap-1.5 text-lg font-semibold text-t-primary mt-6 mb-4 hover:text-t-secondary transition-colors"
+          >
+            {showHistory ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+            History
+          </button>
+          {showHistory && <SnapshotManager />}
+        </>
+      )}
 
       {showPdfModal && <PdfReportModal onClose={() => setShowPdfModal(false)} />}
       {showAddAnnotation && (

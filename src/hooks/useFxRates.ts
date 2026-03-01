@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import type { FxRates } from '../types';
 
@@ -6,10 +6,11 @@ const FX_CACHE_DURATION = 6 * 60 * 60 * 1000; // 6 hours
 
 export function useFxRates(baseCurrency: string) {
   const [fxRates, setFxRates] = useLocalStorage<FxRates | null>('fx-rates', null);
+  const fxRatesRef = useRef(fxRates);
+  fxRatesRef.current = fxRates;
 
   const fetchRates = useCallback(async () => {
     if (baseCurrency === 'USD') {
-      // No need to fetch if base is USD — prices are already in USD
       return;
     }
     try {
@@ -20,6 +21,7 @@ export function useFxRates(baseCurrency: string) {
         base: baseCurrency,
         date: data.date,
         rates: data.rates,
+        fetchedAt: Date.now(),
       });
     } catch {
       // silently fail, keep cached rates
@@ -27,17 +29,17 @@ export function useFxRates(baseCurrency: string) {
   }, [baseCurrency, setFxRates]);
 
   useEffect(() => {
-    // Fetch if no cache, wrong base, or stale
+    // Use ref to avoid fxRates in deps (prevents fetch loop)
+    const current = fxRatesRef.current;
     const needsFetch =
       baseCurrency !== 'USD' &&
-      (!fxRates || fxRates.base !== baseCurrency || isStale(fxRates.date));
+      (!current || current.base !== baseCurrency || isStale(current));
     if (needsFetch) fetchRates();
 
-    // Auto-refresh every 6 hours
     if (baseCurrency === 'USD') return;
     const interval = setInterval(fetchRates, FX_CACHE_DURATION);
     return () => clearInterval(interval);
-  }, [baseCurrency, fxRates, fetchRates]);
+  }, [baseCurrency, fetchRates]);
 
   /**
    * Convert an amount from a source currency to the base currency.
@@ -67,7 +69,8 @@ export function useFxRates(baseCurrency: string) {
   return { fxRates, convertToBase, fetchRates };
 }
 
-function isStale(dateStr: string): boolean {
-  const rateDate = new Date(dateStr).getTime();
-  return Date.now() - rateDate > FX_CACHE_DURATION;
+function isStale(rates: FxRates): boolean {
+  // Use fetchedAt timestamp if available, fall back to API date string
+  const timestamp = rates.fetchedAt || new Date(rates.date).getTime();
+  return Date.now() - timestamp > FX_CACHE_DURATION;
 }

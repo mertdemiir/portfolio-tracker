@@ -85,7 +85,7 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
               </div>
             </div>
             <div>
-              <div style={{ fontSize: 11, color: s.faint, textTransform: 'uppercase', letterSpacing: 1 }}>Total Return</div>
+              <div style={{ fontSize: 11, color: s.faint, textTransform: 'uppercase', letterSpacing: 1 }}>Unrealized Return</div>
               <div style={{ fontSize: 16, fontWeight: 600, color: portfolioSummary.totalGainLoss >= 0 ? '#34d399' : '#f87171', marginTop: 2 }}>
                 {anonymize ? formatPercent(portfolioSummary.totalGainLossPercent) : `${formatSignedCurrency(portfolioSummary.totalGainLoss)} (${formatPercent(portfolioSummary.totalGainLossPercent)})`}
               </div>

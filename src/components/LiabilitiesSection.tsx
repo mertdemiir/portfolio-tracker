@@ -21,11 +21,11 @@ export function LiabilitiesSection({ showTRY, tryRate }: LiabilitiesSectionProps
     return LIABILITY_CATEGORIES.find((c) => c.key === key) || { label: key, icon: '📋' };
   }
 
-  function formatValue(value: number): string {
+  function formatValue(value: number, currency?: string): string {
     if (showTRY && tryRate) {
       return `₺${(value * tryRate).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
     }
-    return formatCurrency(value);
+    return formatCurrency(value, currency);
   }
 
   // Group by category
@@ -95,7 +95,7 @@ export function LiabilitiesSection({ showTRY, tryRate }: LiabilitiesSectionProps
                           </div>
                           <div className="flex items-center gap-1.5">
                             <span className="text-sm font-medium text-red-500">
-                              {formatValue(l.balance)}
+                              {formatValue(l.balance, l.currency)}
                             </span>
                             <button
                               onClick={() => setEditingLiability(l)}

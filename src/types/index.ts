@@ -185,6 +185,7 @@ export interface FxRates {
   base: string;
   date: string;
   rates: Record<string, number>;
+  fetchedAt?: number; // timestamp for staleness check
 }
 
 export const SUPPORTED_CURRENCIES = [

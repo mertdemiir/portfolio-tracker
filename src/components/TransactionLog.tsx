@@ -6,7 +6,7 @@ import { AddTransactionModal } from './AddTransactionModal';
 type SortKey = 'date' | 'ticker' | 'type' | 'total';
 
 export function TransactionLog() {
-  const { transactions, deleteTransaction, holdings, updateHolding, addHolding } = usePortfolioContext();
+  const { transactions, deleteTransaction, holdings, updateHolding, addHolding, deleteHolding } = usePortfolioContext();
   const [showModal, setShowModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'buy' | 'sell'>('all');
@@ -198,13 +198,16 @@ export function TransactionLog() {
                               if (match) {
                                 const { id, ...data } = match;
                                 if (t.type === 'buy') {
-                                  // Undo buy: reduce shares, recalculate cost basis
+                                  // Undo buy: reduce shares
                                   const newShares = match.shares - t.shares;
                                   if (newShares > 0) {
-                                    const newCost = match.shares * match.buyPrice - t.shares * t.pricePerShare;
-                                    updateHolding(id, { ...data, shares: newShares, buyPrice: newCost / newShares });
+                                    // Keep cost basis as-is — recalculating is unreliable
+                                    // when intervening sells have changed the share count
+                                    updateHolding(id, { ...data, shares: newShares });
+                                  } else {
+                                    // This buy created the entire holding — remove it
+                                    deleteHolding(id);
                                   }
-                                  // If newShares <= 0, the buy created this holding entirely — just let it stay
                                 } else {
                                   // Undo sell: restore shares
                                   updateHolding(id, { ...data, shares: match.shares + t.shares });
@@ -215,7 +218,7 @@ export function TransactionLog() {
                                   ticker: t.ticker,
                                   name: t.name,
                                   shares: t.shares,
-                                  buyPrice: t.pricePerShare,
+                                  buyPrice: t.costBasisPerShare ?? t.pricePerShare,
                                   buyDate: t.date,
                                   assetType: 'custom',
                                   inPortfolio: true,

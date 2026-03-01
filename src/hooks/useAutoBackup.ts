@@ -30,6 +30,18 @@ function gatherBackupData(): string {
     transactions: JSON.parse(localStorage.getItem('transactions') || '[]'),
     targetAllocations: JSON.parse(localStorage.getItem('target-allocations') || '[]'),
     nwMilestones: JSON.parse(localStorage.getItem('nw-milestones') || '[]'),
+    benchmarkDataSpx: JSON.parse(localStorage.getItem('benchmark-data-spx') || '[]'),
+    benchmarkDataBtc: JSON.parse(localStorage.getItem('benchmark-data-btc') || '[]'),
+    benchmarkDataGold: JSON.parse(localStorage.getItem('benchmark-data-gold') || '[]'),
+    accentColor: localStorage.getItem('accent-color')?.replace(/^"|"$/g, '') || '#3b82f6',
+    watchlistItems: JSON.parse(localStorage.getItem('watchlist-items') || '[]'),
+    holdingOrder: JSON.parse(localStorage.getItem('holding-order') || '[]'),
+    baseCurrency: localStorage.getItem('base-currency')?.replace(/^"|"$/g, '') || 'USD',
+    portfolios: JSON.parse(localStorage.getItem('portfolios') || '[]'),
+    liabilities: JSON.parse(localStorage.getItem('liabilities') || '[]'),
+    annotations: JSON.parse(localStorage.getItem('timeline-annotations') || '[]'),
+    theme: localStorage.getItem('theme')?.replace(/^"|"$/g, '') || 'dark',
+    benchmarkEnabled: JSON.parse(localStorage.getItem('benchmark-enabled') || '{}'),
   };
   return JSON.stringify(backup, null, 2);
 }

@@ -229,13 +229,24 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     [customCategories]
   );
 
-  // Realized P&L: sum of (sellPrice - costBasis) * shares for all sell transactions
-  const realizedPnl = useMemo(
-    () => transactions
-      .filter((t) => t.type === 'sell' && t.costBasisPerShare !== undefined)
-      .reduce((sum, t) => sum + (t.pricePerShare - t.costBasisPerShare!) * t.shares, 0),
-    [transactions]
-  );
+  // Realized P&L: sum of (sellPrice - costBasis) * shares for sell transactions
+  // filtered by active portfolio (match ticker to holdings in active portfolio)
+  const realizedPnl = useMemo(() => {
+    const sellTxns = transactions.filter((t) => t.type === 'sell' && t.costBasisPerShare !== undefined);
+
+    // If viewing a specific portfolio, only include sells whose ticker matches a holding in that portfolio
+    const filteredSells = activePortfolioId === 'all'
+      ? sellTxns
+      : sellTxns.filter((t) => {
+          return holdings.some(
+            (h) =>
+              h.ticker.toUpperCase() === t.ticker.toUpperCase() &&
+              (h.portfolioId || DEFAULT_PORTFOLIO_ID) === activePortfolioId
+          );
+        });
+
+    return filteredSells.reduce((sum, t) => sum + (t.pricePerShare - t.costBasisPerShare!) * t.shares, 0);
+  }, [transactions, activePortfolioId, holdings]);
 
   // Save daily snapshot with NW, portfolio, and liabilities values
   useEffect(() => {
@@ -244,7 +255,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     }
   }, [allEnrichedHoldings.length, netWorthSummary.totalNetWorth, netWorthSummary.totalPortfolioValue, netWorthSummary.totalLiabilities, netWorthSummary.totalAssets, saveSnapshot]);
 
-  const value: PortfolioContextValue = {
+  const value: PortfolioContextValue = useMemo(() => ({
     apiKey,
     setApiKey,
     hasApiKey,
@@ -256,7 +267,6 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     netWorthSummary,
     portfolioEnrichedHoldings,
     portfolioSummary,
-    // Backward compat
     enrichedHoldings: allEnrichedHoldings,
     summary: portfolioSummary,
     snapshots,
@@ -301,7 +311,18 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     deleteLiability,
     filteredEnrichedHoldings,
     filteredPortfolioSummary,
-  };
+  }), [
+    apiKey, setApiKey, hasApiKey, holdings, addHolding, updateHolding, deleteHolding,
+    allEnrichedHoldings, netWorthSummary, portfolioEnrichedHoldings, portfolioSummary,
+    snapshots, addManualSnapshot, deleteSnapshot, priceCache, pricesLoading, priceError,
+    refreshPrices, customCategories, allCategories, addCustomCategory, deleteCustomCategory,
+    targetAllocations, setTargetAllocation, removeTargetAllocation, transactions, addTransaction,
+    deleteTransaction, realizedPnl, benchmarkData, benchmarkEnabled, toggleBenchmark,
+    importBenchmarkCsv, clearBenchmark, getBenchmarkDateRange, theme, setTheme, accentColor,
+    setAccentColor, baseCurrency, setBaseCurrency, portfolios, activePortfolioId,
+    setActivePortfolioId, createPortfolio, renamePortfolio, deletePortfolio, liabilities,
+    addLiability, updateLiability, deleteLiability, filteredEnrichedHoldings, filteredPortfolioSummary,
+  ]);
 
   return <PortfolioCtx.Provider value={value}>{children}</PortfolioCtx.Provider>;
 }

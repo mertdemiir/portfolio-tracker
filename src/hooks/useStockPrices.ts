@@ -19,14 +19,18 @@ export function useStockPrices(apiKey: string) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef(false);
+  // Use ref to read priceCache without it being a dependency
+  const priceCacheRef = useRef(priceCache);
+  priceCacheRef.current = priceCache;
 
   const fetchPrices = useCallback(
     async (holdings: Holding[]) => {
       if (holdings.length === 0) return;
 
+      const currentCache = priceCacheRef.current;
       const stale = holdings.filter((h) => {
         const key = cacheKey(h);
-        const cached = priceCache[key];
+        const cached = currentCache[key];
         return !cached || !isFresh(cached.lastUpdated);
       });
 
@@ -36,24 +40,19 @@ export function useStockPrices(apiKey: string) {
       setError(null);
       abortRef.current = false;
 
-      // Separate holdings that need network requests from instant ones
       const isLiveMetal = (h: Holding) => h.assetType === 'metal' && (LIVE_METAL_TICKERS as readonly string[]).includes(h.ticker);
       const needsApi = stale.filter((h) => h.assetType === 'stock' || h.assetType === 'etf' || h.assetType === 'crypto' || isLiveMetal(h));
       const instant = stale.filter((h) => (h.assetType === 'cash' || h.assetType === 'custom') || (h.assetType === 'metal' && !isLiveMetal(h)));
 
       try {
-        // Process instant types immediately
         for (const holding of instant) {
           const key = cacheKey(holding);
           const quote = await fetchPriceForHolding(holding, apiKey);
           setPriceCache((prev) => ({ ...prev, [key]: quote }));
         }
 
-        // Process API types with delays
         for (const holding of needsApi) {
           if (abortRef.current) break;
-
-          // Skip stock/etf if no API key
           if ((holding.assetType === 'stock' || holding.assetType === 'etf') && !apiKey) continue;
 
           try {
@@ -65,7 +64,6 @@ export function useStockPrices(apiKey: string) {
               setError(err.message);
               break;
             }
-            // Skip individual ticker errors
           }
           if (needsApi.indexOf(holding) < needsApi.length - 1) {
             await delay(REQUEST_DELAY);
@@ -75,7 +73,7 @@ export function useStockPrices(apiKey: string) {
         setLoading(false);
       }
     },
-    [apiKey, priceCache, setPriceCache]
+    [apiKey, setPriceCache] // removed priceCache dep — read via ref
   );
 
   useEffect(() => {

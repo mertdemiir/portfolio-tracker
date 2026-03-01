@@ -58,8 +58,12 @@ export function usePortfolio() {
               portfolioValue: s.portfolioValue ?? s.totalValue,
             };
           }
-          // Cleanup: manual NW-only entry that was incorrectly given portfolioValue
+          // Cleanup: only strip portfolioValue from manual snapshots (with name)
+          // that were incorrectly given portfolioValue by a prior migration.
+          // Auto snapshots legitimately have portfolioValue === netWorthValue
+          // when 100% of assets are in portfolio with no liabilities.
           if (
+            s.name &&
             s.portfolioValue !== undefined &&
             s.portfolioValue === s.totalValue &&
             s.totalValue === s.netWorthValue
@@ -109,7 +113,8 @@ export function usePortfolio() {
           ...(totalLiabilities !== undefined && totalLiabilities > 0 && { totalLiabilities }),
         };
         if (existing) {
-          return prev.map((s) => (s.date === today ? snapshot : s));
+          // Preserve manual snapshot name if it was set
+          return prev.map((s) => (s.date === today ? { ...snapshot, ...(s.name ? { name: s.name } : {}) } : s));
         }
         return [...prev, snapshot];
       });

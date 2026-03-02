@@ -20,7 +20,7 @@ export function GainLossBarChart({ holdings }: GainLossBarChartProps) {
     }));
 
   return (
-    <div className="bg-surface-card rounded-xl border border-b-default p-5">
+    <div className="bg-surface-card card-radius card-shadow p-5">
       <h3 className="text-sm font-semibold text-t-primary mb-4">Gain/Loss by Holding</h3>
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={data} layout="vertical" margin={{ left: 10, right: 20 }}>
@@ -40,11 +40,12 @@ export function GainLossBarChart({ holdings }: GainLossBarChartProps) {
           <Tooltip
             formatter={(value) => formatCurrency(value as number)}
             contentStyle={{
-              borderRadius: '8px',
+              borderRadius: '10px',
               border: `1px solid ${cc.tooltipBorder}`,
               fontSize: '13px',
               backgroundColor: cc.tooltipBg,
               color: cc.tooltipText,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
             }}
           />
           <ReferenceLine x={0} stroke={cc.refLine} />

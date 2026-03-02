@@ -3,69 +3,192 @@
 /* ═══ Theme Variables ═══ */
 :root,
 [data-theme="light"] {
-  --surface: #f8fafc;
+  --surface: #f9fafb;
   --surface-card: #ffffff;
-  --surface-alt: #f1f5f9;
-  --surface-hover: #f1f5f9;
-  --surface-active: #e2e8f0;
-  --text-primary: #0f172a;
-  --text-secondary: #334155;
-  --text-muted: #64748b;
-  --text-faint: #94a3b8;
-  --border-default: #e2e8f0;
-  --border-subtle: #f1f5f9;
-  --border-input: #cbd5e1;
+  --surface-alt: #f3f4f6;
+  --surface-hover: #f3f4f6;
+  --surface-active: #e5e7eb;
+  --text-primary: #111827;
+  --text-secondary: #374151;
+  --text-muted: #6b7280;
+  --text-faint: #9ca3af;
+  --border-default: #e5e7eb;
+  --border-subtle: #f3f4f6;
+  --border-input: #d1d5db;
   --input-bg: #ffffff;
   --overlay: rgba(0, 0, 0, 0.4);
-  --chart-grid: #f1f5f9;
-  --chart-axis: #94a3b8;
+  --chart-grid: #f3f4f6;
+  --chart-axis: #9ca3af;
   --accent: #3b82f6;
   --accent-hover: #2563eb;
   --accent-light: #eff6ff;
+  --gain: #16a34a;
+  --loss: #dc2626;
+  --gain-bg: #f0fdf4;
+  --loss-bg: #fef2f2;
+  --font-body: "Inter", system-ui, -apple-system, sans-serif;
+  --font-heading: "Inter", system-ui, -apple-system, sans-serif;
+  --radius-card: 0.75rem;
+  --radius-badge: 0.375rem;
+  --radius-button: 0.5rem;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.08);
+  --letter-spacing-body: normal;
+  --letter-spacing-heading: normal;
+  --text-transform-badge: none;
 }
 
 [data-theme="dark"] {
-  --surface: #1e293b;
-  --surface-card: #334155;
-  --surface-alt: #3f4f63;
-  --surface-hover: #3f4f63;
-  --surface-active: #4b5e75;
-  --text-primary: #f1f5f9;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
-  --text-faint: #64748b;
-  --border-default: #475569;
-  --border-subtle: #3f4f63;
-  --border-input: #64748b;
-  --input-bg: #2d3d50;
+  --surface: #0c0f1a;
+  --surface-card: #151926;
+  --surface-alt: #1c2233;
+  --surface-hover: #1c2233;
+  --surface-active: #242d3f;
+  --text-primary: #f0f2f5;
+  --text-secondary: #b0b8c8;
+  --text-muted: #6b7a90;
+  --text-faint: #4a5568;
+  --border-default: #1f2937;
+  --border-subtle: #1a2030;
+  --border-input: #2d3a4d;
+  --input-bg: #111827;
   --overlay: rgba(0, 0, 0, 0.6);
-  --chart-grid: #3f4f63;
-  --chart-axis: #64748b;
+  --chart-grid: #1a2030;
+  --chart-axis: #4a5568;
   --accent: #3b82f6;
   --accent-hover: #2563eb;
   --accent-light: rgba(59, 130, 246, 0.15);
+  --gain: #22c55e;
+  --loss: #ef4444;
+  --gain-bg: rgba(34, 197, 94, 0.1);
+  --loss-bg: rgba(239, 68, 68, 0.1);
+  --font-body: "Inter", system-ui, -apple-system, sans-serif;
+  --font-heading: "Inter", system-ui, -apple-system, sans-serif;
+  --radius-card: 0.75rem;
+  --radius-badge: 0.375rem;
+  --radius-button: 0.5rem;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.08);
+  --letter-spacing-body: normal;
+  --letter-spacing-heading: normal;
+  --text-transform-badge: none;
 }
 
 [data-theme="midnight"] {
-  --surface: #020617;
-  --surface-card: #0f172a;
-  --surface-alt: #1e293b;
-  --surface-hover: #1e293b;
-  --surface-active: #334155;
-  --text-primary: #f8fafc;
-  --text-secondary: #e2e8f0;
-  --text-muted: #94a3b8;
-  --text-faint: #64748b;
-  --border-default: #1e293b;
-  --border-subtle: #172032;
-  --border-input: #334155;
-  --input-bg: #0f172a;
+  --surface: #050509;
+  --surface-card: #0d0d14;
+  --surface-alt: #16161f;
+  --surface-hover: #16161f;
+  --surface-active: #1f1f2c;
+  --text-primary: #f0f2f5;
+  --text-secondary: #b0b8c8;
+  --text-muted: #5a6478;
+  --text-faint: #3d4555;
+  --border-default: #1a1a28;
+  --border-subtle: #111118;
+  --border-input: #252535;
+  --input-bg: #0a0a12;
   --overlay: rgba(0, 0, 0, 0.7);
-  --chart-grid: #1e293b;
-  --chart-axis: #475569;
+  --chart-grid: #141420;
+  --chart-axis: #3d4555;
   --accent: #3b82f6;
   --accent-hover: #2563eb;
   --accent-light: rgba(59, 130, 246, 0.15);
+  --gain: #22c55e;
+  --loss: #ef4444;
+  --gain-bg: rgba(34, 197, 94, 0.1);
+  --loss-bg: rgba(239, 68, 68, 0.1);
+  --font-body: "Inter", system-ui, -apple-system, sans-serif;
+  --font-heading: "Inter", system-ui, -apple-system, sans-serif;
+  --radius-card: 0.75rem;
+  --radius-badge: 0.375rem;
+  --radius-button: 0.5rem;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.08);
+  --letter-spacing-body: normal;
+  --letter-spacing-heading: normal;
+  --text-transform-badge: none;
+}
+
+/* ═══ Heritage Theme — Private Bank / Financial Times ═══ */
+[data-theme="heritage"] {
+  --font-body: "Libre Baskerville", Georgia, "Times New Roman", serif;
+  --font-heading: "Libre Baskerville", Georgia, "Times New Roman", serif;
+  --letter-spacing-body: 0.01em;
+  --letter-spacing-heading: -0.01em;
+  --text-transform-badge: none;
+
+  --surface: #f5f0e8;
+  --surface-card: #faf7f2;
+  --surface-alt: #ede8de;
+  --surface-hover: #ede8de;
+  --surface-active: #e2dbd0;
+
+  --text-primary: #2c2418;
+  --text-secondary: #4a3f32;
+  --text-muted: #7a6e5d;
+  --text-faint: #a09580;
+
+  --border-default: #d9d0c1;
+  --border-subtle: #e8e1d5;
+  --border-input: #c4b9a8;
+  --input-bg: #faf7f2;
+  --overlay: rgba(44, 36, 24, 0.4);
+  --chart-grid: #e8e1d5;
+  --chart-axis: #a09580;
+
+  --accent: #b8860b;
+  --accent-hover: #9a7209;
+  --accent-light: rgba(184, 134, 11, 0.12);
+
+  --gain: #2d6a4f;
+  --loss: #9b2226;
+  --gain-bg: rgba(45, 106, 79, 0.08);
+  --loss-bg: rgba(155, 34, 38, 0.08);
+
+  --radius-card: 0.5rem;
+  --radius-badge: 0.25rem;
+  --radius-button: 0.375rem;
+  --shadow-card: 0 1px 4px rgba(44, 36, 24, 0.1);
+}
+
+/* ═══ Terminal Theme — Bloomberg / Sci-Fi HUD ═══ */
+[data-theme="terminal"] {
+  --font-body: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  --font-heading: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  --letter-spacing-body: -0.02em;
+  --letter-spacing-heading: -0.02em;
+  --text-transform-badge: uppercase;
+
+  --surface: #0a0a0a;
+  --surface-card: #111111;
+  --surface-alt: #1a1a1a;
+  --surface-hover: #1a1a1a;
+  --surface-active: #222222;
+
+  --text-primary: #00ff88;
+  --text-secondary: #00ddcc;
+  --text-muted: #5a7a6a;
+  --text-faint: #334a3f;
+
+  --border-default: #1a3a2a;
+  --border-subtle: #122218;
+  --border-input: #2a5a3a;
+  --input-bg: #0d0d0d;
+  --overlay: rgba(0, 0, 0, 0.8);
+  --chart-grid: #122218;
+  --chart-axis: #334a3f;
+
+  --accent: #00d4ff;
+  --accent-hover: #00b8e0;
+  --accent-light: rgba(0, 212, 255, 0.12);
+
+  --gain: #00ff88;
+  --loss: #ff3366;
+  --gain-bg: rgba(0, 255, 136, 0.08);
+  --loss-bg: rgba(255, 51, 102, 0.08);
+
+  --radius-card: 0;
+  --radius-badge: 0;
+  --radius-button: 0;
+  --shadow-card: none;
 }
 
 /* ═══ Register as Tailwind Colors ═══ */
@@ -86,14 +209,22 @@
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
   --color-accent-light: var(--accent-light);
+  --color-gain: var(--gain);
+  --color-loss: var(--loss);
+  --color-gain-bg: var(--gain-bg);
+  --color-loss-bg: var(--loss-bg);
 }
 
 body {
   margin: 0;
   min-height: 100vh;
   background-color: var(--surface);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  letter-spacing: var(--letter-spacing-body);
   color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* ═══ Form Element Theming ═══ */
@@ -109,12 +240,67 @@ textarea::placeholder {
   color: var(--text-faint);
 }
 
-/* Recharts Legend text */
+/* ═══ Recharts Theming ═══ */
 .recharts-legend-item-text {
   color: var(--text-secondary) !important;
 }
 
-/* Recharts tooltip label */
 .recharts-tooltip-label {
   color: var(--text-primary) !important;
+}
+
+/* ═══ Tabular Numbers for Financial Data ═══ */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ═══ Theme-Aware Structural Utilities ═══ */
+.card-radius { border-radius: var(--radius-card); }
+.badge-radius { border-radius: var(--radius-badge); }
+.button-radius { border-radius: var(--radius-button); }
+.card-shadow { box-shadow: var(--shadow-card); }
+.badge-transform { text-transform: var(--text-transform-badge); }
+
+/* ═══ Terminal Badge Brackets ═══ */
+[data-theme="terminal"] .badge-transform::before { content: "["; }
+[data-theme="terminal"] .badge-transform::after { content: "]"; }
+
+/* ═══ Modal Entrance Animation ═══ */
+@keyframes modal-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.animate-modal-enter {
+  animation: modal-enter 0.2s ease-out;
+}
+
+/* ═══ Scrollbar Styling ═══ */
+[data-theme="dark"],
+[data-theme="midnight"],
+[data-theme="terminal"] {
+  scrollbar-color: var(--border-default) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-faint);
 }

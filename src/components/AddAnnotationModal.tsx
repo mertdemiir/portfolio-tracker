@@ -37,8 +37,8 @@ export function AddAnnotationModal({ onAdd, onClose }: AddAnnotationModalProps) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-surface-card rounded-xl shadow-xl w-full max-w-sm p-5">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-surface-card rounded-2xl shadow-xl w-full max-w-sm p-5 animate-modal-enter">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold text-t-primary">Add Annotation</h2>
           <button onClick={onClose} className="p-1 hover:bg-surface-alt rounded-lg transition-colors">

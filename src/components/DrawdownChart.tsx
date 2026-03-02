@@ -32,7 +32,7 @@ export function DrawdownChart({ snapshots, timeRange }: Props) {
 
   if (data.length < 2) {
     return (
-      <div className="bg-surface-card rounded-xl border border-b-default p-4">
+      <div className="bg-surface-card card-radius card-shadow p-4">
         <h3 className="text-sm font-semibold text-t-primary mb-3">Drawdown</h3>
         <p className="text-xs text-t-faint text-center py-8">Not enough data yet.</p>
       </div>
@@ -40,11 +40,11 @@ export function DrawdownChart({ snapshots, timeRange }: Props) {
   }
 
   return (
-    <div className="bg-surface-card rounded-xl border border-b-default p-4">
+    <div className="bg-surface-card card-radius card-shadow p-4">
       <h3 className="text-sm font-semibold text-t-primary mb-3">Drawdown from ATH</h3>
       <ResponsiveContainer width="100%" height={200}>
         <AreaChart data={data}>
-          <CartesianGrid stroke={colors.grid} strokeDasharray="3 3" />
+          <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
           <XAxis
             dataKey="date"
             tick={{ fontSize: 10, fill: colors.axis }}
@@ -56,7 +56,14 @@ export function DrawdownChart({ snapshots, timeRange }: Props) {
             domain={['dataMin', 0]}
           />
           <Tooltip
-            contentStyle={{ background: colors.tooltipBg, border: `1px solid ${colors.tooltipBorder}`, borderRadius: 8, fontSize: 12, color: colors.tooltipText }}
+            contentStyle={{
+              background: colors.tooltipBg,
+              border: `1px solid ${colors.tooltipBorder}`,
+              borderRadius: 10,
+              fontSize: 12,
+              color: colors.tooltipText,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            }}
             labelFormatter={(d) => new Date(String(d)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             formatter={(v) => [`${Number(v).toFixed(2)}%`, 'Drawdown']}
           />
@@ -64,8 +71,9 @@ export function DrawdownChart({ snapshots, timeRange }: Props) {
             type="monotone"
             dataKey="drawdown"
             stroke="#ef4444"
-            fill="#ef444433"
-            strokeWidth={1.5}
+            fill="#ef4444"
+            fillOpacity={0.15}
+            strokeWidth={2}
           />
         </AreaChart>
       </ResponsiveContainer>

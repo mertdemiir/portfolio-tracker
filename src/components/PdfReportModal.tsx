@@ -93,8 +93,8 @@ export function PdfReportModal({ onClose }: PdfReportModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-surface-card rounded-xl shadow-xl w-full max-w-sm p-6">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-surface-card rounded-2xl shadow-xl w-full max-w-sm p-6 animate-modal-enter">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-accent" />

@@ -1,13 +1,8 @@
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { usePortfolioContext } from '../context/PortfolioContext';
-import { getChartColors } from '../hooks/useTheme';
+import { getChartColors, getChartPalette } from '../hooks/useTheme';
 import type { CategoryBreakdown } from '../types';
 import { formatCurrency } from '../utils/formatters';
-
-const COLORS = [
-  '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
-  '#06b6d4', '#f97316', '#ec4899', '#14b8a6', '#6366f1',
-];
 
 interface CategoryPieChartProps {
   categoryBreakdown: CategoryBreakdown[];
@@ -16,6 +11,7 @@ interface CategoryPieChartProps {
 export function CategoryPieChart({ categoryBreakdown }: CategoryPieChartProps) {
   const { theme } = usePortfolioContext();
   const cc = getChartColors(theme);
+  const COLORS = getChartPalette(theme);
   const data = categoryBreakdown.map((cat) => ({
     name: cat.label,
     value: cat.value,
@@ -27,7 +23,7 @@ export function CategoryPieChart({ categoryBreakdown }: CategoryPieChartProps) {
   }
 
   return (
-    <div className="bg-surface-card rounded-xl border border-b-default p-5">
+    <div className="bg-surface-card card-radius card-shadow p-5">
       <h3 className="text-sm font-semibold text-t-primary mb-4">Net Worth by Category</h3>
       <ResponsiveContainer width="100%" height={300}>
         <PieChart>
@@ -35,10 +31,11 @@ export function CategoryPieChart({ categoryBreakdown }: CategoryPieChartProps) {
             data={data}
             cx="50%"
             cy="50%"
-            innerRadius={60}
+            innerRadius={65}
             outerRadius={100}
             paddingAngle={2}
             dataKey="value"
+            animationDuration={800}
           >
             {data.map((_entry, index) => (
               <Cell key={index} fill={COLORS[index % COLORS.length]} />
@@ -47,11 +44,12 @@ export function CategoryPieChart({ categoryBreakdown }: CategoryPieChartProps) {
           <Tooltip
             formatter={(value) => formatCurrency(value as number)}
             contentStyle={{
-              borderRadius: '8px',
+              borderRadius: '10px',
               border: `1px solid ${cc.tooltipBorder}`,
               fontSize: '13px',
               backgroundColor: cc.tooltipBg,
               color: cc.tooltipText,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
             }}
           />
           <Legend

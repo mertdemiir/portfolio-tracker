@@ -12,12 +12,12 @@ export function AllocationTargetChart() {
 
   if (targetAllocations.length === 0) {
     return (
-      <div className="bg-surface-card rounded-xl border border-b-default p-5">
+      <div className="bg-surface-card card-radius card-shadow p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold text-t-primary">Allocation vs Targets</h3>
           <button
             onClick={() => setShowEditor(true)}
-            className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors"
+            className="flex items-center gap-1 text-xs font-medium text-accent hover:text-accent-hover transition-colors"
           >
             <Settings2 size={14} />
             Set Targets
@@ -48,12 +48,12 @@ export function AllocationTargetChart() {
     .filter(Boolean) as { name: string; actual: number; target: number; deviation: number }[];
 
   return (
-    <div className="bg-surface-card rounded-xl border border-b-default p-5">
+    <div className="bg-surface-card card-radius card-shadow p-5">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-t-primary">Allocation vs Targets</h3>
         <button
           onClick={() => setShowEditor(true)}
-          className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors"
+          className="flex items-center gap-1 text-xs font-medium text-accent hover:text-accent-hover transition-colors"
         >
           <Settings2 size={14} />
           Edit Targets
@@ -67,11 +67,12 @@ export function AllocationTargetChart() {
           <Tooltip
             formatter={(value) => `${Number(value).toFixed(1)}%`}
             contentStyle={{
-              borderRadius: '8px',
+              borderRadius: '10px',
               border: `1px solid ${cc.tooltipBorder}`,
               fontSize: '13px',
               backgroundColor: cc.tooltipBg,
               color: cc.tooltipText,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
             }}
           />
           <Bar dataKey="target" fill={cc.targetBar} radius={[0, 4, 4, 0]} barSize={12} name="target" />

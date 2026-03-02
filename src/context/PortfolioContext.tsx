@@ -29,6 +29,7 @@ import type {
   BenchmarkEnabled,
   BenchmarkId,
   ThemeId,
+  ThemePreference,
 } from '../types';
 
 interface PortfolioContextValue {
@@ -78,7 +79,8 @@ interface PortfolioContextValue {
   getBenchmarkDateRange: (key: BenchmarkId) => { from: string; to: string; count: number } | null;
   // Theme
   theme: ThemeId;
-  setTheme: (t: ThemeId) => void;
+  themePreference: ThemePreference;
+  setTheme: (t: ThemePreference) => void;
   accentColor: string;
   setAccentColor: (c: string) => void;
   // Currency
@@ -125,7 +127,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const { transactions, addTransaction, deleteTransaction } = useTransactions();
   const { benchmarkData, benchmarkEnabled, toggleBenchmark, importBenchmarkCsv, clearBenchmark, getBenchmarkDateRange } =
     useBenchmarks();
-  const { theme, setTheme, accentColor, setAccentColor } = useTheme();
+  const { theme, themePreference, setTheme, accentColor, setAccentColor } = useTheme();
   const [baseCurrency, setBaseCurrency] = useLocalStorage<string>('base-currency', 'USD');
   const { convertToBase } = useFxRates(baseCurrency);
   const {
@@ -304,6 +306,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     clearBenchmark,
     getBenchmarkDateRange,
     theme,
+    themePreference,
     setTheme,
     accentColor,
     setAccentColor,
@@ -328,7 +331,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     refreshPrices, customCategories, allCategories, addCustomCategory, deleteCustomCategory,
     targetAllocations, setTargetAllocation, removeTargetAllocation, transactions, addTransaction,
     deleteTransaction, realizedPnl, benchmarkData, benchmarkEnabled, toggleBenchmark,
-    importBenchmarkCsv, clearBenchmark, getBenchmarkDateRange, theme, setTheme, accentColor,
+    importBenchmarkCsv, clearBenchmark, getBenchmarkDateRange, theme, themePreference, setTheme, accentColor,
     setAccentColor, baseCurrency, setBaseCurrency, portfolios, activePortfolioId,
     setActivePortfolioId, createPortfolio, renamePortfolio, deletePortfolio, liabilities,
     addLiability, updateLiability, deleteLiability, filteredEnrichedHoldings, filteredPortfolioSummary,

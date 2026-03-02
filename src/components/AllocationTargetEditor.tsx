@@ -38,8 +38,8 @@ export function AllocationTargetEditor({ onClose }: AllocationTargetEditorProps)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-surface-card rounded-xl shadow-xl w-full max-w-sm p-5">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-surface-card rounded-2xl shadow-xl w-full max-w-sm p-5 animate-modal-enter">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold text-t-primary">Set Target Allocations</h3>
           <button onClick={onClose} className="p-1 hover:bg-surface-alt rounded-lg transition-colors">
@@ -60,7 +60,7 @@ export function AllocationTargetEditor({ onClose }: AllocationTargetEditorProps)
                   min="0"
                   max="100"
                   step="0.1"
-                  className="w-20 px-2 py-1.5 border border-b-input rounded-md text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-20 px-2 py-1.5 border border-b-input rounded-md text-sm text-right focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
                 />
                 <span className="text-xs text-t-faint">%</span>
               </div>
@@ -81,7 +81,7 @@ export function AllocationTargetEditor({ onClose }: AllocationTargetEditorProps)
           </span>
           <button
             onClick={handleSave}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-accent text-white rounded-lg text-xs font-medium hover:bg-accent-hover transition-colors"
           >
             <Check size={14} />
             Save

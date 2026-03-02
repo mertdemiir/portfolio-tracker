@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ChevronDown, ChevronRight, FileText, Bookmark, Plus } from 'lucide-react';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { useLocalStorage } from '../hooks/useLocalStorage';
@@ -20,6 +20,8 @@ import { AddAnnotationModal } from './AddAnnotationModal';
 import { AnnotationsList } from './AnnotationsList';
 import type { NWMilestone, BenchmarkId, TimeRange } from '../types';
 import { BENCHMARK_CONFIG } from '../types';
+import { formatCurrency } from '../utils/formatters';
+import { filterByTimeRange } from './NetWorthLineChart';
 
 const TIME_RANGES: TimeRange[] = ['1M', '3M', '6M', '1Y', 'ALL'];
 
@@ -45,14 +47,28 @@ export function Charts() {
 
   const anyBenchmarkHasData = benchmarkData.spx.length > 0 || benchmarkData.btc.length > 0 || benchmarkData.gold.length > 0;
 
+  const summaryStats = useMemo(() => {
+    if (snapshots.length === 0) return null;
+    const currentNW = netWorthSummary.totalNetWorth;
+    const ath = Math.max(...snapshots.map(s => s.netWorthValue ?? s.totalValue));
+    const drawdownPct = ath > 0 ? ((currentNW - ath) / ath) * 100 : 0;
+    const filtered = filterByTimeRange(snapshots, timeRange);
+    if (filtered.length < 2) return { currentNW, ath, drawdownPct, periodReturn: null };
+    const sorted = [...filtered].sort((a, b) => a.date.localeCompare(b.date));
+    const firstVal = sorted[0].netWorthValue ?? sorted[0].totalValue;
+    const lastVal = sorted[sorted.length - 1].netWorthValue ?? sorted[sorted.length - 1].totalValue;
+    const periodReturn = firstVal > 0 ? ((lastVal - firstVal) / firstVal) * 100 : 0;
+    return { currentNW, ath, drawdownPct, periodReturn };
+  }, [snapshots, netWorthSummary.totalNetWorth, timeRange]);
+
   return (
     <div>
       {hasHoldings ? (
         <>
           {/* Net Worth Section */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold text-t-primary">Net Worth</h2>
+              <h2 className="text-lg font-semibold tracking-tight text-t-primary">Net Worth</h2>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setShowAnnotations(!showAnnotations)}
@@ -86,13 +102,16 @@ export function Charts() {
                     <button
                       key={key}
                       onClick={() => toggleBenchmark(key)}
-                      className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors ${
+                      className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg transition-colors ${
                         active
-                          ? 'border-transparent text-white'
-                          : 'border-b-default text-t-muted hover:border-b-input'
+                          ? 'bg-surface-alt text-t-primary'
+                          : 'text-t-muted hover:text-t-secondary'
                       }`}
-                      style={active ? { backgroundColor: config.color, borderColor: config.color } : undefined}
                     >
+                      <span
+                        className="w-2 h-2 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: config.color, opacity: active ? 1 : 0.4 }}
+                      />
                       {config.shortLabel}
                     </button>
                   );
@@ -101,16 +120,49 @@ export function Charts() {
             )}
           </div>
 
+          {/* Summary data ribbon */}
+          {summaryStats && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-1 mb-4 text-xs tabular-nums">
+              <div>
+                <span className="text-t-faint">Net Worth</span>
+                <span className="ml-1.5 font-semibold text-t-primary">{formatCurrency(summaryStats.currentNW)}</span>
+              </div>
+              <span className="text-t-faint">·</span>
+              <div>
+                <span className="text-t-faint">ATH</span>
+                <span className="ml-1.5 font-semibold text-t-primary">{formatCurrency(summaryStats.ath)}</span>
+              </div>
+              <span className="text-t-faint">·</span>
+              <div>
+                <span className="text-t-faint">From ATH</span>
+                <span className={`ml-1.5 font-semibold ${summaryStats.drawdownPct >= 0 ? 'text-gain' : 'text-loss'}`}>
+                  {summaryStats.drawdownPct >= 0 ? '+' : ''}{summaryStats.drawdownPct.toFixed(2)}%
+                </span>
+              </div>
+              {summaryStats.periodReturn !== null && (
+                <>
+                  <span className="text-t-faint">·</span>
+                  <div>
+                    <span className="text-t-faint">{timeRange} Return</span>
+                    <span className={`ml-1.5 font-semibold ${summaryStats.periodReturn >= 0 ? 'text-gain' : 'text-loss'}`}>
+                      {summaryStats.periodReturn >= 0 ? '+' : ''}{summaryStats.periodReturn.toFixed(2)}%
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           {/* Time Range Selector */}
-          <div className="flex items-center gap-1 mb-4">
+          <div className="flex items-center gap-1 mb-6">
             {TIME_RANGES.map((r) => (
               <button
                 key={r}
                 onClick={() => setTimeRange(r)}
                 className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
                   timeRange === r
-                    ? 'bg-accent text-white'
-                    : 'text-t-muted hover:bg-surface-alt'
+                    ? 'bg-accent text-white rounded-lg'
+                    : 'text-t-muted hover:text-t-secondary'
                 }`}
               >
                 {r}
@@ -118,7 +170,8 @@ export function Charts() {
             ))}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          {/* Hero: Net Worth Line Chart — full width */}
+          <div className="mb-6">
             <NetWorthLineChart
               snapshots={snapshots}
               milestones={milestones}
@@ -128,7 +181,6 @@ export function Charts() {
               annotations={annotations}
               showAnnotations={showAnnotations}
             />
-            <CategoryPieChart categoryBreakdown={netWorthSummary.categoryBreakdown} />
           </div>
 
           {/* Annotations List */}
@@ -138,30 +190,40 @@ export function Charts() {
             </div>
           )}
 
-          {/* Drawdown + Rolling Returns */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-            <DrawdownChart snapshots={snapshots} timeRange={timeRange} />
-            <RollingReturnsChart snapshots={snapshots} timeRange={timeRange} />
-          </div>
-
-          {/* Currency Exposure */}
+          {/* Category Breakdown */}
           <div className="mb-6">
-            <CurrencyExposureChart holdings={filteredEnrichedHoldings} />
+            <CategoryPieChart categoryBreakdown={netWorthSummary.categoryBreakdown} />
           </div>
 
-          {/* Allocation vs Targets */}
-          <AllocationTargetChart />
-          <div className="mb-6" />
+          {/* Secondary Charts — 2×2 grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+            <div>
+              <p className="text-[11px] text-t-faint mb-1.5">Peak-to-trough decline from all-time highs</p>
+              <DrawdownChart snapshots={snapshots} timeRange={timeRange} />
+            </div>
+            <div>
+              <p className="text-[11px] text-t-faint mb-1.5">Annualized trailing 12-month performance</p>
+              <RollingReturnsChart snapshots={snapshots} timeRange={timeRange} />
+            </div>
+            <div>
+              <p className="text-[11px] text-t-faint mb-1.5">Portfolio distribution across currencies</p>
+              <CurrencyExposureChart holdings={filteredEnrichedHoldings} />
+            </div>
+            <div>
+              <p className="text-[11px] text-t-faint mb-1.5">Current vs target allocation by category</p>
+              <AllocationTargetChart />
+            </div>
+          </div>
 
           {/* Portfolio Section */}
           {filteredEnrichedHoldings.length > 0 && (
             <>
-              <h2 className="text-lg font-semibold text-t-primary mb-4">Portfolio</h2>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+              <h2 className="text-lg font-semibold tracking-tight text-t-primary mb-6">Portfolio</h2>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
                 <AllocationPieChart holdings={filteredEnrichedHoldings} />
                 <GainLossBarChart holdings={filteredEnrichedHoldings} />
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
                 <PortfolioLineChart snapshots={snapshots} />
                 <TreemapChart holdings={filteredEnrichedHoldings} />
               </div>
@@ -176,10 +238,10 @@ export function Charts() {
 
       {/* Generate Report Button */}
       {hasHoldings && (
-        <div className="flex justify-end mb-4 mt-6">
+        <div className="flex justify-end mb-6 mt-6">
           <button
             onClick={() => setShowPdfModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors focus:ring-2 focus:ring-accent/40"
           >
             <FileText className="w-4 h-4" />
             Generate Report
@@ -190,7 +252,7 @@ export function Charts() {
       {/* Monthly/Yearly Summary */}
       {hasHoldings && (
         <>
-          <h2 className="text-lg font-semibold text-t-primary mb-4">Summary</h2>
+          <h2 className="text-lg font-semibold tracking-tight text-t-primary mb-6">Summary</h2>
           <MonthlySummary />
         </>
       )}
@@ -200,7 +262,7 @@ export function Charts() {
         <>
           <button
             onClick={() => setShowHistory((v) => !v)}
-            className="flex items-center gap-1.5 text-lg font-semibold text-t-primary mt-6 mb-4 hover:text-t-secondary transition-colors"
+            className="flex items-center gap-1.5 text-lg font-semibold tracking-tight text-t-primary mt-6 mb-6 hover:text-t-secondary transition-colors"
           >
             {showHistory ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
             History

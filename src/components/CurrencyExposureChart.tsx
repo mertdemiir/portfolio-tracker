@@ -1,15 +1,9 @@
 import { useMemo } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { usePortfolioContext } from '../context/PortfolioContext';
-import { getChartColors } from '../hooks/useTheme';
+import { getChartColors, getChartPalette } from '../hooks/useTheme';
 import { formatCurrency } from '../utils/formatters';
 import type { EnrichedHolding } from '../types';
-
-const CURRENCY_COLORS = [
-  '#3b82f6', '#10b981', '#f97316', '#8b5cf6', '#ef4444',
-  '#14b8a6', '#ec4899', '#6366f1', '#eab308', '#06b6d4',
-  '#84cc16', '#f43f5e',
-];
 
 interface Props {
   holdings: EnrichedHolding[];
@@ -18,6 +12,7 @@ interface Props {
 export function CurrencyExposureChart({ holdings }: Props) {
   const { theme } = usePortfolioContext();
   const colors = getChartColors(theme);
+  const CURRENCY_COLORS = getChartPalette(theme);
 
   const data = useMemo(() => {
     if (holdings.length === 0) return [];
@@ -42,7 +37,7 @@ export function CurrencyExposureChart({ holdings }: Props) {
 
   if (data.length === 0) {
     return (
-      <div className="bg-surface-card rounded-xl border border-b-default p-5">
+      <div className="bg-surface-card card-radius card-shadow p-5">
         <h3 className="text-sm font-semibold text-t-primary mb-4">Currency Exposure</h3>
         <div className="flex items-center justify-center h-[200px] text-sm text-t-muted">
           No holdings to analyze.
@@ -52,7 +47,7 @@ export function CurrencyExposureChart({ holdings }: Props) {
   }
 
   return (
-    <div className="bg-surface-card rounded-xl border border-b-default p-5">
+    <div className="bg-surface-card card-radius card-shadow p-5">
       <h3 className="text-sm font-semibold text-t-primary mb-4">Currency Exposure</h3>
       <div className="flex items-center gap-4">
         <div className="w-1/2">
@@ -76,9 +71,10 @@ export function CurrencyExposureChart({ holdings }: Props) {
                 contentStyle={{
                   background: colors.tooltipBg,
                   border: `1px solid ${colors.tooltipBorder}`,
-                  borderRadius: 8,
+                  borderRadius: 10,
                   fontSize: 12,
                   color: colors.tooltipText,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                 }}
                 formatter={(value: number | undefined, name?: string) => [
                   formatCurrency(value ?? 0),

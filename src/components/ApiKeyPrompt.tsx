@@ -16,9 +16,9 @@ export function ApiKeyPrompt({ onSave, onClose }: ApiKeyPromptProps) {
   };
 
   return (
-    <div className="bg-surface-card rounded-xl shadow-sm border border-b-default p-6 max-w-md w-full">
-      <div className="flex items-center justify-center w-12 h-12 bg-blue-50 rounded-full mb-4 mx-auto">
-        <Key className="w-6 h-6 text-blue-600" />
+    <div className="bg-surface-card card-radius card-shadow border border-b-default p-6 max-w-md w-full">
+      <div className="flex items-center justify-center w-12 h-12 bg-accent-light rounded-full mb-4 mx-auto">
+        <Key className="w-6 h-6 text-accent" />
       </div>
       <h3 className="text-lg font-bold text-t-primary text-center mb-1">
         Finnhub API Key
@@ -32,7 +32,7 @@ export function ApiKeyPrompt({ onSave, onClose }: ApiKeyPromptProps) {
           value={key}
           onChange={(e) => setKey(e.target.value)}
           placeholder="Enter your Finnhub API key"
-          className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
         />
         <div className="flex gap-2 mt-3">
           {onClose && (
@@ -47,7 +47,7 @@ export function ApiKeyPrompt({ onSave, onClose }: ApiKeyPromptProps) {
           <button
             type="submit"
             disabled={!key.trim()}
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex-1 px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Save
           </button>
@@ -57,7 +57,7 @@ export function ApiKeyPrompt({ onSave, onClose }: ApiKeyPromptProps) {
         href="https://finnhub.io/register"
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center justify-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 mt-3"
+        className="flex items-center justify-center gap-1.5 text-xs text-accent hover:text-accent-hover mt-3"
       >
         Get a free API key at finnhub.io
         <ExternalLink className="w-3 h-3" />

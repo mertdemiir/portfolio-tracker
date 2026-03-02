@@ -40,8 +40,8 @@ export function MoveToPortfolioModal({ holding, onClose }: MoveToPortfolioModalP
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-surface-card rounded-xl shadow-xl w-full max-w-xs p-5">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-surface-card rounded-2xl shadow-xl w-full max-w-xs p-5 animate-modal-enter">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <FolderInput className="w-4 h-4 text-accent" />

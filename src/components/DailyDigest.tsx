@@ -45,7 +45,7 @@ export function DailyDigest() {
   lines.push({
     icon: gained ? TrendingUp : TrendingDown,
     text: `Your portfolio ${gained ? 'gained' : 'lost'} ${formatSignedCurrency(dailyChange)} today (${formatPercent(dailyPct)})`,
-    color: gained ? 'text-emerald-600' : 'text-red-500',
+    color: gained ? 'text-gain' : 'text-loss',
   });
 
   // Line 2: Top mover
@@ -53,7 +53,7 @@ export function DailyDigest() {
     lines.push({
       icon: Sparkles,
       text: `Top mover: ${topMover.ticker} ${formatPercent(topMover.dailyChangePercent)}`,
-      color: topMover.dailyChangePercent >= 0 ? 'text-emerald-600' : 'text-red-500',
+      color: topMover.dailyChangePercent >= 0 ? 'text-gain' : 'text-loss',
     });
   }
 
@@ -62,7 +62,7 @@ export function DailyDigest() {
     lines.push({
       icon: nwDelta >= 0 ? TrendingUp : TrendingDown,
       text: `Net worth is ${nwDelta >= 0 ? 'up' : 'down'} ${formatSignedCurrency(nwDelta)} from yesterday`,
-      color: nwDelta >= 0 ? 'text-emerald-600' : 'text-red-500',
+      color: nwDelta >= 0 ? 'text-gain' : 'text-loss',
     });
   }
 
@@ -77,8 +77,10 @@ export function DailyDigest() {
 
   if (lines.length === 0) return null;
 
+  const borderColor = gained ? 'border-l-gain' : 'border-l-loss';
+
   return (
-    <div className="bg-surface-card rounded-xl border border-b-default p-4 mb-4 relative">
+    <div className={`bg-surface-card card-radius border border-b-default border-l-4 ${borderColor} p-4 mb-6 relative`}>
       <button
         onClick={() => setDismissedDate(today)}
         className="absolute top-2.5 right-2.5 p-1 text-t-faint hover:text-t-muted transition-colors rounded-md hover:bg-surface-alt"
@@ -86,9 +88,9 @@ export function DailyDigest() {
       >
         <X size={14} />
       </button>
-      <div className="space-y-1.5 pr-6">
+      <div className="space-y-2 pr-6">
         {lines.map((line, i) => (
-          <div key={i} className="flex items-center gap-2">
+          <div key={i} className="flex items-center gap-2.5">
             <line.icon className={`w-3.5 h-3.5 flex-shrink-0 ${line.color}`} />
             <span className="text-sm text-t-secondary">{line.text}</span>
           </div>

@@ -6,13 +6,13 @@ export function PortfolioSelector() {
   if (portfolios.length <= 1) return null;
 
   return (
-    <div className="flex items-center gap-1 overflow-x-auto">
+    <div className="inline-flex items-center gap-0.5 p-1 bg-surface-alt rounded-lg overflow-x-auto">
       <button
         onClick={() => setActivePortfolioId('all')}
-        className={`px-3 py-1 text-xs font-medium rounded-lg whitespace-nowrap transition-colors ${
+        className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-all ${
           activePortfolioId === 'all'
-            ? 'bg-accent text-white'
-            : 'text-t-muted hover:bg-surface-alt'
+            ? 'bg-surface-card text-t-primary shadow-sm'
+            : 'text-t-muted hover:text-t-secondary'
         }`}
       >
         All
@@ -21,10 +21,10 @@ export function PortfolioSelector() {
         <button
           key={p.id}
           onClick={() => setActivePortfolioId(p.id)}
-          className={`px-3 py-1 text-xs font-medium rounded-lg whitespace-nowrap transition-colors ${
+          className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-all ${
             activePortfolioId === p.id
-              ? 'bg-accent text-white'
-              : 'text-t-muted hover:bg-surface-alt'
+              ? 'bg-surface-card text-t-primary shadow-sm'
+              : 'text-t-muted hover:text-t-secondary'
           }`}
         >
           {p.name}

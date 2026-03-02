@@ -194,8 +194,8 @@ export function CsvImportModal({ onClose }: CsvImportModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-surface-card rounded-xl shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-surface-card rounded-2xl shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto animate-modal-enter">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-semibold text-t-primary">Import CSV</h2>
           <button onClick={onClose} className="p-1 hover:bg-surface-alt rounded-lg transition-colors">
@@ -212,7 +212,7 @@ export function CsvImportModal({ onClose }: CsvImportModalProps) {
             return (
               <div key={label} className="flex items-center gap-2">
                 {i > 0 && <ChevronRight size={12} />}
-                <span className={`font-medium ${isActive ? 'text-blue-600' : isDone ? 'text-emerald-600' : ''}`}>
+                <span className={`font-medium ${isActive ? 'text-accent' : isDone ? 'text-gain' : ''}`}>
                   {label}
                 </span>
               </div>
@@ -234,14 +234,14 @@ export function CsvImportModal({ onClose }: CsvImportModalProps) {
                 >{m}</button>
               ))}
             </div>
-            <div className="border-2 border-dashed border-b-input rounded-xl p-10 text-center">
+            <div className="border-2 border-dashed border-b-input card-radius p-10 text-center">
               <Upload className="w-10 h-10 text-t-faint mx-auto mb-3" />
               <p className="text-sm text-t-muted mb-4">
                 Upload a CSV file with your {mode === 'holdings' ? 'holdings' : 'transactions'} data.
               </p>
               <button
                 onClick={handleUpload}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors"
               >
                 <Upload size={16} />
                 Choose CSV File
@@ -279,7 +279,7 @@ export function CsvImportModal({ onClose }: CsvImportModalProps) {
               ))}
             </div>
             {!canProceedFromMapping() && (
-              <p className="text-sm text-amber-600 mb-4 flex items-center gap-1.5">
+              <p className="text-sm text-amber-500 mb-4 flex items-center gap-1.5">
                 <AlertTriangle size={14} />
                 Map all required fields (*) to continue.
               </p>
@@ -291,7 +291,7 @@ export function CsvImportModal({ onClose }: CsvImportModalProps) {
               <button
                 onClick={() => setStep('preview')}
                 disabled={!canProceedFromMapping()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                className="px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover disabled:opacity-50 transition-colors"
               >
                 Preview
               </button>
@@ -319,7 +319,7 @@ export function CsvImportModal({ onClose }: CsvImportModalProps) {
                   {rows.slice(0, 50).map((row, i) => {
                     const error = validateRow(row);
                     return (
-                      <tr key={i} className={`border-b border-b-subtle ${error ? 'bg-red-50' : ''}`}>
+                      <tr key={i} className={`border-b border-b-subtle ${error ? 'bg-loss-bg' : ''}`}>
                         <td className="py-1.5 pr-3">
                           {error ? (
                             <span className="text-red-500 flex items-center gap-1"><AlertTriangle size={12} />{error}</span>
@@ -359,21 +359,21 @@ export function CsvImportModal({ onClose }: CsvImportModalProps) {
         {/* Step: Done */}
         {step === 'done' && (
           <div className="text-center py-8">
-            <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-              <Check className="w-8 h-8 text-emerald-600" />
+            <div className="w-16 h-16 rounded-full bg-gain-bg flex items-center justify-center mx-auto mb-4">
+              <Check className="w-8 h-8 text-gain" />
             </div>
             <h3 className="text-lg font-semibold text-t-primary mb-2">Import Complete</h3>
             <p className="text-sm text-t-muted mb-1">
               Successfully imported <span className="font-semibold">{importedCount}</span> {mode}.
             </p>
             {skippedCount > 0 && (
-              <p className="text-sm text-amber-600">
+              <p className="text-sm text-amber-500">
                 {skippedCount} row{skippedCount > 1 ? 's' : ''} skipped due to validation errors.
               </p>
             )}
             <button
               onClick={onClose}
-              className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+              className="mt-6 px-6 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors"
             >
               Done
             </button>

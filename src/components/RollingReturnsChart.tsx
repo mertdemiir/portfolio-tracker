@@ -54,7 +54,7 @@ export function RollingReturnsChart({ snapshots, timeRange }: Props) {
 
   if (data.length < 2) {
     return (
-      <div className="bg-surface-card rounded-xl border border-b-default p-4">
+      <div className="bg-surface-card card-radius card-shadow p-4">
         <h3 className="text-sm font-semibold text-t-primary mb-3">Rolling 1Y Returns</h3>
         <p className="text-xs text-t-faint text-center py-8">Need 1+ year of data.</p>
       </div>
@@ -62,11 +62,11 @@ export function RollingReturnsChart({ snapshots, timeRange }: Props) {
   }
 
   return (
-    <div className="bg-surface-card rounded-xl border border-b-default p-4">
+    <div className="bg-surface-card card-radius card-shadow p-4">
       <h3 className="text-sm font-semibold text-t-primary mb-3">Rolling 1Y Returns</h3>
       <ResponsiveContainer width="100%" height={200}>
         <LineChart data={data}>
-          <CartesianGrid stroke={colors.grid} strokeDasharray="3 3" />
+          <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
           <XAxis
             dataKey="date"
             tick={{ fontSize: 10, fill: colors.axis }}
@@ -78,11 +78,25 @@ export function RollingReturnsChart({ snapshots, timeRange }: Props) {
           />
           <ReferenceLine y={0} stroke={colors.refLine} />
           <Tooltip
-            contentStyle={{ background: colors.tooltipBg, border: `1px solid ${colors.tooltipBorder}`, borderRadius: 8, fontSize: 12, color: colors.tooltipText }}
+            contentStyle={{
+              background: colors.tooltipBg,
+              border: `1px solid ${colors.tooltipBorder}`,
+              borderRadius: 10,
+              fontSize: 12,
+              color: colors.tooltipText,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            }}
             labelFormatter={(d) => new Date(String(d)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             formatter={(v) => [`${Number(v).toFixed(2)}%`, '1Y Return']}
           />
-          <Line type="monotone" dataKey="return1Y" stroke="var(--accent)" strokeWidth={2} dot={false} />
+          <Line
+            type="monotone"
+            dataKey="return1Y"
+            stroke="var(--accent)"
+            strokeWidth={2}
+            dot={false}
+            activeDot={{ r: 4, strokeWidth: 2 }}
+          />
         </LineChart>
       </ResponsiveContainer>
     </div>

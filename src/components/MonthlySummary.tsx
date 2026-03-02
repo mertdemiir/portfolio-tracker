@@ -93,7 +93,7 @@ export function MonthlySummary() {
 
   if (summaries.length === 0) {
     return (
-      <div className="bg-surface-card rounded-xl border border-b-default p-5">
+      <div className="bg-surface-card card-radius card-shadow p-5">
         <h3 className="text-sm font-semibold text-t-primary mb-4">Period Summary</h3>
         <p className="text-sm text-t-muted text-center py-6">
           Need snapshot history to show summaries.
@@ -103,7 +103,7 @@ export function MonthlySummary() {
   }
 
   return (
-    <div className="bg-surface-card rounded-xl border border-b-default p-5">
+    <div className="bg-surface-card card-radius card-shadow p-5">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-t-primary">Period Summary</h3>
         <div className="flex bg-surface-alt rounded-lg p-0.5">
@@ -144,21 +144,21 @@ export function MonthlySummary() {
             {summaries.map((s) => (
               <tr key={s.label} className="border-b border-b-subtle last:border-0">
                 <td className="py-2 text-t-secondary font-medium">{s.label}</td>
-                <td className="py-2 text-right text-t-muted">{formatCurrency(s.startValue)}</td>
-                <td className="py-2 text-right text-t-primary font-medium">
+                <td className="py-2 text-right text-t-muted tabular-nums">{formatCurrency(s.startValue)}</td>
+                <td className="py-2 text-right text-t-primary font-medium tabular-nums">
                   {formatCurrency(s.endValue)}
                 </td>
                 <td
-                  className={`py-2 text-right font-medium ${
-                    s.change >= 0 ? 'text-green-600' : 'text-red-600'
+                  className={`py-2 text-right font-medium tabular-nums ${
+                    s.change >= 0 ? 'text-gain' : 'text-loss'
                   }`}
                 >
                   {s.change >= 0 ? '+' : ''}
                   {formatCurrency(s.change)}
                 </td>
                 <td
-                  className={`py-2 text-right font-medium ${
-                    s.changePercent >= 0 ? 'text-green-600' : 'text-red-600'
+                  className={`py-2 text-right font-medium tabular-nums ${
+                    s.changePercent >= 0 ? 'text-gain' : 'text-loss'
                   }`}
                 >
                   {formatPercent(s.changePercent)}

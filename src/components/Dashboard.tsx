@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { DollarSign, TrendingUp, TrendingDown, Clock, Wallet, Target, Plus, Trash2, Check, X, Share2 } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Clock, Target, Plus, Trash2, Check, X, Share2, ChevronDown } from 'lucide-react';
+import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { formatCurrency, formatSignedCurrency, formatPercent } from '../utils/formatters';
@@ -8,7 +9,12 @@ import { PerformanceMetrics } from './PerformanceMetrics';
 import { DailyDigest } from './DailyDigest';
 import { ShareImageModal } from './ShareImageModal';
 import { LiabilitiesSection } from './LiabilitiesSection';
-import type { NWMilestone } from '../types';
+import type { NWMilestone, TabId } from '../types';
+import type { NavFilter } from '../App';
+
+interface DashboardProps {
+  onNavigate?: (tab: TabId, filter?: NavFilter) => void;
+}
 
 function useTryRate(baseCurrency: string) {
   const [rate, setRate] = useState<number | null>(null);
@@ -29,11 +35,11 @@ function useTryRate(baseCurrency: string) {
 }
 
 const CATEGORY_COLORS = [
-  'bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-red-500',
-  'bg-purple-500', 'bg-cyan-500', 'bg-orange-500', 'bg-pink-500',
+  'bg-indigo-500', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500',
+  'bg-violet-500', 'bg-cyan-500', 'bg-orange-500', 'bg-pink-500',
 ];
 
-export function Dashboard() {
+export function Dashboard({ onNavigate }: DashboardProps) {
   const {
     filteredPortfolioSummary,
     filteredEnrichedHoldings,
@@ -44,6 +50,7 @@ export function Dashboard() {
     activePortfolioId,
     portfolios,
     realizedPnl,
+    snapshots,
   } = usePortfolioContext();
 
   const [milestones, setMilestones] = useLocalStorage<NWMilestone[]>('nw-milestones', []);
@@ -52,6 +59,7 @@ export function Dashboard() {
   const [newValue, setNewValue] = useState('');
   const [showShareModal, setShowShareModal] = useState(false);
   const [showTRY, setShowTRY] = useState(false);
+  const [milestonesOpen, setMilestonesOpen] = useState(true);
   const tryRate = useTryRate(baseCurrency);
 
   // Migrate old single nw-target to milestones
@@ -93,55 +101,16 @@ export function Dashboard() {
 
   const ps = filteredPortfolioSummary;
   const totalPnl = ps.totalGainLoss + realizedPnl;
-  const portfolioCards = [
-    {
-      title: 'Portfolio Value',
-      value: formatCurrency(ps.totalValue),
-      icon: DollarSign,
-      color: 'bg-blue-50 text-blue-600',
-    },
-    {
-      title: 'Unrealized P&L',
-      value: formatSignedCurrency(ps.totalGainLoss),
-      subtitle: formatPercent(ps.totalGainLossPercent),
-      icon: ps.totalGainLoss >= 0 ? TrendingUp : TrendingDown,
-      color: ps.totalGainLoss >= 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600',
-      valueColor: ps.totalGainLoss >= 0 ? 'text-green-600' : 'text-red-600',
-    },
-    {
-      title: 'Realized P&L',
-      value: formatSignedCurrency(realizedPnl),
-      icon: realizedPnl >= 0 ? TrendingUp : TrendingDown,
-      color: realizedPnl >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600',
-      valueColor: realizedPnl >= 0 ? 'text-emerald-600' : 'text-red-600',
-    },
-    {
-      title: 'Total P&L',
-      value: formatSignedCurrency(totalPnl),
-      subtitle: `Cost basis: ${formatCurrency(ps.totalCostBasis)}`,
-      icon: totalPnl >= 0 ? TrendingUp : TrendingDown,
-      color: totalPnl >= 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600',
-      valueColor: totalPnl >= 0 ? 'text-green-600' : 'text-red-600',
-    },
-    {
-      title: "Today's Change",
-      value: formatSignedCurrency(ps.totalDailyChange),
-      subtitle: formatPercent(ps.totalDailyChangePercent),
-      icon: Clock,
-      color: ps.totalDailyChange >= 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600',
-      valueColor: ps.totalDailyChange >= 0 ? 'text-green-600' : 'text-red-600',
-    },
-  ];
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-t-primary">Dashboard</h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-lg font-semibold text-t-primary tracking-tight">Dashboard</h2>
         <div className="flex items-center gap-2">
           {pricesLoading && (
-            <span className="text-xs text-t-muted flex items-center gap-1">
+            <span className="text-xs text-t-muted flex items-center gap-1.5">
               <div className="w-3 h-3 border-2 border-b-input border-t-accent rounded-full animate-spin" />
-              Updating prices...
+              Updating...
             </span>
           )}
           <button
@@ -155,14 +124,11 @@ export function Dashboard() {
       </div>
 
       {/* Section A: Net Worth Hero */}
-      <div className="bg-surface-card rounded-xl border border-b-default p-6 mb-4">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-emerald-50 text-emerald-600">
-            <Wallet className="w-5 h-5" />
-          </div>
+      <div className="bg-surface-card rounded-2xl border border-b-default p-6 mb-6 overflow-hidden">
+        <div className="flex items-start gap-4 mb-5">
           <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <p className="text-sm text-t-muted">Total Net Worth</p>
+            <div className="flex items-center gap-2 mb-1">
+              <p className="text-sm text-t-muted font-medium">Total Net Worth</p>
               {baseCurrency !== 'TRY' && (
                 <button
                   onClick={() => setShowTRY((p) => !p)}
@@ -176,27 +142,28 @@ export function Dashboard() {
                 </button>
               )}
             </div>
-            <p className="text-3xl font-bold text-t-primary">
+            <p className="text-4xl font-bold text-t-primary tabular-nums tracking-tight">
               {showTRY && tryRate
                 ? `₺${(netWorthSummary.totalNetWorth * tryRate).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
                 : formatCurrency(netWorthSummary.totalNetWorth)}
             </p>
           </div>
         </div>
+
         {/* Assets / Liabilities breakdown */}
         {netWorthSummary.totalLiabilities > 0 && (
-          <div className="flex gap-6 text-sm mb-3">
+          <div className="flex gap-6 text-sm mb-4">
             <div>
-              <span className="text-t-muted">Total Assets</span>
-              <p className="font-semibold text-emerald-600">
+              <span className="text-t-muted text-xs">Total Assets</span>
+              <p className="font-semibold text-gain tabular-nums">
                 {showTRY && tryRate
                   ? `₺${(netWorthSummary.totalAssets * tryRate).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
                   : formatCurrency(netWorthSummary.totalAssets)}
               </p>
             </div>
             <div>
-              <span className="text-t-muted">Liabilities</span>
-              <p className="font-semibold text-red-500">
+              <span className="text-t-muted text-xs">Liabilities</span>
+              <p className="font-semibold text-loss tabular-nums">
                 {showTRY && tryRate
                   ? `-₺${(netWorthSummary.totalLiabilities * tryRate).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
                   : `-${formatCurrency(netWorthSummary.totalLiabilities)}`}
@@ -204,40 +171,62 @@ export function Dashboard() {
             </div>
           </div>
         )}
+
         <div className="flex gap-6 text-sm">
           <div>
-            <span className="text-t-muted">Portfolio</span>
-            <p className="font-semibold text-t-primary">
+            <span className="text-t-muted text-xs">Portfolio</span>
+            <p className="font-semibold text-t-primary tabular-nums">
               {showTRY && tryRate
                 ? `₺${(netWorthSummary.totalPortfolioValue * tryRate).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
                 : formatCurrency(netWorthSummary.totalPortfolioValue)}
             </p>
           </div>
           <div>
-            <span className="text-t-muted">Other Assets</span>
-            <p className="font-semibold text-t-primary">
+            <span className="text-t-muted text-xs">Other Assets</span>
+            <p className="font-semibold text-t-primary tabular-nums">
               {showTRY && tryRate
                 ? `₺${(netWorthSummary.totalNonPortfolioValue * tryRate).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
                 : formatCurrency(netWorthSummary.totalNonPortfolioValue)}
             </p>
           </div>
           <div>
-            <span className="text-t-muted">Total Holdings</span>
+            <span className="text-t-muted text-xs">Holdings</span>
             <p className="font-semibold text-t-primary">{netWorthSummary.holdingCount}</p>
           </div>
         </div>
 
+        {/* 7-day sparkline waterline */}
+        {snapshots.length >= 2 && (
+          <div className="mt-4 -mx-6 -mb-6 h-16 opacity-60">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={snapshots.slice(-7).map(s => ({ value: s.netWorthValue ?? s.totalValue }))} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="sparklineGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="var(--accent)" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <Area type="monotone" dataKey="value" stroke="var(--accent)" strokeWidth={1.5} fill="url(#sparklineGradient)" dot={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
         {/* NW Milestones */}
-        <div className="mt-4 pt-4 border-t border-b-subtle">
+        <div className="mt-5 pt-5 border-t border-b-subtle">
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-1.5">
-              <Target className="w-4 h-4 text-blue-500" />
+            <button
+              onClick={() => setMilestonesOpen(v => !v)}
+              className="flex items-center gap-1.5"
+            >
+              <Target className="w-4 h-4 text-accent" />
               <span className="text-sm font-medium text-t-secondary">Milestones</span>
-            </div>
+              <ChevronDown className={`w-3.5 h-3.5 text-t-faint transition-transform duration-200 ${milestonesOpen ? '' : '-rotate-90'}`} />
+            </button>
             {!addingMilestone && (
               <button
-                onClick={() => setAddingMilestone(true)}
-                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 transition-colors"
+                onClick={() => { setMilestonesOpen(true); setAddingMilestone(true); }}
+                className="flex items-center gap-1 text-xs text-accent hover:text-accent-hover transition-colors"
               >
                 <Plus size={13} />
                 Add
@@ -245,70 +234,79 @@ export function Dashboard() {
             )}
           </div>
 
-          {milestones.length > 0 && (
-            <div className="space-y-2.5 mb-3">
-              {milestones.map((m) => {
-                const reached = netWorthSummary.totalNetWorth >= m.value;
-                const pct = m.value > 0 ? (netWorthSummary.totalNetWorth / m.value) * 100 : 0;
-                return (
-                  <div key={m.id}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-t-muted">{m.name}</span>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs font-medium ${reached ? 'text-emerald-600' : 'text-blue-600'}`}>
-                          {pct.toFixed(1)}% of {formatCurrency(m.value)}
-                        </span>
-                        <button
-                          onClick={() => deleteMilestone(m.id)}
-                          className="p-0.5 text-t-faint hover:text-red-500 transition-colors"
-                        >
-                          <Trash2 size={12} />
-                        </button>
+          {milestonesOpen && (
+            <>
+              {milestones.length > 0 && (
+                <div className="space-y-3 mb-3">
+                  {milestones.map((m) => {
+                    const reached = netWorthSummary.totalNetWorth >= m.value;
+                    const pct = m.value > 0 ? (netWorthSummary.totalNetWorth / m.value) * 100 : 0;
+                    return (
+                      <div key={m.id}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs font-medium text-t-muted">{m.name}</span>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs font-semibold tabular-nums ${reached ? 'text-gain' : 'text-accent'}`}>
+                              {pct.toFixed(1)}% of {formatCurrency(m.value)}
+                            </span>
+                            <button
+                              onClick={() => deleteMilestone(m.id)}
+                              className="p-0.5 text-t-faint hover:text-loss transition-colors"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="h-2.5 bg-surface-alt rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-700 ease-out"
+                            style={{
+                              width: `${Math.min(pct, 100)}%`,
+                              background: reached
+                                ? 'linear-gradient(90deg, #10b981, #34d399)'
+                                : 'linear-gradient(90deg, var(--accent), var(--accent-hover))',
+                            }}
+                          />
+                        </div>
+                        <p className="text-[10px] text-t-faint mt-1">
+                          {reached ? '✓ Reached!' : `${formatCurrency(m.value - netWorthSummary.totalNetWorth)} to go`}
+                        </p>
                       </div>
-                    </div>
-                    <div className="h-1.5 bg-surface-alt rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${reached ? 'bg-emerald-500' : 'bg-blue-500'}`}
-                        style={{ width: `${Math.min(pct, 100)}%` }}
-                      />
-                    </div>
-                    <p className="text-[10px] text-t-faint mt-0.5">
-                      {reached ? '✓ Reached!' : `${formatCurrency(m.value - netWorthSummary.totalNetWorth)} to go`}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                    );
+                  })}
+                </div>
+              )}
 
-          {milestones.length === 0 && !addingMilestone && (
-            <p className="text-xs text-t-faint">No milestones set. Add one to track your goals.</p>
-          )}
+              {milestones.length === 0 && !addingMilestone && (
+                <p className="text-xs text-t-faint">No milestones set. Add one to track your goals.</p>
+              )}
 
-          {addingMilestone && (
-            <div className="flex items-center gap-2 mt-2">
-              <input
-                type="text"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="Name (optional)"
-                className="w-32 px-2 py-1 border border-b-input rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <span className="text-xs text-t-faint">$</span>
-              <input
-                type="number"
-                value={newValue}
-                onChange={(e) => setNewValue(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addMilestone()}
-                placeholder="Amount"
-                min="0"
-                step="1000"
-                className="w-28 px-2 py-1 border border-b-input rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                autoFocus
-              />
-              <button onClick={addMilestone} className="p-1 text-emerald-600 hover:text-emerald-700"><Check size={14} /></button>
-              <button onClick={() => { setAddingMilestone(false); setNewName(''); setNewValue(''); }} className="p-1 text-t-faint hover:text-t-muted"><X size={14} /></button>
-            </div>
+              {addingMilestone && (
+                <div className="flex items-center gap-2 mt-2">
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder="Name (optional)"
+                    className="w-32 px-2.5 py-1.5 border border-b-input rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
+                  />
+                  <span className="text-xs text-t-faint">$</span>
+                  <input
+                    type="number"
+                    value={newValue}
+                    onChange={(e) => setNewValue(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && addMilestone()}
+                    placeholder="Amount"
+                    min="0"
+                    step="1000"
+                    className="w-28 px-2.5 py-1.5 border border-b-input rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
+                    autoFocus
+                  />
+                  <button onClick={addMilestone} className="p-1 text-gain hover:opacity-80 transition-opacity"><Check size={14} /></button>
+                  <button onClick={() => { setAddingMilestone(false); setNewName(''); setNewValue(''); }} className="p-1 text-t-faint hover:text-t-muted"><X size={14} /></button>
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -325,28 +323,71 @@ export function Dashboard() {
           Showing <span className="font-medium text-t-secondary">{activeName}</span> portfolio
         </p>
       )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
-        {portfolioCards.map((card) => (
-          <div
-            key={card.title}
-            className="bg-surface-card rounded-xl border border-b-default p-5"
-          >
-            <div className="flex items-center gap-3 mb-3">
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${card.color}`}>
-                <card.icon className="w-5 h-5" />
-              </div>
-              <span className="text-sm font-medium text-t-muted">{card.title}</span>
-            </div>
-            <p className={`text-2xl font-bold ${card.valueColor || 'text-t-primary'}`}>
-              {card.value}
-            </p>
-            {card.subtitle && (
-              <p className={`text-sm mt-0.5 ${card.valueColor || 'text-t-muted'}`}>
-                {card.subtitle}
-              </p>
-            )}
+      {/* P&L Strip */}
+      <div className="bg-surface-card card-radius border border-b-default mb-6 overflow-hidden">
+        <div className="grid grid-cols-2 lg:grid-cols-5 divide-x divide-b-subtle">
+          {/* Portfolio Value */}
+          <div className="p-4">
+            <span className="text-xs font-medium text-t-muted flex items-center gap-1.5">
+              <DollarSign className="w-3.5 h-3.5" />
+              Portfolio Value
+            </span>
+            <p className="text-2xl font-bold text-t-primary tabular-nums mt-1">{formatCurrency(ps.totalValue)}</p>
           </div>
-        ))}
+
+          {/* Unrealized P&L */}
+          <div className="p-4">
+            <span className="text-xs font-medium text-t-muted flex items-center gap-1.5">
+              {ps.totalGainLoss >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+              Unrealized
+            </span>
+            <p className={`text-lg font-bold tabular-nums mt-1 ${ps.totalGainLoss >= 0 ? 'text-gain' : 'text-loss'}`}>
+              {formatSignedCurrency(ps.totalGainLoss)}
+            </p>
+            <p className={`text-[11px] tabular-nums ${ps.totalGainLoss >= 0 ? 'text-gain/60' : 'text-loss/60'}`}>
+              {formatPercent(ps.totalGainLossPercent)}
+            </p>
+          </div>
+
+          {/* Realized P&L */}
+          <div className="p-4">
+            <span className="text-xs font-medium text-t-muted flex items-center gap-1.5">
+              {realizedPnl >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+              Realized
+            </span>
+            <p className={`text-lg font-bold tabular-nums mt-1 ${realizedPnl >= 0 ? 'text-gain' : 'text-loss'}`}>
+              {formatSignedCurrency(realizedPnl)}
+            </p>
+          </div>
+
+          {/* Total P&L */}
+          <div className="p-4">
+            <span className="text-xs font-medium text-t-muted flex items-center gap-1.5">
+              {totalPnl >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+              Total P&L
+            </span>
+            <p className={`text-lg font-bold tabular-nums mt-1 ${totalPnl >= 0 ? 'text-gain' : 'text-loss'}`}>
+              {formatSignedCurrency(totalPnl)}
+            </p>
+            <p className="text-[10px] text-t-faint tabular-nums">
+              Cost basis: {formatCurrency(ps.totalCostBasis)}
+            </p>
+          </div>
+
+          {/* Today's Change — with tinted background */}
+          <div className={`p-4 col-span-2 lg:col-span-1 ${ps.totalDailyChange >= 0 ? 'bg-gain/[0.03]' : 'bg-loss/[0.03]'}`}>
+            <span className="text-xs font-medium text-t-muted flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5" />
+              Today
+            </span>
+            <p className={`text-lg font-bold tabular-nums mt-1 ${ps.totalDailyChange >= 0 ? 'text-gain' : 'text-loss'}`}>
+              {formatSignedCurrency(ps.totalDailyChange)}
+            </p>
+            <p className={`text-[11px] tabular-nums ${ps.totalDailyChange >= 0 ? 'text-gain/60' : 'text-loss/60'}`}>
+              {formatPercent(ps.totalDailyChangePercent)}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Section B2: Performance Metrics */}
@@ -354,25 +395,29 @@ export function Dashboard() {
 
       {/* Section C: Net Worth by Category */}
       {netWorthSummary.categoryBreakdown.length > 0 && (
-        <div className="bg-surface-card rounded-xl border border-b-default p-5 mb-4">
+        <div className="bg-surface-card card-radius border border-b-default p-5 mb-6">
           <h3 className="text-sm font-semibold text-t-primary mb-4">Net Worth by Category</h3>
           <div className="space-y-3">
             {netWorthSummary.categoryBreakdown.map((cat, i) => (
-              <div key={cat.key}>
-                <div className="flex items-center justify-between mb-1">
+              <button
+                key={cat.key}
+                onClick={() => onNavigate?.('holdings', { category: cat.key })}
+                className="block w-full text-left hover:bg-surface-alt/50 -mx-2 px-2 py-1 rounded-lg transition-colors"
+              >
+                <div className="flex items-center justify-between mb-1.5">
                   <span className="text-sm text-t-secondary">{cat.label}</span>
-                  <div className="text-sm text-right">
+                  <div className="text-sm text-right tabular-nums">
                     <span className="font-medium text-t-primary">{formatCurrency(cat.value)}</span>
-                    <span className="text-t-faint ml-2">{cat.percentage.toFixed(1)}%</span>
+                    <span className="text-t-faint ml-2 text-xs">{cat.percentage.toFixed(1)}%</span>
                   </div>
                 </div>
                 <div className="h-2 bg-surface-alt rounded-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full ${CATEGORY_COLORS[i % CATEGORY_COLORS.length]}`}
+                    className={`h-full rounded-full transition-all duration-700 ease-out ${CATEGORY_COLORS[i % CATEGORY_COLORS.length]}`}
                     style={{ width: `${Math.max(cat.percentage, 0.5)}%` }}
                   />
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -380,29 +425,33 @@ export function Dashboard() {
 
       {/* Section D: Top Movers (portfolio only) */}
       {filteredEnrichedHoldings.length > 0 && (
-        <div className="bg-surface-card rounded-xl border border-b-default p-5">
+        <div className="bg-surface-card card-radius border border-b-default p-5">
           <h3 className="text-sm font-semibold text-t-primary mb-3">Top Movers Today</h3>
-          <div className="space-y-2">
+          <div className="flex flex-wrap gap-2">
             {[...filteredEnrichedHoldings]
               .sort((a, b) => Math.abs(b.dailyChangePercent) - Math.abs(a.dailyChangePercent))
-              .slice(0, 5)
+              .filter(h => h.dailyChange !== 0)
+              .slice(0, 8)
               .map((h) => (
-                <div key={h.id} className="flex items-center justify-between py-1.5">
-                  <div className="flex items-center gap-3">
-                    <span className="font-medium text-t-primary text-sm w-16">{h.ticker}</span>
-                    <span className="text-xs text-t-muted truncate max-w-[150px]">{h.name}</span>
-                  </div>
-                  <div className="text-right">
-                    <span
-                      className={`text-sm font-medium ${
-                        h.dailyChangePercent >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}
-                    >
-                      {formatPercent(h.dailyChangePercent)}
-                    </span>
-                  </div>
-                </div>
+                <button
+                  key={h.id}
+                  onClick={() => onNavigate?.('holdings', { ticker: h.ticker })}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                    h.dailyChangePercent >= 0
+                      ? 'bg-gain/[0.08] text-gain hover:bg-gain/[0.15]'
+                      : 'bg-loss/[0.08] text-loss hover:bg-loss/[0.15]'
+                  }`}
+                >
+                  <span className="font-bold text-t-primary">{h.ticker}</span>
+                  {formatPercent(h.dailyChangePercent)}
+                  <span className="text-t-muted font-normal">
+                    ({formatSignedCurrency(h.dailyChange)})
+                  </span>
+                </button>
               ))}
+            {filteredEnrichedHoldings.every(h => h.dailyChange === 0) && (
+              <p className="text-xs text-t-faint">No movers today</p>
+            )}
           </div>
         </div>
       )}

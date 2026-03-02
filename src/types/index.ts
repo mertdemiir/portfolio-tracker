@@ -173,7 +173,8 @@ export const BENCHMARK_CONFIG: Record<BenchmarkId, { label: string; color: strin
   gold: { label: 'Gold (XAUUSD)',   color: '#eab308', shortLabel: 'Gold' },
 };
 
-export type ThemeId = 'light' | 'dark' | 'midnight';
+export type ThemeId = 'light' | 'dark' | 'midnight' | 'heritage' | 'terminal';
+export type ThemePreference = ThemeId | 'auto';
 
 export const ACCENT_PRESETS: { name: string; color: string }[] = [
   { name: 'Blue', color: '#3b82f6' },
@@ -265,10 +266,10 @@ export const ASSET_TYPE_CONFIG: Record<
   AssetType,
   { label: string; quantityLabel: string; badgeColor: string; badgeBg: string }
 > = {
-  stock: { label: 'Stock', quantityLabel: 'Shares', badgeColor: 'text-blue-700', badgeBg: 'bg-blue-100' },
-  etf: { label: 'ETF', quantityLabel: 'Shares', badgeColor: 'text-indigo-700', badgeBg: 'bg-indigo-100' },
-  crypto: { label: 'Crypto', quantityLabel: 'Units', badgeColor: 'text-orange-700', badgeBg: 'bg-orange-100' },
-  metal: { label: 'Metal', quantityLabel: 'Units', badgeColor: 'text-yellow-700', badgeBg: 'bg-yellow-100' },
-  cash: { label: 'Cash', quantityLabel: 'Amount', badgeColor: 'text-green-700', badgeBg: 'bg-green-100' },
-  custom: { label: 'Custom', quantityLabel: 'Units', badgeColor: 'text-slate-700', badgeBg: 'bg-slate-100' },
+  stock: { label: 'Stock', quantityLabel: 'Shares', badgeColor: 'text-blue-500', badgeBg: 'bg-blue-500/10' },
+  etf: { label: 'ETF', quantityLabel: 'Shares', badgeColor: 'text-violet-500', badgeBg: 'bg-violet-500/10' },
+  crypto: { label: 'Crypto', quantityLabel: 'Units', badgeColor: 'text-amber-500', badgeBg: 'bg-amber-500/10' },
+  metal: { label: 'Metal', quantityLabel: 'Units', badgeColor: 'text-yellow-500', badgeBg: 'bg-yellow-500/10' },
+  cash: { label: 'Cash', quantityLabel: 'Amount', badgeColor: 'text-emerald-500', badgeBg: 'bg-emerald-500/10' },
+  custom: { label: 'Custom', quantityLabel: 'Units', badgeColor: 'text-gray-500', badgeBg: 'bg-gray-500/10' },
 };

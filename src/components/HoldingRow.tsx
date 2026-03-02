@@ -16,6 +16,7 @@ interface HoldingRowProps {
   onDelete: () => void;
   onToggleFavorite: () => void;
   onMove?: () => void;
+  onTickerClick?: () => void;
 }
 
 function getStaleWarning(holding: EnrichedHolding, priceCache: PriceCache): string | null {
@@ -58,9 +59,9 @@ function getStaleWarning(holding: EnrichedHolding, priceCache: PriceCache): stri
   return null;
 }
 
-export function HoldingRow({ holding, categoryLabel, showPortfolioBadge, priceCache, isDraggable, onEdit, onDelete, onToggleFavorite, onMove }: HoldingRowProps) {
-  const gainColor = holding.gainLoss >= 0 ? 'text-green-600' : 'text-red-600';
-  const dailyColor = holding.dailyChange >= 0 ? 'text-green-600' : 'text-red-600';
+export function HoldingRow({ holding, categoryLabel, showPortfolioBadge, priceCache, isDraggable, onEdit, onDelete, onToggleFavorite, onMove, onTickerClick }: HoldingRowProps) {
+  const gainColor = holding.gainLoss >= 0 ? 'text-gain' : 'text-loss';
+  const dailyColor = holding.dailyChange >= 0 ? 'text-gain' : 'text-loss';
   const config = ASSET_TYPE_CONFIG[holding.assetType ?? 'stock'];
   const staleWarning = getStaleWarning(holding, priceCache);
 
@@ -86,7 +87,7 @@ export function HoldingRow({ holding, categoryLabel, showPortfolioBadge, priceCa
       <tr
         ref={setNodeRef}
         style={dragStyle}
-        className="hidden md:table-row border-b border-b-subtle hover:bg-surface transition-colors"
+        className="hidden md:table-row hover:bg-surface-alt/50 transition-colors group"
       >
         {isDraggable && (
           <td className="px-2 py-3 w-8">
@@ -99,12 +100,17 @@ export function HoldingRow({ holding, categoryLabel, showPortfolioBadge, priceCa
           <div className="flex items-center gap-2">
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-semibold text-t-primary">{holding.ticker}</span>
-                <span className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded ${config.badgeBg} ${config.badgeColor}`}>
+                <span
+                  className={`font-semibold text-t-primary ${onTickerClick ? 'cursor-pointer hover:text-accent transition-colors' : ''}`}
+                  onClick={onTickerClick}
+                >
+                  {holding.ticker}
+                </span>
+                <span className={`inline-block text-[10px] font-semibold px-1.5 py-0.5 badge-radius badge-transform ${config.badgeBg} ${config.badgeColor}`}>
                   {config.label}
                 </span>
                 {showPortfolioBadge && !holding.inPortfolio && (
-                  <span className="inline-block text-[10px] font-medium px-1.5 py-0.5 rounded bg-surface-alt text-t-muted">
+                  <span className="inline-block text-[10px] font-medium px-1.5 py-0.5 badge-radius bg-surface-alt text-t-faint">
                     NW only
                   </span>
                 )}
@@ -116,11 +122,11 @@ export function HoldingRow({ holding, categoryLabel, showPortfolioBadge, priceCa
             </div>
           </div>
         </td>
-        <td className="px-4 py-3 text-right text-sm text-t-secondary">{holding.shares}</td>
-        <td className="px-4 py-3 text-right text-sm text-t-secondary">
+        <td className="px-4 py-3 text-right text-sm text-t-secondary tabular-nums">{holding.shares}</td>
+        <td className="px-4 py-3 text-right text-sm text-t-secondary tabular-nums">
           {formatCurrency(holding.buyPrice)}
         </td>
-        <td className="px-4 py-3 text-right text-sm text-t-secondary">
+        <td className="px-4 py-3 text-right text-sm text-t-secondary tabular-nums">
           <div className="flex items-center justify-end gap-1">
             {formatCurrency(holding.currentPrice)}
             {staleWarning && (
@@ -130,27 +136,35 @@ export function HoldingRow({ holding, categoryLabel, showPortfolioBadge, priceCa
             )}
           </div>
         </td>
-        <td className="px-4 py-3 text-right text-sm text-t-secondary">
+        <td className="px-4 py-3 text-right text-sm font-medium text-t-primary tabular-nums">
           {formatCurrency(holding.marketValue)}
         </td>
-        <td className={`px-4 py-3 text-right text-sm font-medium ${gainColor}`}>
+        <td className={`px-4 py-3 text-right text-sm font-medium tabular-nums ${gainColor}`}>
           <div>{formatSignedCurrency(holding.gainLoss)}</div>
-          <div className="text-xs">{formatPercent(holding.gainLossPercent)}</div>
+          <div className="text-xs opacity-70">{formatPercent(holding.gainLossPercent)}</div>
         </td>
-        <td className={`px-4 py-3 text-right text-sm ${dailyColor}`}>
-          {formatSignedCurrency(holding.dailyChange)}
+        <td className="px-4 py-3 text-right text-sm tabular-nums">
+          {(() => {
+            const hasLivePrice = holding.assetType === 'stock' || holding.assetType === 'etf' || holding.assetType === 'crypto';
+            const showDash = holding.dailyChange === 0 && !hasLivePrice;
+            return showDash ? (
+              <span className="text-t-faint">&mdash;</span>
+            ) : (
+              <span className={dailyColor}>{formatSignedCurrency(holding.dailyChange)}</span>
+            );
+          })()}
         </td>
-        <td className="px-4 py-3 text-right text-sm text-t-muted">
+        <td className="px-4 py-3 text-right text-sm text-t-muted tabular-nums">
           {holding.allocation.toFixed(1)}%
         </td>
         <td className="px-4 py-3 text-right">
-          <div className="flex items-center justify-end gap-1">
+          <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               onClick={onToggleFavorite}
-              className="p-1.5 hover:bg-amber-50 rounded-lg transition-colors"
+              className="p-1.5 hover:bg-surface-alt rounded-lg transition-colors"
               title={holding.isFavorite ? 'Unpin' : 'Pin to top'}
             >
-              <Star className={`w-4 h-4 ${holding.isFavorite ? 'text-amber-400 fill-amber-400' : 'text-t-faint'}`} />
+              <Star className={`w-3.5 h-3.5 ${holding.isFavorite ? 'text-amber-400 fill-amber-400' : 'text-t-faint'}`} />
             </button>
             {onMove && (
               <button
@@ -158,7 +172,7 @@ export function HoldingRow({ holding, categoryLabel, showPortfolioBadge, priceCa
                 className="p-1.5 hover:bg-surface-alt rounded-lg transition-colors"
                 title="Move to portfolio"
               >
-                <FolderInput className="w-4 h-4 text-t-muted" />
+                <FolderInput className="w-3.5 h-3.5 text-t-faint hover:text-t-muted" />
               </button>
             )}
             <button
@@ -166,16 +180,20 @@ export function HoldingRow({ holding, categoryLabel, showPortfolioBadge, priceCa
               className="p-1.5 hover:bg-surface-alt rounded-lg transition-colors"
               title="Edit"
             >
-              <Pencil className="w-4 h-4 text-t-muted" />
+              <Pencil className="w-3.5 h-3.5 text-t-faint hover:text-t-muted" />
             </button>
             <button
               onClick={onDelete}
-              className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+              className="p-1.5 hover:bg-loss-bg rounded-lg transition-colors"
               title="Delete"
             >
-              <Trash2 className="w-4 h-4 text-t-muted hover:text-red-500" />
+              <Trash2 className="w-3.5 h-3.5 text-t-faint hover:text-loss" />
             </button>
           </div>
+          {/* Always-visible favorite star */}
+          {holding.isFavorite && (
+            <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 group-hover:hidden ml-auto" />
+          )}
         </td>
       </tr>
 
@@ -183,7 +201,7 @@ export function HoldingRow({ holding, categoryLabel, showPortfolioBadge, priceCa
       <div
         ref={setNodeRef}
         style={dragStyle}
-        className="md:hidden bg-surface-card border border-b-default rounded-xl p-4 mb-3"
+        className="md:hidden bg-surface-card border border-b-default card-radius p-4 mb-3"
       >
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-start gap-2">
@@ -194,12 +212,17 @@ export function HoldingRow({ holding, categoryLabel, showPortfolioBadge, priceCa
             )}
             <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-semibold text-t-primary text-base">{holding.ticker}</span>
-              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${config.badgeBg} ${config.badgeColor}`}>
+              <span
+                className={`font-semibold text-t-primary text-base ${onTickerClick ? 'cursor-pointer hover:text-accent transition-colors' : ''}`}
+                onClick={onTickerClick}
+              >
+                {holding.ticker}
+              </span>
+              <span className={`text-[10px] font-semibold px-1.5 py-0.5 badge-radius badge-transform ${config.badgeBg} ${config.badgeColor}`}>
                 {config.label}
               </span>
               {showPortfolioBadge && !holding.inPortfolio && (
-                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-surface-alt text-t-muted">
+                <span className="text-[10px] font-medium px-1.5 py-0.5 badge-radius bg-surface-alt text-t-faint">
                   NW only
                 </span>
               )}
@@ -210,31 +233,31 @@ export function HoldingRow({ holding, categoryLabel, showPortfolioBadge, priceCa
             )}
             </div>
           </div>
-          <div className="flex items-center gap-1">
-            <button onClick={onToggleFavorite} className="p-1.5 hover:bg-amber-50 rounded-lg">
+          <div className="flex items-center gap-0.5">
+            <button onClick={onToggleFavorite} className="p-1.5 hover:bg-surface-alt rounded-lg">
               <Star className={`w-4 h-4 ${holding.isFavorite ? 'text-amber-400 fill-amber-400' : 'text-t-faint'}`} />
             </button>
             {onMove && (
               <button onClick={onMove} className="p-1.5 hover:bg-surface-alt rounded-lg" title="Move to portfolio">
-                <FolderInput className="w-4 h-4 text-t-muted" />
+                <FolderInput className="w-4 h-4 text-t-faint" />
               </button>
             )}
             <button onClick={onEdit} className="p-1.5 hover:bg-surface-alt rounded-lg">
-              <Pencil className="w-4 h-4 text-t-muted" />
+              <Pencil className="w-4 h-4 text-t-faint" />
             </button>
-            <button onClick={onDelete} className="p-1.5 hover:bg-red-50 rounded-lg">
-              <Trash2 className="w-4 h-4 text-t-muted" />
+            <button onClick={onDelete} className="p-1.5 hover:bg-loss-bg rounded-lg">
+              <Trash2 className="w-4 h-4 text-t-faint" />
             </button>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-y-2 text-sm">
           <div>
-            <span className="text-t-muted">{config.quantityLabel}</span>
-            <p className="font-medium text-t-primary">{holding.shares}</p>
+            <span className="text-t-muted text-xs">{config.quantityLabel}</span>
+            <p className="font-medium text-t-primary tabular-nums">{holding.shares}</p>
           </div>
           <div className="text-right">
-            <span className="text-t-muted">Price</span>
-            <p className="font-medium text-t-primary flex items-center justify-end gap-1">
+            <span className="text-t-muted text-xs">Price</span>
+            <p className="font-medium text-t-primary flex items-center justify-end gap-1 tabular-nums">
               {formatCurrency(holding.currentPrice)}
               {staleWarning && (
                 <span title={staleWarning}>
@@ -244,12 +267,12 @@ export function HoldingRow({ holding, categoryLabel, showPortfolioBadge, priceCa
             </p>
           </div>
           <div>
-            <span className="text-t-muted">Market Value</span>
-            <p className="font-medium text-t-primary">{formatCurrency(holding.marketValue)}</p>
+            <span className="text-t-muted text-xs">Market Value</span>
+            <p className="font-medium text-t-primary tabular-nums">{formatCurrency(holding.marketValue)}</p>
           </div>
           <div className="text-right">
-            <span className="text-t-muted">Gain/Loss</span>
-            <p className={`font-medium ${gainColor}`}>
+            <span className="text-t-muted text-xs">Gain/Loss</span>
+            <p className={`font-medium tabular-nums ${gainColor}`}>
               {formatSignedCurrency(holding.gainLoss)} ({formatPercent(holding.gainLossPercent)})
             </p>
           </div>

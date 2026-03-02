@@ -61,8 +61,8 @@ export function ShareImageModal({ netWorthSummary, portfolioSummary, topHoldings
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-surface-card rounded-xl shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-surface-card rounded-2xl shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto animate-modal-enter">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-t-primary">Share Portfolio Snapshot</h2>
           <button onClick={onClose} className="p-1 hover:bg-surface-alt rounded-lg transition-colors">
@@ -85,9 +85,9 @@ export function ShareImageModal({ netWorthSummary, portfolioSummary, topHoldings
         {/* Preview */}
         <div className="flex justify-center mb-4">
           {imageUrl ? (
-            <img src={imageUrl} alt="Portfolio snapshot" className="rounded-xl shadow-lg max-w-full" style={{ maxHeight: 320 }} />
+            <img src={imageUrl} alt="Portfolio snapshot" className="card-radius shadow-lg max-w-full" style={{ maxHeight: 320 }} />
           ) : (
-            <div className="w-full h-48 bg-surface-alt rounded-xl flex items-center justify-center">
+            <div className="w-full h-48 bg-surface-alt card-radius flex items-center justify-center">
               <div className="w-6 h-6 border-2 border-b-input border-t-accent rounded-full animate-spin" />
             </div>
           )}

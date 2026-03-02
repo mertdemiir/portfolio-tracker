@@ -177,14 +177,14 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
           return (
             <div>
               <label className="block text-sm font-medium text-t-secondary mb-1.5">Symbol</label>
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                <p className="text-sm text-amber-800 mb-2">
+              <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                <p className="text-sm text-amber-600 mb-2">
                   An API key is needed for stock/ETF search & live prices.
                 </p>
                 <button
                   type="button"
                   onClick={() => setShowApiKeyPrompt(true)}
-                  className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                  className="text-sm font-medium text-accent hover:text-accent-hover"
                 >
                   Enter API Key
                 </button>
@@ -242,7 +242,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
                 setTicker(e.target.value);
                 setName(metal?.name ?? e.target.value);
               }}
-              className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
             >
               <option value="">Select a metal</option>
               {METALS.map((m) => (
@@ -265,7 +265,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
                 setTicker(e.target.value);
                 setName(currency?.name ?? e.target.value);
               }}
-              className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
             >
               <option value="">Select a currency</option>
               {CURRENCIES.map((c) => (
@@ -287,7 +287,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
                 value={ticker}
                 onChange={(e) => setTicker(e.target.value.toUpperCase())}
                 placeholder="e.g. PRIV-FUND"
-                className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
               />
               {errors.ticker && <p className="text-red-500 text-xs mt-1">{errors.ticker}</p>}
             </div>
@@ -298,7 +298,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Private Equity Fund"
-                className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
               />
             </div>
           </div>
@@ -308,8 +308,8 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-surface-card rounded-xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-surface-card rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto animate-modal-enter">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-semibold text-t-primary">
             {isEdit ? 'Edit Holding' : 'Add Holding'}
@@ -346,7 +346,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
                       }}
                       className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
                         isSelected
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          ? 'border-accent bg-accent-light text-accent'
                           : 'border-b-default text-t-muted hover:bg-surface'
                       }`}
                     >
@@ -375,7 +375,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
                 value={shares}
                 onChange={(e) => setShares(e.target.value)}
                 placeholder="0"
-                className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
               />
               {errors.shares && (
                 <p className="text-red-500 text-xs mt-1">{errors.shares}</p>
@@ -393,7 +393,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
                   value={buyPrice}
                   onChange={(e) => setBuyPrice(e.target.value)}
                   placeholder="0.00"
-                  className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
                 />
                 {errors.buyPrice && (
                   <p className="text-red-500 text-xs mt-1">{errors.buyPrice}</p>
@@ -415,7 +415,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
                 value={manualPrice}
                 onChange={(e) => setManualPrice(e.target.value)}
                 placeholder="Enter current market price"
-                className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
               />
               {errors.manualPrice && (
                 <p className="text-red-500 text-xs mt-1">{errors.manualPrice}</p>
@@ -435,7 +435,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
               type="date"
               value={buyDate}
               onChange={(e) => setBuyDate(e.target.value)}
-              className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
             />
             {errors.buyDate && (
               <p className="text-red-500 text-xs mt-1">{errors.buyDate}</p>
@@ -448,7 +448,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
             <select
               value={currency}
               onChange={(e) => setCurrency(e.target.value)}
-              className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
             >
               {SUPPORTED_CURRENCIES.map((c) => (
                 <option key={c.code} value={c.code}>
@@ -464,7 +464,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
             >
               {allCategories.map((cat) => (
                 <option key={cat.key} value={cat.key}>
@@ -476,7 +476,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
               <button
                 type="button"
                 onClick={() => setShowAddCategory(true)}
-                className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 mt-1.5"
+                className="inline-flex items-center gap-1 text-xs text-accent hover:text-accent-hover mt-1.5"
               >
                 <Plus className="w-3 h-3" />
                 Add custom category
@@ -488,7 +488,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
                   value={newCategoryLabel}
                   onChange={(e) => setNewCategoryLabel(e.target.value)}
                   placeholder="Category name"
-                  className="flex-1 px-2 py-1.5 border border-b-input rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="flex-1 px-2 py-1.5 border border-b-input rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
@@ -500,7 +500,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
                   type="button"
                   onClick={handleAddCategory}
                   disabled={!newCategoryLabel.trim()}
-                  className="px-2 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                  className="px-2 py-1.5 bg-accent text-white rounded-lg text-xs font-medium hover:bg-accent-hover disabled:opacity-50 transition-colors"
                 >
                   Add
                 </button>
@@ -541,7 +541,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
               type="button"
               onClick={() => setInPortfolio(!inPortfolio)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                inPortfolio ? 'bg-blue-600' : 'bg-surface-active'
+                inPortfolio ? 'bg-accent' : 'bg-surface-active'
               }`}
             >
               <span
@@ -563,7 +563,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
                 type="button"
                 onClick={() => setSkipStaleCheck(!skipStaleCheck)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  skipStaleCheck ? 'bg-blue-600' : 'bg-surface-active'
+                  skipStaleCheck ? 'bg-accent' : 'bg-surface-active'
                 }`}
               >
                 <span
@@ -586,7 +586,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+              className="flex-1 px-4 py-2.5 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors"
             >
               {isEdit ? 'Save Changes' : `Add ${config.label}`}
             </button>

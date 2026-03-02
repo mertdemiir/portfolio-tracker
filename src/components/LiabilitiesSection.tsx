@@ -48,17 +48,17 @@ export function LiabilitiesSection({ showTRY, tryRate }: LiabilitiesSectionProps
           ) : (
             <ChevronRight className="w-4 h-4 text-t-faint group-hover:text-t-muted transition-colors" />
           )}
-          <CreditCard className="w-4 h-4 text-red-500" />
+          <CreditCard className="w-4 h-4 text-loss" />
           <span className="text-sm font-medium text-t-secondary">Liabilities</span>
           {netWorthSummary.totalLiabilities > 0 && (
-            <span className="text-xs font-medium text-red-500 ml-1">
+            <span className="text-xs font-medium text-loss ml-1">
               {formatValue(netWorthSummary.totalLiabilities)}
             </span>
           )}
         </button>
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-1 text-xs text-red-500 hover:text-red-600 transition-colors"
+          className="flex items-center gap-1 text-xs text-loss hover:text-loss transition-colors"
         >
           <Plus size={13} />
           Add
@@ -94,7 +94,7 @@ export function LiabilitiesSection({ showTRY, tryRate }: LiabilitiesSectionProps
                             </div>
                           </div>
                           <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-medium text-red-500">
+                            <span className="text-sm font-medium text-loss">
                               {formatValue(l.balance, l.currency)}
                             </span>
                             <button
@@ -105,7 +105,7 @@ export function LiabilitiesSection({ showTRY, tryRate }: LiabilitiesSectionProps
                             </button>
                             <button
                               onClick={() => deleteLiability(l.id)}
-                              className="p-0.5 text-t-faint hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                              className="p-0.5 text-t-faint hover:text-loss opacity-0 group-hover:opacity-100 transition-all"
                             >
                               <Trash2 size={12} />
                             </button>

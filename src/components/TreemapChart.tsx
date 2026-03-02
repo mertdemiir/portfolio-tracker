@@ -64,7 +64,7 @@ export function TreemapChart({ holdings }: Props) {
   if (data.length === 0) return null;
 
   return (
-    <div className="bg-surface-card rounded-xl border border-b-default p-4">
+    <div className="bg-surface-card card-radius card-shadow p-4">
       <h3 className="text-sm font-semibold text-t-primary mb-3">Portfolio Treemap</h3>
       <ResponsiveContainer width="100%" height={250}>
         <Treemap
@@ -78,7 +78,16 @@ export function TreemapChart({ holdings }: Props) {
               if (!payload?.[0]) return null;
               const d = payload[0].payload;
               return (
-                <div className="px-3 py-2 rounded-lg shadow-lg text-xs" style={{ background: colors.tooltipBg, border: `1px solid ${colors.tooltipBorder}`, color: colors.tooltipText }}>
+                <div
+                  className="px-3 py-2 text-xs"
+                  style={{
+                    background: colors.tooltipBg,
+                    border: `1px solid ${colors.tooltipBorder}`,
+                    color: colors.tooltipText,
+                    borderRadius: '10px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  }}
+                >
                   <p className="font-semibold">{d.name}</p>
                   <p>{formatCurrency(d.size)}</p>
                   <p style={{ color: d.change >= 0 ? '#10b981' : '#ef4444' }}>{formatPercent(d.change)}</p>

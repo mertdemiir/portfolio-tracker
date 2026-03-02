@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Trash2, Plus, Key, Tag, Download, Upload, HardDrive, FileSpreadsheet, Sun, Moon, Stars, BarChart3, FolderOpen } from 'lucide-react';
+import { X, Trash2, Plus, Key, Tag, Download, Upload, HardDrive, FileSpreadsheet, Sun, Moon, Stars, BarChart3, FolderOpen, Landmark, TerminalSquare } from 'lucide-react';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { useAutoBackup } from '../hooks/useAutoBackup';
 import { CsvImportModal } from './CsvImportModal';
 import { ManagePortfoliosModal } from './ManagePortfoliosModal';
-import type { CustomCategory, ThemeId, BenchmarkId } from '../types';
+import type { CustomCategory, ThemeId, ThemePreference, BenchmarkId } from '../types';
 import { BENCHMARK_CONFIG, ACCENT_PRESETS, SUPPORTED_CURRENCIES } from '../types';
 
 interface SettingsModalProps {
@@ -24,7 +24,7 @@ export function SettingsModal({
   onDeleteCategory,
   onClose,
 }: SettingsModalProps) {
-  const { holdings, snapshots, theme, setTheme, accentColor, setAccentColor, baseCurrency, setBaseCurrency, importBenchmarkCsv, clearBenchmark, getBenchmarkDateRange } = usePortfolioContext();
+  const { holdings, snapshots, theme, themePreference, setTheme, accentColor, setAccentColor, baseCurrency, setBaseCurrency, importBenchmarkCsv, clearBenchmark, getBenchmarkDateRange } = usePortfolioContext();
   const [keyInput, setKeyInput] = useState(apiKey);
   const [newCategoryLabel, setNewCategoryLabel] = useState('');
   const [keySaved, setKeySaved] = useState(false);
@@ -212,8 +212,8 @@ export function SettingsModal({
   return (
     <>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-surface-card rounded-xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-surface-card rounded-2xl animate-modal-enter shadow-xl w-full max-w-xl p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-semibold text-t-primary">Settings</h2>
           <button
@@ -225,22 +225,44 @@ export function SettingsModal({
         </div>
 
         {/* Appearance Section */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-3">
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-b-subtle">
             <Sun className="w-4 h-4 text-t-muted" />
             <h3 className="text-sm font-semibold text-t-primary">Appearance</h3>
           </div>
-          <div className="grid grid-cols-3 gap-2">
+
+          {/* Auto Appearance Toggle */}
+          <div className="flex items-center justify-between py-2.5 px-3 bg-surface rounded-lg mb-3">
+            <div>
+              <p className="text-sm font-medium text-t-secondary">Automatic Appearance</p>
+              <p className="text-xs text-t-muted">Heritage during day · Terminal at night</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setTheme(themePreference === 'auto' ? theme : 'auto')}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                themePreference === 'auto' ? 'bg-accent' : 'bg-surface-active'
+              }`}
+            >
+              <span className={`inline-block h-4 w-4 rounded-full bg-surface-card transition-transform ${
+                themePreference === 'auto' ? 'translate-x-6' : 'translate-x-1'
+              }`} />
+            </button>
+          </div>
+
+          <div className={`grid grid-cols-3 sm:grid-cols-5 gap-2 ${themePreference === 'auto' ? 'opacity-40 pointer-events-none' : ''}`}>
             {([
-              { id: 'light' as ThemeId, label: 'Light', icon: Sun, bg: '#f8fafc', card: '#ffffff', text: '#0f172a' },
-              { id: 'dark' as ThemeId, label: 'Dark', icon: Moon, bg: '#1e293b', card: '#334155', text: '#f1f5f9' },
-              { id: 'midnight' as ThemeId, label: 'Midnight', icon: Stars, bg: '#020617', card: '#0f172a', text: '#f8fafc' },
+              { id: 'heritage' as ThemeId, label: 'Heritage', icon: Landmark, bg: '#f5f0e8', card: '#faf7f2', text: '#2c2418' },
+              { id: 'terminal' as ThemeId, label: 'Terminal', icon: TerminalSquare, bg: '#0a0a0a', card: '#111111', text: '#00ff88' },
+              { id: 'light' as ThemeId, label: 'Light', icon: Sun, bg: '#f9fafb', card: '#ffffff', text: '#111827' },
+              { id: 'dark' as ThemeId, label: 'Dark', icon: Moon, bg: '#0c0f1a', card: '#151926', text: '#f0f2f5' },
+              { id: 'midnight' as ThemeId, label: 'Midnight', icon: Stars, bg: '#050509', card: '#0d0d14', text: '#f0f2f5' },
             ]).map((t) => (
               <button
                 key={t.id}
                 onClick={() => setTheme(t.id)}
                 className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 transition-all ${
-                  theme === t.id
+                  themePreference === t.id
                     ? 'border-accent ring-1 ring-accent/30'
                     : 'border-b-default hover:border-b-input'
                 }`}
@@ -267,14 +289,14 @@ export function SettingsModal({
                 <button
                   key={p.color}
                   onClick={() => setAccentColor(p.color)}
-                  className={`w-7 h-7 rounded-full border-2 transition-all ${
+                  className={`w-8 h-8 rounded-full border-2 transition-all ${
                     accentColor === p.color ? 'border-t-primary scale-110' : 'border-transparent hover:scale-105'
                   }`}
                   style={{ backgroundColor: p.color }}
                   title={p.name}
                 />
               ))}
-              <label className="relative w-7 h-7 rounded-full border-2 border-dashed border-b-input cursor-pointer hover:border-b-default transition-colors overflow-hidden" title="Custom color">
+              <label className="relative w-8 h-8 rounded-full border-2 border-dashed border-b-input cursor-pointer hover:border-b-default transition-colors overflow-hidden" title="Custom color">
                 <input
                   type="color"
                   value={accentColor}
@@ -303,8 +325,8 @@ export function SettingsModal({
         </div>
 
         {/* API Key Section */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-3">
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-b-subtle">
             <Key className="w-4 h-4 text-t-muted" />
             <h3 className="text-sm font-semibold text-t-primary">Finnhub API Key</h3>
           </div>
@@ -314,12 +336,12 @@ export function SettingsModal({
               value={keyInput}
               onChange={(e) => setKeyInput(e.target.value)}
               placeholder="Enter your Finnhub API key"
-              className="flex-1 px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="flex-1 px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
             />
             <button
               onClick={handleSaveKey}
               disabled={!keyInput.trim()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              className="px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover disabled:opacity-50 transition-colors"
             >
               {keySaved ? 'Saved!' : 'Save'}
             </button>
@@ -330,8 +352,8 @@ export function SettingsModal({
         </div>
 
         {/* Custom Categories Section */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-3">
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-b-subtle">
             <Tag className="w-4 h-4 text-t-muted" />
             <h3 className="text-sm font-semibold text-t-primary">Custom Categories</h3>
           </div>
@@ -346,7 +368,7 @@ export function SettingsModal({
                   <span className="text-sm text-t-secondary">{cat.label}</span>
                   <button
                     onClick={() => onDeleteCategory(cat.key)}
-                    className="p-1 hover:bg-red-50 rounded transition-colors"
+                    className="p-1 hover:bg-loss-bg rounded transition-colors"
                     title="Delete category"
                   >
                     <Trash2 className="w-3.5 h-3.5 text-t-faint hover:text-red-500" />
@@ -364,7 +386,7 @@ export function SettingsModal({
               value={newCategoryLabel}
               onChange={(e) => setNewCategoryLabel(e.target.value)}
               placeholder="New category name"
-              className="flex-1 px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="flex-1 px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
             />
             <button
               type="submit"
@@ -378,8 +400,8 @@ export function SettingsModal({
         </div>
 
         {/* Benchmark Data Section */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-3">
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-b-subtle">
             <BarChart3 className="w-4 h-4 text-t-muted" />
             <h3 className="text-sm font-semibold text-t-primary">Benchmark Data</h3>
           </div>
@@ -420,7 +442,7 @@ export function SettingsModal({
                     {range && (
                       <button
                         onClick={() => handleBenchmarkClear(key)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 text-red-500 hover:bg-red-50 rounded-md text-xs font-medium transition-colors"
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 text-loss hover:bg-loss-bg rounded-md text-xs font-medium transition-colors"
                       >
                         <Trash2 className="w-3 h-3" />
                         Clear
@@ -428,7 +450,7 @@ export function SettingsModal({
                     )}
                   </div>
                   {status && (
-                    <p className={`text-xs mt-1.5 ${status.startsWith('Error') ? 'text-red-500' : 'text-emerald-600'}`}>
+                    <p className={`text-xs mt-1.5 ${status.startsWith('Error') ? 'text-loss' : 'text-gain'}`}>
                       {status}
                     </p>
                   )}
@@ -449,7 +471,7 @@ export function SettingsModal({
 
         {/* Data Backup Section */}
         <div>
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-b-subtle">
             <HardDrive className="w-4 h-4 text-t-muted" />
             <h3 className="text-sm font-semibold text-t-primary">Data Backup</h3>
           </div>
@@ -473,14 +495,14 @@ export function SettingsModal({
             </button>
           </div>
           {backupStatus && (
-            <p className={`text-xs mt-2 ${backupStatus.includes('failed') || backupStatus.includes('Invalid') || backupStatus.includes('Failed') ? 'text-red-500' : 'text-emerald-600'}`}>{backupStatus}</p>
+            <p className={`text-xs mt-2 ${backupStatus.includes('failed') || backupStatus.includes('Invalid') || backupStatus.includes('Failed') ? 'text-loss' : 'text-gain'}`}>{backupStatus}</p>
           )}
         </div>
 
         {/* Auto Backup Section (Electron only) */}
         {isElectron && (
           <div className="mt-6">
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-b-subtle">
               <HardDrive className="w-4 h-4 text-t-muted" />
               <h3 className="text-sm font-semibold text-t-primary">Auto Backup</h3>
             </div>
@@ -493,7 +515,7 @@ export function SettingsModal({
                 type="button"
                 onClick={() => setAutoEnabled(!autoBackupSettings.enabled)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  autoBackupSettings.enabled ? 'bg-blue-600' : 'bg-surface-active'
+                  autoBackupSettings.enabled ? 'bg-accent' : 'bg-surface-active'
                 }`}
               >
                 <span className={`inline-block h-4 w-4 rounded-full bg-surface-card transition-transform ${
@@ -544,7 +566,7 @@ export function SettingsModal({
 
         {/* Portfolios Section */}
         <div className="mt-6">
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-b-subtle">
             <FolderOpen className="w-4 h-4 text-t-muted" />
             <h3 className="text-sm font-semibold text-t-primary">Portfolios</h3>
           </div>
@@ -562,7 +584,7 @@ export function SettingsModal({
 
         {/* CSV Import Section */}
         <div className="mt-6">
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-b-subtle">
             <FileSpreadsheet className="w-4 h-4 text-t-muted" />
             <h3 className="text-sm font-semibold text-t-primary">Import from CSV</h3>
           </div>

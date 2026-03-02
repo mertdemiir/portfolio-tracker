@@ -54,8 +54,8 @@ export function ManagePortfoliosModal({ onClose }: ManagePortfoliosModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-surface-card rounded-xl shadow-xl w-full max-w-sm p-6">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-surface-card rounded-2xl shadow-xl w-full max-w-sm p-6 animate-modal-enter">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-t-primary">Manage Portfolios</h2>
           <button onClick={onClose} className="p-1 hover:bg-surface-alt rounded-lg transition-colors">
@@ -81,7 +81,7 @@ export function ManagePortfoliosModal({ onClose }: ManagePortfoliosModalProps) {
                       className="flex-1 px-2 py-1 border border-b-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
                       autoFocus
                     />
-                    <button onClick={saveEdit} className="p-1 text-emerald-600 hover:text-emerald-700">
+                    <button onClick={saveEdit} className="p-1 text-gain hover:text-gain">
                       <Check size={14} />
                     </button>
                     <button onClick={() => setEditingId(null)} className="p-1 text-t-faint hover:text-t-muted">
@@ -103,7 +103,7 @@ export function ManagePortfoliosModal({ onClose }: ManagePortfoliosModalProps) {
                     {!isDefault && (
                       <button
                         onClick={() => handleDelete(p.id)}
-                        className="p-1 text-t-faint hover:text-red-500 transition-colors"
+                        className="p-1 text-t-faint hover:text-loss transition-colors"
                       >
                         <Trash2 size={13} />
                       </button>

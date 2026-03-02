@@ -1,19 +1,34 @@
-import { useState, useMemo } from 'react';
-import { Plus, Trash2, X, Check, ArrowUpDown } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Plus, Trash2, X, Check, ArrowUpDown, MessageSquare } from 'lucide-react';
+import { BarChart, Bar, ResponsiveContainer, XAxis, Tooltip } from 'recharts';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { formatCurrency, formatSignedCurrency, formatDate } from '../utils/formatters';
 import { AddTransactionModal } from './AddTransactionModal';
 import { DEFAULT_PORTFOLIO_ID } from '../types';
+import type { NavFilter } from '../App';
+
 type SortKey = 'date' | 'ticker' | 'type' | 'total';
 
-export function TransactionLog() {
+interface TransactionLogProps {
+  initialFilter?: NavFilter | null;
+}
+
+export function TransactionLog({ initialFilter }: TransactionLogProps) {
   const { transactions, deleteTransaction, holdings, updateHolding, addHolding, deleteHolding, activePortfolioId } = usePortfolioContext();
   const [showModal, setShowModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'buy' | 'sell'>('all');
-  const [filterTicker, setFilterTicker] = useState('');
+  const [filterTicker, setFilterTicker] = useState(initialFilter?.ticker || '');
   const [sortKey, setSortKey] = useState<SortKey>('date');
   const [sortAsc, setSortAsc] = useState(false);
+
+  // Apply filter from cross-page navigation
+  useEffect(() => {
+    if (initialFilter?.ticker) {
+      setFilterTicker(initialFilter.ticker);
+    }
+  }, [initialFilter]);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -64,7 +79,7 @@ export function TransactionLog() {
 
   const SortHeader = ({ label, field }: { label: string; field: SortKey }) => (
     <th
-      className="pb-2 font-medium text-t-muted text-xs cursor-pointer hover:text-t-secondary select-none"
+      className="pb-2 text-[11px] font-semibold text-t-muted uppercase tracking-wider cursor-pointer hover:text-t-secondary select-none"
       onClick={() => toggleSort(field)}
     >
       <span className="inline-flex items-center gap-1">
@@ -76,42 +91,89 @@ export function TransactionLog() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-t-primary">Transactions</h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-lg font-semibold text-t-primary tracking-tight">Transactions</h2>
         <button
           onClick={() => setShowModal(true)}
-          className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover shadow-sm transition-colors"
         >
           <Plus size={16} />
           Log Transaction
         </button>
       </div>
 
+      {/* Monthly volume chart */}
+      {transactions.length > 0 && (() => {
+        const monthlyData = transactions.reduce((acc, t) => {
+          const month = t.date.substring(0, 7); // YYYY-MM
+          if (!acc[month]) acc[month] = { month, buys: 0, sells: 0 };
+          if (t.type === 'buy') acc[month].buys += t.total;
+          else acc[month].sells += t.total;
+          return acc;
+        }, {} as Record<string, { month: string; buys: number; sells: number }>);
+
+        const chartData = Object.values(monthlyData)
+          .sort((a, b) => a.month.localeCompare(b.month))
+          .slice(-12)
+          .map(d => ({
+            ...d,
+            label: new Date(d.month + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+          }));
+
+        if (chartData.length < 2) return null;
+
+        return (
+          <div className="bg-surface-card card-radius border border-b-default p-4 mb-6">
+            <h3 className="text-xs font-semibold text-t-muted uppercase tracking-wider mb-3">Monthly Activity</h3>
+            <div className="h-20">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                  <XAxis dataKey="label" fontSize={10} stroke="var(--text-faint)" tickLine={false} axisLine={false} />
+                  <Tooltip
+                    formatter={(value: number | undefined, name?: string) => [formatCurrency(value ?? 0), name === 'buys' ? 'Bought' : 'Sold']}
+                    contentStyle={{
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-default)',
+                      fontSize: '12px',
+                      backgroundColor: 'var(--surface-card)',
+                      color: 'var(--text-primary)',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    }}
+                  />
+                  <Bar dataKey="buys" fill="var(--gain)" radius={[2, 2, 0, 0]} maxBarSize={24} />
+                  <Bar dataKey="sells" fill="var(--loss)" radius={[2, 2, 0, 0]} maxBarSize={24} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        <div className="bg-surface-card rounded-xl border border-b-default p-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="bg-surface-card card-radius border border-b-default p-4 hover:shadow-sm transition-all duration-200">
           <p className="text-xs text-t-muted mb-1">Total Transactions</p>
-          <p className="text-xl font-bold text-t-primary">{transactions.length}</p>
+          <p className="text-xl font-bold text-t-primary tabular-nums">{transactions.length}</p>
         </div>
-        <div className="bg-surface-card rounded-xl border border-b-default p-4">
+        <div className="bg-surface-card card-radius border border-b-default border-l-4 border-l-gain p-4 hover:shadow-sm transition-all duration-200">
           <p className="text-xs text-t-muted mb-1">Total Bought</p>
-          <p className="text-xl font-bold text-green-600">{formatCurrency(totalBuys)}</p>
+          <p className="text-xl font-bold text-gain tabular-nums">{formatCurrency(totalBuys)}</p>
         </div>
-        <div className="bg-surface-card rounded-xl border border-b-default p-4">
+        <div className="bg-surface-card card-radius border border-b-default border-l-4 border-l-loss p-4 hover:shadow-sm transition-all duration-200">
           <p className="text-xs text-t-muted mb-1">Total Sold</p>
-          <p className="text-xl font-bold text-red-600">{formatCurrency(totalSells)}</p>
+          <p className="text-xl font-bold text-loss tabular-nums">{formatCurrency(totalSells)}</p>
         </div>
-        <div className="bg-surface-card rounded-xl border border-b-default p-4">
+        <div className={`bg-surface-card card-radius border border-b-default border-l-4 ${totalRealizedPnl >= 0 ? 'border-l-gain' : 'border-l-loss'} p-4 hover:shadow-sm transition-all duration-200`}>
           <p className="text-xs text-t-muted mb-1">Realized P&L</p>
-          <p className={`text-xl font-bold ${totalRealizedPnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          <p className={`text-xl font-bold tabular-nums ${totalRealizedPnl >= 0 ? 'text-gain' : 'text-loss'}`}>
             {formatSignedCurrency(totalRealizedPnl)}
           </p>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-surface-card rounded-xl border border-b-default p-5">
-        <div className="flex flex-wrap items-center gap-3 mb-4">
+      {/* Filters & Table */}
+      <div className="bg-surface-card card-radius border border-b-default overflow-hidden">
+        <div className="flex flex-wrap items-center gap-3 p-5 pb-4">
           <div className="flex bg-surface-alt rounded-lg p-0.5">
             {(['all', 'buy', 'sell'] as const).map((t) => (
               <button
@@ -132,12 +194,12 @@ export function TransactionLog() {
             value={filterTicker}
             onChange={(e) => setFilterTicker(e.target.value)}
             placeholder="Filter by ticker..."
-            className="px-3 py-1.5 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-48"
+            className="px-3 py-1.5 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent w-48"
           />
         </div>
 
         {filtered.length === 0 ? (
-          <p className="text-sm text-t-muted text-center py-8">
+          <p className="text-sm text-t-muted text-center py-8 px-5">
             {transactions.length === 0
               ? 'No transactions yet. Log your first buy or sell.'
               : 'No transactions match your filters.'}
@@ -150,25 +212,26 @@ export function TransactionLog() {
                   <SortHeader label="Date" field="date" />
                   <SortHeader label="Type" field="type" />
                   <SortHeader label="Ticker" field="ticker" />
-                  <th className="pb-2 font-medium text-t-muted text-xs">Name</th>
-                  <th className="pb-2 font-medium text-t-muted text-xs text-right">Shares</th>
-                  <th className="pb-2 font-medium text-t-muted text-xs text-right">Price</th>
+                  <th className="pb-2 text-[11px] font-semibold text-t-muted uppercase tracking-wider">Name</th>
+                  <th className="pb-2 text-[11px] font-semibold text-t-muted uppercase tracking-wider text-right">Shares</th>
+                  <th className="pb-2 text-[11px] font-semibold text-t-muted uppercase tracking-wider text-right">Price</th>
                   <SortHeader label="Total" field="total" />
-                  <th className="pb-2 font-medium text-t-muted text-xs text-right">P&L</th>
-                  <th className="pb-2 font-medium text-t-muted text-xs">Notes</th>
+                  <th className="pb-2 text-[11px] font-semibold text-t-muted uppercase tracking-wider text-right">P&L</th>
+                  <th className="pb-2 w-8"></th>
                   <th className="pb-2 w-10"></th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((t) => (
-                  <tr key={t.id} className="border-b border-b-subtle last:border-0">
-                    <td className="py-2 text-t-secondary">{formatDate(t.date)}</td>
+                  <React.Fragment key={t.id}>
+                  <tr className="border-b border-b-subtle last:border-0 hover:bg-surface-alt/50 transition-colors group">
+                    <td className="py-2 text-t-secondary tabular-nums">{formatDate(t.date)}</td>
                     <td className="py-2">
                       <span
-                        className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                        className={`inline-block px-2 py-0.5 rounded-md text-[11px] font-semibold ${
                           t.type === 'buy'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-red-100 text-red-700'
+                            ? 'bg-emerald-500/10 text-emerald-600'
+                            : 'bg-red-500/10 text-red-600'
                         }`}
                       >
                         {t.type.toUpperCase()}
@@ -176,19 +239,29 @@ export function TransactionLog() {
                     </td>
                     <td className="py-2 font-medium text-t-primary">{t.ticker}</td>
                     <td className="py-2 text-t-muted text-xs truncate max-w-[120px]">{t.name}</td>
-                    <td className="py-2 text-right text-t-secondary">{t.shares}</td>
-                    <td className="py-2 text-right text-t-secondary">{formatCurrency(t.pricePerShare)}</td>
-                    <td className="py-2 text-right font-medium text-t-primary">{formatCurrency(t.total)}</td>
+                    <td className="py-2 text-right text-t-secondary tabular-nums">{t.shares}</td>
+                    <td className="py-2 text-right text-t-secondary tabular-nums">{formatCurrency(t.pricePerShare)}</td>
+                    <td className="py-2 text-right font-medium text-t-primary tabular-nums">{formatCurrency(t.total)}</td>
                     <td className="py-2 text-right text-sm">
                       {t.type === 'sell' && t.costBasisPerShare !== undefined ? (
-                        <span className={`font-medium ${(t.pricePerShare - t.costBasisPerShare) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        <span className={`font-medium tabular-nums ${(t.pricePerShare - t.costBasisPerShare) >= 0 ? 'text-gain' : 'text-loss'}`}>
                           {formatSignedCurrency((t.pricePerShare - t.costBasisPerShare) * t.shares)}
                         </span>
                       ) : (
                         <span className="text-t-faint">-</span>
                       )}
                     </td>
-                    <td className="py-2 text-t-muted text-xs truncate max-w-[100px]">{t.notes || '-'}</td>
+                    <td className="py-2 text-center">
+                      {t.notes && (
+                        <button
+                          onClick={() => setExpandedRow(expandedRow === t.id ? null : t.id)}
+                          className="p-1 text-t-faint hover:text-accent transition-colors"
+                          title="View note"
+                        >
+                          <MessageSquare size={13} />
+                        </button>
+                      )}
+                    </td>
                     <td className="py-2 text-right">
                       {confirmDelete === t.id ? (
                         <div className="flex items-center gap-1 justify-end">
@@ -236,7 +309,7 @@ export function TransactionLog() {
                               deleteTransaction(t.id);
                               setConfirmDelete(null);
                             }}
-                            className="text-red-600 hover:text-red-700 p-0.5"
+                            className="text-loss hover:text-loss/80 p-0.5"
                           >
                             <Check size={14} />
                           </button>
@@ -250,13 +323,23 @@ export function TransactionLog() {
                       ) : (
                         <button
                           onClick={() => setConfirmDelete(t.id)}
-                          className="text-t-faint hover:text-red-500 transition-colors p-0.5"
+                          className="text-t-faint hover:text-loss transition-colors p-0.5"
                         >
                           <Trash2 size={14} />
                         </button>
                       )}
                     </td>
                   </tr>
+                  {expandedRow === t.id && t.notes && (
+                    <tr>
+                      <td colSpan={10} className="px-5 py-3 bg-surface-alt/30">
+                        <div className="flex items-start gap-2 border-l-2 border-accent/40 pl-3">
+                          <p className="text-xs text-t-secondary leading-relaxed">{t.notes}</p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

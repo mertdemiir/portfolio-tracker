@@ -119,8 +119,8 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-surface-card rounded-xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-surface-card rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto animate-modal-enter">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-semibold text-t-primary">Log Transaction</h2>
           <button onClick={onClose} className="p-1 hover:bg-surface-alt rounded-lg transition-colors">
@@ -135,7 +135,7 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
               type="button"
               onClick={() => setType('buy')}
               className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
-                type === 'buy' ? 'bg-surface-card text-green-700 shadow-sm' : 'text-t-muted'
+                type === 'buy' ? 'bg-surface-card text-gain shadow-sm' : 'text-t-muted'
               }`}
             >
               Buy
@@ -144,7 +144,7 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
               type="button"
               onClick={() => setType('sell')}
               className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
-                type === 'sell' ? 'bg-surface-card text-red-700 shadow-sm' : 'text-t-muted'
+                type === 'sell' ? 'bg-surface-card text-loss shadow-sm' : 'text-t-muted'
               }`}
             >
               Sell
@@ -159,7 +159,7 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
               value={date}
               max={todayDateString()}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
               required
             />
           </div>
@@ -172,7 +172,7 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
               value={ticker}
               onChange={(e) => handleTickerChange(e.target.value)}
               placeholder="e.g. AAPL, BTC"
-              className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
               required
             />
             {suggestions.length > 0 && (
@@ -200,7 +200,7 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Auto-filled or enter manually"
-              className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
             />
           </div>
 
@@ -215,7 +215,7 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
                 placeholder="0"
                 min="0"
                 step="any"
-                className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
                 required
               />
             </div>
@@ -228,7 +228,7 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
                 placeholder="0.00"
                 min="0"
                 step="0.01"
-                className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
                 required
               />
             </div>
@@ -252,19 +252,19 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. DCA purchase, rebalancing"
               rows={2}
-              className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+              className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent resize-none"
             />
           </div>
 
           {/* Sell error */}
           {sellError && (
-            <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{sellError}</p>
+            <p className="text-sm text-loss bg-loss-bg rounded-lg px-3 py-2">{sellError}</p>
           )}
 
           {/* Submit */}
           <button
             type="submit"
-            className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+            className="w-full py-2.5 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors"
           >
             Log Transaction
           </button>

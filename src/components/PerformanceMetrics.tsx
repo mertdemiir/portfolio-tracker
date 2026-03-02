@@ -1,4 +1,3 @@
-import { TrendingUp, Award, AlertTriangle } from 'lucide-react';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { formatPercent, formatCurrency } from '../utils/formatters';
 import type { PortfolioSnapshot, EnrichedHolding } from '../types';
@@ -49,58 +48,49 @@ export function PerformanceMetrics() {
   const { best, worst } = getBestWorst(filteredEnrichedHoldings);
 
   return (
-    <div className="bg-surface-card rounded-xl border border-b-default p-5 mb-4">
+    <div className="bg-surface-card card-radius border border-b-default p-5 mb-6">
       <h3 className="text-sm font-semibold text-t-primary mb-4">Performance</h3>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Return */}
-        <div>
-          <div className="flex items-center gap-1.5 mb-1">
-            <TrendingUp className="w-3.5 h-3.5 text-t-faint" />
-            <span className="text-xs text-t-muted">Total Return</span>
-          </div>
+        <div className="border-l-2 border-l-accent pl-3 hover:scale-[1.02] transition-transform">
+          <span className="text-xs text-t-muted font-medium">Total Return</span>
           <p
-            className={`text-lg font-bold ${
-              filteredPortfolioSummary.totalGainLossPercent >= 0 ? 'text-green-600' : 'text-red-600'
+            className={`text-lg font-bold tabular-nums ${
+              filteredPortfolioSummary.totalGainLossPercent >= 0 ? 'text-gain' : 'text-loss'
             }`}
           >
             {formatPercent(filteredPortfolioSummary.totalGainLossPercent)}
           </p>
-          <p className="text-xs text-t-faint">
+          <p className="text-xs text-t-faint tabular-nums">
             {filteredPortfolioSummary.totalGainLoss >= 0 ? '+' : ''}
             {formatCurrency(filteredPortfolioSummary.totalGainLoss)}
           </p>
         </div>
 
         {/* CAGR */}
-        <div>
-          <div className="flex items-center gap-1.5 mb-1">
-            <TrendingUp className="w-3.5 h-3.5 text-t-faint" />
-            <span className="text-xs text-t-muted">CAGR</span>
-          </div>
+        <div className="border-l-2 border-l-violet-500 pl-3 hover:scale-[1.02] transition-transform">
+          <span className="text-xs text-t-muted font-medium">CAGR</span>
           {displayCagr !== null ? (
             <>
               <p
-                className={`text-lg font-bold ${displayCagr >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                className={`text-lg font-bold tabular-nums ${displayCagr >= 0 ? 'text-gain' : 'text-loss'}`}
               >
                 {formatPercent(displayCagr)}
               </p>
               <p className="text-xs text-t-faint">Annualized</p>
             </>
           ) : (
-            <p className="text-sm text-t-faint">Need more data</p>
+            <p className="text-sm text-t-faint mt-1">Need more data</p>
           )}
         </div>
 
         {/* Best Performer */}
-        <div>
-          <div className="flex items-center gap-1.5 mb-1">
-            <Award className="w-3.5 h-3.5 text-t-faint" />
-            <span className="text-xs text-t-muted">Best Performer</span>
-          </div>
+        <div className="border-l-2 border-l-gain pl-3 hover:scale-[1.02] transition-transform">
+          <span className="text-xs text-t-muted font-medium">Best Performer</span>
           {best ? (
             <>
-              <p className="text-lg font-bold text-green-600">{best.ticker}</p>
-              <p className="text-xs text-green-600">{formatPercent(best.gainLossPercent)}</p>
+              <p className="text-lg font-bold text-gain">{best.ticker}</p>
+              <p className="text-xs text-gain/70 tabular-nums">{formatPercent(best.gainLossPercent)}</p>
             </>
           ) : (
             <p className="text-sm text-t-faint">-</p>
@@ -108,15 +98,12 @@ export function PerformanceMetrics() {
         </div>
 
         {/* Worst Performer */}
-        <div>
-          <div className="flex items-center gap-1.5 mb-1">
-            <AlertTriangle className="w-3.5 h-3.5 text-t-faint" />
-            <span className="text-xs text-t-muted">Worst Performer</span>
-          </div>
+        <div className="border-l-2 border-l-loss pl-3 hover:scale-[1.02] transition-transform">
+          <span className="text-xs text-t-muted font-medium">Worst Performer</span>
           {worst ? (
             <>
-              <p className="text-lg font-bold text-red-600">{worst.ticker}</p>
-              <p className="text-xs text-red-600">{formatPercent(worst.gainLossPercent)}</p>
+              <p className="text-lg font-bold text-loss">{worst.ticker}</p>
+              <p className="text-xs text-loss/70 tabular-nums">{formatPercent(worst.gainLossPercent)}</p>
             </>
           ) : (
             <p className="text-sm text-t-faint">-</p>

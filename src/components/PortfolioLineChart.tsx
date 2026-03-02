@@ -15,7 +15,7 @@ export function PortfolioLineChart({ snapshots }: PortfolioLineChartProps) {
 
   if (withPortfolio.length < 2) {
     return (
-      <div className="bg-surface-card rounded-xl border border-b-default p-5">
+      <div className="bg-surface-card card-radius card-shadow p-5">
         <h3 className="text-sm font-semibold text-t-primary mb-4">Portfolio Value Over Time</h3>
         <div className="flex items-center justify-center h-[260px] text-sm text-t-muted">
           Portfolio history will appear after 2+ days of snapshots.
@@ -39,7 +39,7 @@ export function PortfolioLineChart({ snapshots }: PortfolioLineChartProps) {
   const yMax = Math.ceil((maxVal + padding) / step) * step;
 
   return (
-    <div className="bg-surface-card rounded-xl border border-b-default p-5">
+    <div className="bg-surface-card card-radius card-shadow p-5">
       <h3 className="text-sm font-semibold text-t-primary mb-4">Portfolio Value Over Time</h3>
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={data} margin={{ left: 10, right: 20 }}>
@@ -55,11 +55,12 @@ export function PortfolioLineChart({ snapshots }: PortfolioLineChartProps) {
             formatter={(value) => formatCurrency(value as number)}
             labelStyle={{ fontWeight: 600, color: cc.tooltipText }}
             contentStyle={{
-              borderRadius: '8px',
+              borderRadius: '10px',
               border: `1px solid ${cc.tooltipBorder}`,
               fontSize: '13px',
               backgroundColor: cc.tooltipBg,
               color: cc.tooltipText,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
             }}
           />
           <Line
@@ -67,8 +68,8 @@ export function PortfolioLineChart({ snapshots }: PortfolioLineChartProps) {
             dataKey="value"
             stroke="#3b82f6"
             strokeWidth={2}
-            dot={{ r: 3 }}
-            activeDot={{ r: 5 }}
+            dot={false}
+            activeDot={{ r: 4, strokeWidth: 2 }}
           />
         </LineChart>
       </ResponsiveContainer>

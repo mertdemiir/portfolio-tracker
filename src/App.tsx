@@ -13,6 +13,11 @@ import { useLocalStorage } from './hooks/useLocalStorage';
 import { useAutoBackup } from './hooks/useAutoBackup';
 import type { TabId } from './types';
 
+export interface NavFilter {
+  ticker?: string;
+  category?: string;
+}
+
 function AppContent() {
   const {
     apiKey,
@@ -21,10 +26,27 @@ function AppContent() {
     customCategories,
     addCustomCategory,
     deleteCustomCategory,
+    priceCache,
   } = usePortfolioContext();
   const [activeTab, setActiveTab] = useState<TabId>('holdings');
   const [showSettings, setShowSettings] = useState(false);
   const [welcomeDismissed, setWelcomeDismissed] = useLocalStorage('welcome-dismissed', false);
+  const [navFilter, setNavFilter] = useState<NavFilter | null>(null);
+
+  function navigateTo(tab: TabId, filter?: NavFilter) {
+    setNavFilter(filter || null);
+    setActiveTab(tab);
+  }
+
+  function handleTabChange(tab: TabId) {
+    setNavFilter(null);
+    setActiveTab(tab);
+  }
+
+  // Compute most recent price update for "as of" timestamp
+  const latestPriceUpdate = Object.values(priceCache).reduce((latest, q) => {
+    return q.lastUpdated > latest ? q.lastUpdated : latest;
+  }, 0);
 
   // Auto-backup scheduling (Electron only, runs silently)
   useAutoBackup();
@@ -42,16 +64,16 @@ function AppContent() {
   }
 
   return (
-    <Layout activeTab={activeTab} onTabChange={setActiveTab} onSettingsClick={() => setShowSettings(true)}>
+    <Layout activeTab={activeTab} onTabChange={handleTabChange} onSettingsClick={() => setShowSettings(true)} latestPriceUpdate={latestPriceUpdate}>
       {priceError && (
         <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
           {priceError}
         </div>
       )}
-      {activeTab === 'dashboard' && <Dashboard />}
-      {activeTab === 'holdings' && <HoldingsTable />}
+      {activeTab === 'dashboard' && <Dashboard onNavigate={navigateTo} />}
+      {activeTab === 'holdings' && <HoldingsTable initialFilter={navFilter} onNavigate={navigateTo} />}
       {activeTab === 'charts' && <Charts />}
-      {activeTab === 'transactions' && <TransactionLog />}
+      {activeTab === 'transactions' && <TransactionLog initialFilter={navFilter} />}
       {activeTab === 'simulator' && <Simulator />}
       {activeTab === 'watchlist' && <Watchlist />}
       {showSettings && (

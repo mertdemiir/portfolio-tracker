@@ -34,7 +34,7 @@ export function SnapshotManager() {
   };
 
   return (
-    <div className="bg-surface-card rounded-xl border border-b-default p-5">
+    <div className="bg-surface-card card-radius border border-b-default p-5">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-t-primary">Snapshot History</h3>
         {!showForm && (

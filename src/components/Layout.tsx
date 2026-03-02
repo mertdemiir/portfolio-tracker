@@ -1,4 +1,4 @@
-import { LayoutDashboard, List, BarChart3, Receipt, FlaskConical, Settings, Eye } from 'lucide-react';
+import { LayoutDashboard, List, BarChart3, Receipt, FlaskConical, Settings, Eye, Flame } from 'lucide-react';
 import { PortfolioSelector } from './PortfolioSelector';
 import type { TabId } from '../types';
 
@@ -17,6 +17,7 @@ const tabs: { id: TabId; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'transactions', label: 'Transactions', icon: Receipt },
   { id: 'simulator', label: 'Simulator', icon: FlaskConical },
   { id: 'watchlist', label: 'Watchlist', icon: Eye },
+  { id: 'fire', label: 'FIRE', icon: Flame },
 ];
 
 function formatAsOf(timestamp: number): { text: string; stale: boolean } {

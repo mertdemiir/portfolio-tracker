@@ -4,7 +4,7 @@ import { usePortfolioContext } from '../context/PortfolioContext';
 import { useAutoBackup } from '../hooks/useAutoBackup';
 import { CsvImportModal } from './CsvImportModal';
 import { ManagePortfoliosModal } from './ManagePortfoliosModal';
-import type { CustomCategory, ThemeId, ThemePreference, BenchmarkId } from '../types';
+import type { CustomCategory, ThemeId, BenchmarkId } from '../types';
 import { BENCHMARK_CONFIG, ACCENT_PRESETS, SUPPORTED_CURRENCIES } from '../types';
 
 interface SettingsModalProps {
@@ -235,7 +235,7 @@ export function SettingsModal({
           <div className="flex items-center justify-between py-2.5 px-3 bg-surface rounded-lg mb-3">
             <div>
               <p className="text-sm font-medium text-t-secondary">Automatic Appearance</p>
-              <p className="text-xs text-t-muted">Heritage during day · Terminal at night</p>
+              <p className="text-xs text-t-muted">Light during day · Dark at night</p>
             </div>
             <button
               type="button"
@@ -250,9 +250,9 @@ export function SettingsModal({
             </button>
           </div>
 
-          <div className={`grid grid-cols-3 sm:grid-cols-5 gap-2 ${themePreference === 'auto' ? 'opacity-40 pointer-events-none' : ''}`}>
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
             {([
-              { id: 'heritage' as ThemeId, label: 'Heritage', icon: Landmark, bg: '#f5f0e8', card: '#faf7f2', text: '#2c2418' },
+              { id: 'heritage' as ThemeId, label: 'Heritage', icon: Landmark, bg: '#f4f1ec', card: '#f9f7f4', text: '#1a1612' },
               { id: 'terminal' as ThemeId, label: 'Terminal', icon: TerminalSquare, bg: '#0a0a0a', card: '#111111', text: '#00ff88' },
               { id: 'light' as ThemeId, label: 'Light', icon: Sun, bg: '#f9fafb', card: '#ffffff', text: '#111827' },
               { id: 'dark' as ThemeId, label: 'Dark', icon: Moon, bg: '#0c0f1a', card: '#151926', text: '#f0f2f5' },
@@ -262,7 +262,7 @@ export function SettingsModal({
                 key={t.id}
                 onClick={() => setTheme(t.id)}
                 className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 transition-all ${
-                  themePreference === t.id
+                  themePreference === t.id || (themePreference === 'auto' && theme === t.id)
                     ? 'border-accent ring-1 ring-accent/30'
                     : 'border-b-default hover:border-b-input'
                 }`}

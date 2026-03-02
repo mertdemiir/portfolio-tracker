@@ -42,13 +42,13 @@ const THEME_STYLES: Record<ThemeId, {
     accent2: 'rgba(16,185,129,0.08)',
   },
   heritage: {
-    bg: 'linear-gradient(135deg, #f5f0e8 0%, #ede8de 100%)',
-    text: '#2c2418',
-    muted: '#7a6e5d',
-    faint: '#a09580',
-    subtle: 'rgba(44, 36, 24, 0.04)',
+    bg: 'linear-gradient(135deg, #f4f1ec 0%, #eceae5 100%)',
+    text: '#1a1612',
+    muted: '#6b6358',
+    faint: '#928a7e',
+    subtle: 'rgba(26, 22, 18, 0.04)',
     accent1: 'rgba(184, 134, 11, 0.08)',
-    accent2: 'rgba(45, 106, 79, 0.06)',
+    accent2: 'rgba(37, 107, 71, 0.06)',
   },
   terminal: {
     bg: 'linear-gradient(135deg, #0a0a0a 0%, #111111 100%)',
@@ -76,7 +76,7 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
           background: s.bg,
           color: s.text,
           fontFamily: theme === 'heritage'
-            ? '"Libre Baskerville", Georgia, serif'
+            ? '"Source Serif 4", Georgia, serif'
             : theme === 'terminal'
             ? '"JetBrains Mono", monospace'
             : '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',

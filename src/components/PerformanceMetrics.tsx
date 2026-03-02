@@ -1,34 +1,48 @@
+import { useMemo } from 'react';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { formatPercent, formatCurrency } from '../utils/formatters';
 import type { PortfolioSnapshot, EnrichedHolding } from '../types';
 
-function computeCAGR(snapshots: PortfolioSnapshot[]): number | null {
-  const withPortfolio = snapshots.filter((s) => s.portfolioValue != null);
-  if (withPortfolio.length < 2) return null;
-  const sorted = [...withPortfolio].sort((a, b) => a.date.localeCompare(b.date));
-  const startValue = sorted[0].portfolioValue!;
-  const endValue = sorted[sorted.length - 1].portfolioValue!;
-  if (startValue <= 0) return null;
-  const days =
-    (new Date(sorted[sorted.length - 1].date).getTime() - new Date(sorted[0].date).getTime()) /
-    (1000 * 60 * 60 * 24);
-  if (days < 1) return null;
-  const years = days / 365.25;
-  return (Math.pow(endValue / startValue, 1 / years) - 1) * 100;
-}
+/**
+ * CAGR = (endValue / startValue)^(1/years) - 1
+ *
+ * Uses the first historical snapshot as the start point and the current
+ * live value as the end point.  This avoids dependence on today's
+ * mutable snapshot (which is overwritten on every price update) and
+ * gives a stable, accurate number.
+ *
+ * Requires ≥ 30 days of history to avoid meaninglessly volatile results.
+ */
+function computeCAGR(
+  snapshots: PortfolioSnapshot[],
+  currentValue: number,
+  field: 'portfolioValue' | 'netWorth',
+): number | null {
+  if (currentValue <= 0) return null;
 
-function computeNWCAGR(snapshots: PortfolioSnapshot[]): number | null {
-  if (snapshots.length < 2) return null;
-  const sorted = [...snapshots].sort((a, b) => a.date.localeCompare(b.date));
-  const startValue = sorted[0].netWorthValue ?? sorted[0].totalValue;
-  const endValue = sorted[sorted.length - 1].netWorthValue ?? sorted[sorted.length - 1].totalValue;
-  if (!startValue || !endValue || startValue <= 0) return null;
-  const days =
-    (new Date(sorted[sorted.length - 1].date).getTime() - new Date(sorted[0].date).getTime()) /
-    (1000 * 60 * 60 * 24);
-  if (days < 1) return null;
+  const usable = snapshots.filter((s) =>
+    field === 'portfolioValue'
+      ? s.portfolioValue != null && s.portfolioValue > 0
+      : (s.netWorthValue ?? s.totalValue) > 0,
+  );
+  if (usable.length === 0) return null;
+
+  const sorted = [...usable].sort((a, b) => a.date.localeCompare(b.date));
+  const startSnap = sorted[0];
+  const startValue =
+    field === 'portfolioValue'
+      ? startSnap.portfolioValue!
+      : (startSnap.netWorthValue ?? startSnap.totalValue);
+
+  if (startValue <= 0) return null;
+
+  const startDate = new Date(startSnap.date);
+  const now = new Date();
+  const days = (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
+  if (days < 30) return null; // need ≥ 30 days for a meaningful annualised rate
+
   const years = days / 365.25;
-  return (Math.pow(endValue / startValue, 1 / years) - 1) * 100;
+  return (Math.pow(currentValue / startValue, 1 / years) - 1) * 100;
 }
 
 function getBestWorst(holdings: EnrichedHolding[]) {
@@ -38,13 +52,26 @@ function getBestWorst(holdings: EnrichedHolding[]) {
 }
 
 export function PerformanceMetrics() {
-  const { filteredPortfolioSummary, filteredEnrichedHoldings, snapshots } = usePortfolioContext();
+  const {
+    filteredPortfolioSummary,
+    filteredEnrichedHoldings,
+    snapshots,
+    netWorthSummary,
+  } = usePortfolioContext();
 
   if (filteredEnrichedHoldings.length === 0) return null;
 
-  const cagr = computeCAGR(snapshots);
-  const nwCagr = computeNWCAGR(snapshots);
-  const displayCagr = cagr ?? nwCagr;
+  const portfolioCagr = useMemo(
+    () => computeCAGR(snapshots, filteredPortfolioSummary.totalValue, 'portfolioValue'),
+    [snapshots, filteredPortfolioSummary.totalValue],
+  );
+
+  const nwCagr = useMemo(
+    () => computeCAGR(snapshots, netWorthSummary.totalNetWorth, 'netWorth'),
+    [snapshots, netWorthSummary.totalNetWorth],
+  );
+
+  const displayCagr = portfolioCagr ?? nwCagr;
   const { best, worst } = getBestWorst(filteredEnrichedHoldings);
 
   return (

@@ -12,6 +12,7 @@ import {
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { useHoldingOrder } from '../hooks/useHoldingOrder';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 import { HoldingRow } from './HoldingRow';
 import { AddEditStockModal } from './AddEditStockModal';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
@@ -51,8 +52,8 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
   const [deletingHolding, setDeletingHolding] = useState<Holding | null>(null);
   const [movingHolding, setMovingHolding] = useState<Holding | null>(null);
   const hasMultiplePortfolios = portfolios.length > 1;
-  const [sortKey, setSortKey] = useState<SortKey>('marketValue');
-  const [sortAsc, setSortAsc] = useState(false);
+  const [sortKey, setSortKey] = useLocalStorage<SortKey>('holdings-sort-key', 'marketValue');
+  const [sortAsc, setSortAsc] = useLocalStorage<boolean>('holdings-sort-asc', false);
 
   // Keep holding order in sync with actual holdings
   useEffect(() => {
@@ -199,11 +200,19 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
         <h2 className="text-lg font-semibold text-t-primary tracking-tight">Holdings</h2>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setSortKey((k) => k === 'custom' ? 'marketValue' : 'custom')}
+            onClick={() => {
+              if (!isCustomSort) {
+                // Capture current visual order before entering reorder mode
+                syncOrder(sorted.map((h) => h.id));
+                setSortKey('custom');
+              } else {
+                setSortKey('custom');
+              }
+            }}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors ${
               isCustomSort ? 'bg-accent text-white' : 'text-t-muted hover:bg-surface-alt'
             }`}
-            title={isCustomSort ? 'Exit custom order' : 'Enable drag-and-drop reorder'}
+            title={isCustomSort ? 'Custom order active' : 'Enable drag-and-drop reorder'}
           >
             <GripVertical className="w-4 h-4" />
             <span className="hidden sm:inline">Reorder</span>

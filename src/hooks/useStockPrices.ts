@@ -24,15 +24,17 @@ export function useStockPrices(apiKey: string) {
   priceCacheRef.current = priceCache;
 
   const fetchPrices = useCallback(
-    async (holdings: Holding[]) => {
+    async (holdings: Holding[], force = false) => {
       if (holdings.length === 0) return;
 
       const currentCache = priceCacheRef.current;
-      const stale = holdings.filter((h) => {
-        const key = cacheKey(h);
-        const cached = currentCache[key];
-        return !cached || !isFresh(cached.lastUpdated);
-      });
+      const stale = force
+        ? holdings
+        : holdings.filter((h) => {
+            const key = cacheKey(h);
+            const cached = currentCache[key];
+            return !cached || !isFresh(cached.lastUpdated);
+          });
 
       if (stale.length === 0) return;
 

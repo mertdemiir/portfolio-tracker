@@ -145,7 +145,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
 
   const refreshPrices = useCallback(() => {
     if (holdings.length > 0) {
-      fetchPrices(holdings);
+      fetchPrices(holdings, true);
     }
   }, [holdings, fetchPrices]);
 

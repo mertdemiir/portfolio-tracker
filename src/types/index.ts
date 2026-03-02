@@ -94,7 +94,7 @@ export interface CoinGeckoSearchResult {
   market_cap_rank: number | null;
 }
 
-export type TabId = 'dashboard' | 'holdings' | 'charts' | 'transactions' | 'simulator' | 'watchlist';
+export type TabId = 'dashboard' | 'holdings' | 'charts' | 'transactions' | 'simulator' | 'watchlist' | 'fire';
 
 export interface Portfolio {
   id: string;

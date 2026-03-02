@@ -109,44 +109,44 @@
 
 /* ═══ Heritage Theme — Private Bank / Financial Times ═══ */
 [data-theme="heritage"] {
-  --font-body: "Libre Baskerville", Georgia, "Times New Roman", serif;
+  --font-body: "Source Serif 4", Georgia, "Times New Roman", serif;
   --font-heading: "Libre Baskerville", Georgia, "Times New Roman", serif;
-  --letter-spacing-body: 0.01em;
+  --letter-spacing-body: 0.005em;
   --letter-spacing-heading: -0.01em;
   --text-transform-badge: none;
 
-  --surface: #f5f0e8;
-  --surface-card: #faf7f2;
-  --surface-alt: #ede8de;
-  --surface-hover: #ede8de;
-  --surface-active: #e2dbd0;
+  --surface: #f4f1ec;
+  --surface-card: #f9f7f4;
+  --surface-alt: #eceae5;
+  --surface-hover: #eceae5;
+  --surface-active: #e1ded8;
 
-  --text-primary: #2c2418;
-  --text-secondary: #4a3f32;
-  --text-muted: #7a6e5d;
-  --text-faint: #a09580;
+  --text-primary: #1a1612;
+  --text-secondary: #3b352d;
+  --text-muted: #6b6358;
+  --text-faint: #928a7e;
 
-  --border-default: #d9d0c1;
-  --border-subtle: #e8e1d5;
-  --border-input: #c4b9a8;
-  --input-bg: #faf7f2;
-  --overlay: rgba(44, 36, 24, 0.4);
-  --chart-grid: #e8e1d5;
-  --chart-axis: #a09580;
+  --border-default: #d6d1c9;
+  --border-subtle: #e5e2dc;
+  --border-input: #c2bbb1;
+  --input-bg: #f9f7f4;
+  --overlay: rgba(26, 22, 18, 0.4);
+  --chart-grid: #e5e2dc;
+  --chart-axis: #928a7e;
 
   --accent: #b8860b;
   --accent-hover: #9a7209;
   --accent-light: rgba(184, 134, 11, 0.12);
 
-  --gain: #2d6a4f;
-  --loss: #9b2226;
-  --gain-bg: rgba(45, 106, 79, 0.08);
-  --loss-bg: rgba(155, 34, 38, 0.08);
+  --gain: #256b47;
+  --loss: #a12a2e;
+  --gain-bg: rgba(37, 107, 71, 0.08);
+  --loss-bg: rgba(161, 42, 46, 0.08);
 
   --radius-card: 0.5rem;
   --radius-badge: 0.25rem;
   --radius-button: 0.375rem;
-  --shadow-card: 0 1px 4px rgba(44, 36, 24, 0.1);
+  --shadow-card: 0 1px 4px rgba(26, 22, 18, 0.08);
 }
 
 /* ═══ Terminal Theme — Bloomberg / Sci-Fi HUD ═══ */

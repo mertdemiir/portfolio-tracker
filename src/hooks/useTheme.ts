@@ -39,13 +39,13 @@ const CHART_COLORS: Record<ThemeId, {
     targetBar: '#3d4555',
   },
   heritage: {
-    grid: '#e8e1d5',
-    axis: '#a09580',
-    tooltipBg: '#faf7f2',
-    tooltipBorder: '#d9d0c1',
-    tooltipText: '#2c2418',
-    refLine: '#d9d0c1',
-    targetBar: '#c4b9a8',
+    grid: '#e5e2dc',
+    axis: '#928a7e',
+    tooltipBg: '#f9f7f4',
+    tooltipBorder: '#d6d1c9',
+    tooltipText: '#1a1612',
+    refLine: '#d6d1c9',
+    targetBar: '#c2bbb1',
   },
   terminal: {
     grid: '#122218',
@@ -78,8 +78,8 @@ const CHART_PALETTES: Record<ThemeId, string[]> = {
     '#ef4444', '#ec4899', '#f97316', '#14b8a6', '#3b82f6',
   ],
   heritage: [
-    '#b8860b', '#2d6a4f', '#7a6e5d', '#9b2226', '#6b5b3e',
-    '#4a6741', '#8b6914', '#5c4033', '#7b8b6f', '#a67c52',
+    '#b8860b', '#256b47', '#6e6459', '#a12a2e', '#5f5137',
+    '#3d6d3a', '#8b6914', '#5c4033', '#708567', '#9e7248',
   ],
   terminal: [
     '#00ff88', '#00d4ff', '#ffaa00', '#ff3366', '#aa55ff',
@@ -95,9 +95,9 @@ export function getChartPalette(theme: ThemeId): string[] {
 
 function resolveAutoTheme(): ThemeId {
   if (typeof window !== 'undefined' && window.matchMedia) {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'terminal' : 'heritage';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
-  return 'heritage';
+  return 'light';
 }
 
 function resolveTheme(pref: ThemePreference): ThemeId {
@@ -180,7 +180,7 @@ export function useTheme() {
     // Listen for changes
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const handler = (e: MediaQueryListEvent) => {
-      setResolvedTheme(e.matches ? 'terminal' : 'heritage');
+      setResolvedTheme(e.matches ? 'dark' : 'light');
     };
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);

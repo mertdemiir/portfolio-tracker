@@ -8,6 +8,7 @@ import { Charts } from './components/Charts';
 import { TransactionLog } from './components/TransactionLog';
 import { Simulator } from './components/Simulator';
 import { Watchlist } from './components/Watchlist';
+import { FirePage } from './components/FirePage';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useAutoBackup } from './hooks/useAutoBackup';
@@ -76,6 +77,7 @@ function AppContent() {
       {activeTab === 'transactions' && <TransactionLog initialFilter={navFilter} />}
       {activeTab === 'simulator' && <Simulator />}
       {activeTab === 'watchlist' && <Watchlist />}
+      {activeTab === 'fire' && <FirePage />}
       {showSettings && (
         <SettingsModal
           apiKey={apiKey}

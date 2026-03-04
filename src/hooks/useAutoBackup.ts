@@ -42,6 +42,10 @@ function gatherBackupData(): string {
     annotations: JSON.parse(localStorage.getItem('timeline-annotations') || '[]'),
     theme: localStorage.getItem('theme')?.replace(/^"|"$/g, '') || 'dark',
     benchmarkEnabled: JSON.parse(localStorage.getItem('benchmark-enabled') || '{}'),
+    fireSettings: JSON.parse(localStorage.getItem('fire-settings') || '{}'),
+    autoBackupSettings: JSON.parse(localStorage.getItem('auto-backup-settings') || '{}'),
+    digestDismissedDate: localStorage.getItem('digest-dismissed-date')?.replace(/^"|"$/g, '') || '',
+    activePortfolio: localStorage.getItem('active-portfolio')?.replace(/^"|"$/g, '') || 'all',
   };
   return JSON.stringify(backup, null, 2);
 }
@@ -51,6 +55,7 @@ function isDue(settings: AutoBackupSettings): boolean {
   if (!settings.lastBackup) return true;
 
   const last = new Date(settings.lastBackup).getTime();
+  if (isNaN(last)) return true; // corrupted timestamp → treat as never backed up
   const now = Date.now();
   const interval = settings.frequency === 'daily' ? DAY_MS : WEEK_MS;
   return now - last >= interval;

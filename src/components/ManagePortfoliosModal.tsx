@@ -12,6 +12,8 @@ export function ManagePortfoliosModal({ onClose }: ManagePortfoliosModalProps) {
   const [newName, setNewName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+  // Bug 37: inline confirmation instead of native confirm()
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     function handleEsc(e: KeyboardEvent) {
@@ -44,12 +46,12 @@ export function ManagePortfoliosModal({ onClose }: ManagePortfoliosModalProps) {
   }
 
   function handleDelete(id: string) {
-    const holdingCount = holdings.filter((h) => (h.portfolioId || DEFAULT_PORTFOLIO_ID) === id).length;
-    const msg = holdingCount > 0
-      ? `Delete this portfolio? ${holdingCount} holding(s) will be moved to the default portfolio.`
-      : 'Delete this portfolio?';
-    if (!confirm(msg)) return;
-    deletePortfolio(id);
+    if (confirmDeleteId === id) {
+      deletePortfolio(id);
+      setConfirmDeleteId(null);
+    } else {
+      setConfirmDeleteId(id);
+    }
   }
 
   return (
@@ -100,9 +102,27 @@ export function ManagePortfoliosModal({ onClose }: ManagePortfoliosModalProps) {
                     >
                       <Pencil size={13} />
                     </button>
-                    {!isDefault && (
+                    {!isDefault && confirmDeleteId === p.id ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-t-muted mr-1">Delete?</span>
+                        <button
+                          onClick={() => handleDelete(p.id)}
+                          className="p-1 text-loss hover:text-loss/80 transition-colors"
+                          title="Confirm delete"
+                        >
+                          <Check size={13} />
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="p-1 text-t-faint hover:text-t-muted transition-colors"
+                          title="Cancel"
+                        >
+                          <X size={13} />
+                        </button>
+                      </div>
+                    ) : !isDefault && (
                       <button
-                        onClick={() => handleDelete(p.id)}
+                        onClick={() => setConfirmDeleteId(p.id)}
                         className="p-1 text-t-faint hover:text-loss transition-colors"
                       >
                         <Trash2 size={13} />

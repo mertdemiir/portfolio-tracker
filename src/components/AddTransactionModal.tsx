@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { usePortfolioContext } from '../context/PortfolioContext';
-import { todayDateString } from '../utils/formatters';
+import { useFxRates } from '../hooks/useFxRates';
+import { todayDateString, formatCurrency } from '../utils/formatters';
 import { DEFAULT_PORTFOLIO_ID } from '../types';
 
 interface AddTransactionModalProps {
@@ -9,7 +10,8 @@ interface AddTransactionModalProps {
 }
 
 export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
-  const { holdings, addTransaction, updateHolding, deleteHolding, activePortfolioId } = usePortfolioContext();
+  const { holdings, addTransaction, updateHolding, deleteHolding, activePortfolioId, baseCurrency } = usePortfolioContext();
+  const { convertToBase, fxRates } = useFxRates(baseCurrency);
   const [date, setDate] = useState(todayDateString());
   const [ticker, setTicker] = useState('');
   const [name, setName] = useState('');
@@ -59,11 +61,11 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
     if (!date || !ticker.trim() || isNaN(s) || s <= 0 || isNaN(p) || p <= 0) return;
 
     const tickerNorm = ticker.trim().toUpperCase();
-    // Find matching holding — prefer active portfolio, then any
+    // Find matching holding — scoped to active portfolio (Bug 1: don't cross-pollinate portfolios)
     const allMatches = holdings.filter((h) => h.ticker.toUpperCase() === tickerNorm);
-    const match = allMatches.find((h) => (h.portfolioId || DEFAULT_PORTFOLIO_ID) === activePortfolioId)
-      || allMatches[0]
-      || null;
+    const match = activePortfolioId === 'all'
+      ? allMatches[0] || null
+      : allMatches.find((h) => (h.portfolioId || DEFAULT_PORTFOLIO_ID) === activePortfolioId) || null;
 
     // Sell validation: must have a matching holding with enough shares
     if (type === 'sell') {
@@ -109,8 +111,18 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
         const newCost = s * p;
         const newShares = match.shares + s;
         const avgPrice = (oldCost + newCost) / newShares;
+        // Recalculate weighted-average buyFxRate for DCA.
+        // Only store buyFxRate when FX rates are available (or not needed, e.g. USD→USD).
+        const holdingCurrency = match.currency || 'USD';
+        const fxReady = holdingCurrency === baseCurrency || (fxRates && fxRates.base === baseCurrency);
+        const updatedData: typeof data & { buyFxRate?: number } = { ...data, shares: newShares, buyPrice: avgPrice };
+        if (fxReady) {
+          const currentFxRate = convertToBase(1, holdingCurrency);
+          const oldFxRate = match.buyFxRate ?? currentFxRate; // fallback for pre-existing holdings
+          updatedData.buyFxRate = (match.shares * oldFxRate + s * currentFxRate) / newShares;
+        }
         // Preserve original buyDate on DCA — don't overwrite with today's date
-        updateHolding(id, { ...data, shares: newShares, buyPrice: avgPrice });
+        updateHolding(id, updatedData);
       }
     }
 
@@ -220,7 +232,7 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-t-muted mb-1">Price per Share ($)</label>
+              <label className="block text-xs font-medium text-t-muted mb-1">Price per Share</label>
               <input
                 type="number"
                 value={pricePerShare}
@@ -239,7 +251,7 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
             <div className="bg-surface rounded-lg px-3 py-2 text-sm">
               <span className="text-t-muted">Total: </span>
               <span className="font-semibold text-t-primary">
-                ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {formatCurrency(total)}
               </span>
             </div>
           )}

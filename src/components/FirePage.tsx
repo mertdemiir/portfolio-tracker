@@ -274,9 +274,8 @@ export function FirePage() {
     if (yearsToRetirement > 0) {
       const realReturn = (1 + settings.expectedReturn / 100) / (1 + settings.inflationRate / 100) - 1;
       const growthFactor = Math.pow(1 + realReturn, yearsToRetirement);
-      if (growthFactor > 0) {
-        coast = regular / growthFactor;
-      }
+      // growthFactor ≤ 0 means money loses all value — coasting is impossible
+      coast = growthFactor > 0 ? regular / growthFactor : regular * 10;
     }
 
     return { lean, regular, fat, coast };

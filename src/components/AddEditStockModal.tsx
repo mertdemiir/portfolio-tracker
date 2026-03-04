@@ -126,7 +126,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
       ...(manualPrice ? { manualPrice: parseFloat(manualPrice), lastManualPriceUpdate: new Date().toISOString().split('T')[0] } : {}),
       ...(coinGeckoId ? { coinGeckoId } : {}),
     });
-    // Auto-log transaction for new holdings
+    // Auto-log transaction for new holdings (Bug 9: include full metadata)
     if (!holding) {
       addTransaction({
         date: buyDate,
@@ -136,6 +136,10 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
         shares: parsedShares,
         pricePerShare: parsedPrice,
         total: parsedShares * parsedPrice,
+        currency: currency || 'USD',
+        assetType,
+        category,
+        portfolioId: portfolioId || DEFAULT_PORTFOLIO_ID,
       });
     }
   }

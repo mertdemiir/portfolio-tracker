@@ -28,10 +28,11 @@ export function DailyDigest() {
   const topMover = [...portfolioEnrichedHoldings]
     .sort((a, b) => Math.abs(b.dailyChangePercent) - Math.abs(a.dailyChangePercent))[0];
 
-  // Yesterday comparison
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  // Yesterday comparison (use local date to match snapshot keys)
+  const todayParts = today.split('-').map(Number);
+  const yesterdayDate = new Date(todayParts[0], todayParts[1] - 1, todayParts[2]);
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterdayStr = `${yesterdayDate.getFullYear()}-${String(yesterdayDate.getMonth() + 1).padStart(2, '0')}-${String(yesterdayDate.getDate()).padStart(2, '0')}`;
   const yesterdaySnap = snapshots.find((s) => s.date === yesterdayStr);
   const nwDelta = yesterdaySnap ? netWorthSummary.totalNetWorth - yesterdaySnap.netWorthValue : null;
 

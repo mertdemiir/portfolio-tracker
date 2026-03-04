@@ -16,6 +16,7 @@ export function SymbolSearch({ apiKey, onSelect, initialValue = '', assetType = 
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const seqRef = useRef(0); // Bug 36: sequence counter to ignore stale results
   const containerRef = useRef<HTMLDivElement>(null);
 
   const label = assetType === 'etf' ? 'ETF Symbol' : 'Stock Symbol';
@@ -31,15 +32,18 @@ export function SymbolSearch({ apiKey, onSelect, initialValue = '', assetType = 
     }
 
     debounceRef.current = setTimeout(async () => {
+      const thisSeq = ++seqRef.current;
       setLoading(true);
       try {
         const res = await searchSymbol(query, apiKey, assetType);
-        setResults(res);
-        setIsOpen(res.length > 0);
+        if (seqRef.current === thisSeq) {
+          setResults(res);
+          setIsOpen(res.length > 0);
+        }
       } catch {
-        setResults([]);
+        if (seqRef.current === thisSeq) setResults([]);
       } finally {
-        setLoading(false);
+        if (seqRef.current === thisSeq) setLoading(false);
       }
     }, 300);
 

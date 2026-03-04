@@ -11,6 +11,7 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { usePortfolioContext } from '../context/PortfolioContext';
+import { useFxRates } from '../hooks/useFxRates';
 import { useHoldingOrder } from '../hooks/useHoldingOrder';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { HoldingRow } from './HoldingRow';
@@ -43,7 +44,9 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
     priceCache,
     activePortfolioId,
     portfolios,
+    baseCurrency,
   } = usePortfolioContext();
+  const { convertToBase, fxRates } = useFxRates(baseCurrency);
 
   const { order: holdingOrder, syncOrder, reorder } = useHoldingOrder();
 
@@ -121,9 +124,11 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
 
   const sorted = useMemo(() => {
     return [...filteredWithAllocation].sort((a, b) => {
-      // Favorites always float to top
-      const favDiff = (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0);
-      if (favDiff !== 0) return favDiff;
+      // Favorites float to top — but NOT in custom sort (user controls order fully)
+      if (sortKey !== 'custom') {
+        const favDiff = (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0);
+        if (favDiff !== 0) return favDiff;
+      }
       if (sortKey === 'custom') {
         const ai = holdingOrder.indexOf(a.id);
         const bi = holdingOrder.indexOf(b.id);
@@ -159,7 +164,9 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
           <AddEditStockModal
             apiKey={apiKey}
             onSave={(data) => {
-              addHolding(data);
+              const holdingCurrency = data.currency || 'USD';
+              const fxReady = holdingCurrency === baseCurrency || (fxRates && fxRates.base === baseCurrency);
+              addHolding({ ...data, ...(fxReady ? { buyFxRate: convertToBase(1, holdingCurrency) } : {}) });
               setShowAddModal(false);
             }}
             onClose={() => setShowAddModal(false)}
@@ -206,13 +213,15 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
                 syncOrder(sorted.map((h) => h.id));
                 setSortKey('custom');
               } else {
-                setSortKey('custom');
+                // Exit reorder mode → fall back to default sort
+                setSortKey('marketValue');
+                setSortAsc(false);
               }
             }}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors ${
               isCustomSort ? 'bg-accent text-white' : 'text-t-muted hover:bg-surface-alt'
             }`}
-            title={isCustomSort ? 'Custom order active' : 'Enable drag-and-drop reorder'}
+            title={isCustomSort ? 'Exit reorder mode' : 'Enable drag-and-drop reorder'}
           >
             <GripVertical className="w-4 h-4" />
             <span className="hidden sm:inline">Reorder</span>
@@ -255,7 +264,7 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
           <span className="text-t-muted">
             Return <span className={`font-semibold ${filtered.reduce((s, h) => s + h.gainLoss, 0) >= 0 ? 'text-gain' : 'text-loss'}`}>
               {(() => {
-                const totalCost = filtered.reduce((s, h) => s + (h.buyPrice * h.shares), 0);
+                const totalCost = filtered.reduce((s, h) => s + h.costBasis, 0);
                 const totalGain = filtered.reduce((s, h) => s + h.gainLoss, 0);
                 return totalCost > 0 ? formatPercent((totalGain / totalCost) * 100) : '0%';
               })()}
@@ -371,6 +380,7 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
                   <HoldingRow
                     key={h.id}
                     holding={h}
+                    baseCurrency={baseCurrency}
                     categoryLabel={categoryLabelMap[h.category] || h.category}
                     showPortfolioBadge={filterMode === 'all'}
                     priceCache={priceCache}
@@ -396,6 +406,7 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
               <HoldingRow
                 key={h.id}
                 holding={h}
+                baseCurrency={baseCurrency}
                 priceCache={priceCache}
                 categoryLabel={categoryLabelMap[h.category] || h.category}
                 showPortfolioBadge={filterMode === 'all'}
@@ -415,7 +426,9 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
         <AddEditStockModal
           apiKey={apiKey}
           onSave={(data) => {
-            addHolding(data);
+            const holdingCurrency = data.currency || 'USD';
+            const fxReady = holdingCurrency === baseCurrency || (fxRates && fxRates.base === baseCurrency);
+            addHolding({ ...data, ...(fxReady ? { buyFxRate: convertToBase(1, holdingCurrency) } : {}) });
             setShowAddModal(false);
           }}
           onClose={() => setShowAddModal(false)}

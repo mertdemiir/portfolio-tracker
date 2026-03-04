@@ -1,4 +1,5 @@
 import { Trash2 } from 'lucide-react';
+import { formatDate } from '../utils/formatters';
 import type { TimelineAnnotation } from '../types';
 
 interface AnnotationsListProps {
@@ -23,7 +24,7 @@ export function AnnotationsList({ annotations, onDelete }: AnnotationsListProps)
               style={{ backgroundColor: a.color || 'var(--accent)' }}
             />
             <span className="text-xs text-t-muted flex-shrink-0">
-              {new Date(a.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              {formatDate(a.date)}
             </span>
             <span className="text-xs text-t-primary truncate">{a.label}</span>
           </div>

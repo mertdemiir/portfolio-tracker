@@ -19,6 +19,7 @@ export function useStockPrices(apiKey: string) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef(false);
+  const seqRef = useRef(0); // sequence counter to handle concurrent fetches
   // Use ref to read priceCache without it being a dependency
   const priceCacheRef = useRef(priceCache);
   priceCacheRef.current = priceCache;
@@ -38,6 +39,7 @@ export function useStockPrices(apiKey: string) {
 
       if (stale.length === 0) return;
 
+      const thisSeq = ++seqRef.current;
       setLoading(true);
       setError(null);
       abortRef.current = false;
@@ -49,9 +51,14 @@ export function useStockPrices(apiKey: string) {
       const failedTickers: string[] = [];
       try {
         for (const holding of instant) {
-          const key = cacheKey(holding);
-          const quote = await fetchPriceForHolding(holding, apiKey);
-          setPriceCache((prev) => ({ ...prev, [key]: quote }));
+          if (abortRef.current) break;
+          try {
+            const key = cacheKey(holding);
+            const quote = await fetchPriceForHolding(holding, apiKey);
+            if (!abortRef.current) setPriceCache((prev) => ({ ...prev, [key]: quote }));
+          } catch {
+            failedTickers.push(holding.ticker);
+          }
         }
 
         for (const holding of needsApi) {
@@ -61,19 +68,10 @@ export function useStockPrices(apiKey: string) {
           try {
             const key = cacheKey(holding);
             const quote = await fetchPriceForHolding(holding, apiKey);
-            // For metals (which return change: 0 from API), compute daily change
-            // from previously cached price if available
-            if (isLiveMetal(holding) && quote.change === 0) {
-              const prev = currentCache[key];
-              if (prev && prev.currentPrice > 0) {
-                quote.change = quote.currentPrice - prev.currentPrice;
-                quote.changePercent = (quote.change / prev.currentPrice) * 100;
-              }
-            }
-            setPriceCache((prev) => ({ ...prev, [key]: quote }));
+            if (!abortRef.current) setPriceCache((prev) => ({ ...prev, [key]: quote }));
           } catch (err) {
             if (err instanceof Error && err.message.includes('Rate limit')) {
-              setError(err.message);
+              if (!abortRef.current) setError(err.message);
               break;
             }
             failedTickers.push(holding.ticker);
@@ -83,10 +81,13 @@ export function useStockPrices(apiKey: string) {
           }
         }
       } finally {
-        if (failedTickers.length > 0) {
-          setError(`Failed to fetch prices for ${failedTickers.join(', ')}`);
+        // Only the latest fetch call controls loading/error state
+        if (!abortRef.current && seqRef.current === thisSeq) {
+          if (failedTickers.length > 0) {
+            setError(`Failed to fetch prices for ${failedTickers.join(', ')}`);
+          }
+          setLoading(false);
         }
-        setLoading(false);
       }
     },
     [apiKey, setPriceCache] // removed priceCache dep — read via ref

@@ -27,6 +27,7 @@ export function useAnnotations() {
     (id: string, data: Partial<Omit<TimelineAnnotation, 'id'>>) => {
       setAnnotations((prev) =>
         prev.map((a) => (a.id === id ? { ...a, ...data } : a))
+          .sort((a, b) => a.date.localeCompare(b.date))
       );
     },
     [setAnnotations]

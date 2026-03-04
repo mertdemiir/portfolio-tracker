@@ -20,5 +20,12 @@ export function useTransactions() {
     [setTransactions]
   );
 
-  return { transactions, addTransaction, deleteTransaction };
+  const restoreTransaction = useCallback(
+    (txn: Transaction) => {
+      setTransactions((prev) => [...prev, txn]);
+    },
+    [setTransactions]
+  );
+
+  return { transactions, addTransaction, deleteTransaction, restoreTransaction };
 }

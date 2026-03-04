@@ -143,8 +143,8 @@ export function NetWorthLineChart({
       return vals;
     });
 
-    const minVal = Math.min(...allValues, 0);
-    const maxVal = Math.max(...allValues, 0);
+    const minVal = allValues.reduce((a, b) => Math.min(a, b), 0);
+    const maxVal = allValues.reduce((a, b) => Math.max(a, b), 0);
     const range = maxVal - minVal || 10;
     const padding = range * 0.15;
 
@@ -271,9 +271,9 @@ export function NetWorthLineChart({
 
   const values = data.map((d) => d.value);
   const currentNW = values[values.length - 1] ?? 0;
-  const minVal = Math.min(...values);
-  const rawMax = Math.max(...values);
-  const highestMilestone = milestones.length > 0 ? Math.max(...milestones.map((m) => m.value)) : 0;
+  const minVal = values.reduce((a, b) => Math.min(a, b), Infinity);
+  const rawMax = values.reduce((a, b) => Math.max(a, b), -Infinity);
+  const highestMilestone = milestones.length > 0 ? milestones.reduce((a, m) => Math.max(a, m.value), 0) : 0;
   const maxVal = Math.max(rawMax, highestMilestone);
   const range = maxVal - minVal || maxVal * 0.1;
   const padding = range * 0.15;

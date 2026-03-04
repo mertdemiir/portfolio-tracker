@@ -70,7 +70,11 @@ export function useFxRates(baseCurrency: string) {
 }
 
 function isStale(rates: FxRates): boolean {
-  // Use fetchedAt timestamp if available, fall back to API date string
-  const timestamp = rates.fetchedAt || new Date(rates.date).getTime();
+  // Use fetchedAt timestamp if available, fall back to API date string.
+  // Parse date parts manually to avoid UTC timezone shift.
+  const timestamp = rates.fetchedAt || (() => {
+    const [y, m, d] = rates.date.split('-').map(Number);
+    return (y && m && d) ? new Date(y, m - 1, d).getTime() : 0;
+  })();
   return Date.now() - timestamp > FX_CACHE_DURATION;
 }

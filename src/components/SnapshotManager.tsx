@@ -6,7 +6,8 @@ import { formatCurrency, formatDate, todayDateString } from '../utils/formatters
 export function SnapshotManager() {
   const { snapshots, addManualSnapshot, deleteSnapshot } = usePortfolioContext();
   const [showForm, setShowForm] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  // Bug 24: use index instead of date string to avoid ambiguity with same-date snapshots
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [date, setDate] = useState('');
   const [snapshotName, setSnapshotName] = useState('');
   const [netWorth, setNetWorth] = useState('');
@@ -133,8 +134,8 @@ export function SnapshotManager() {
               </tr>
             </thead>
             <tbody>
-              {sortedSnapshots.map((s) => (
-                <tr key={s.date} className="border-b border-b-subtle last:border-0">
+              {sortedSnapshots.map((s, i) => (
+                <tr key={`${s.date}-${i}`} className="border-b border-b-subtle last:border-0">
                   <td className="py-2 text-t-secondary">{formatDate(s.date)}</td>
                   <td className="py-2 text-t-muted text-xs">{s.name || '—'}</td>
                   <td className="py-2 text-right text-t-primary font-medium">
@@ -144,7 +145,7 @@ export function SnapshotManager() {
                     {s.portfolioValue != null ? formatCurrency(s.portfolioValue) : '-'}
                   </td>
                   <td className="py-2 text-right">
-                    {confirmDelete === s.date ? (
+                    {confirmDelete === i ? (
                       <div className="flex items-center gap-1 justify-end">
                         <button
                           onClick={() => { deleteSnapshot(s.date); setConfirmDelete(null); }}
@@ -163,7 +164,7 @@ export function SnapshotManager() {
                       </div>
                     ) : (
                       <button
-                        onClick={() => setConfirmDelete(s.date)}
+                        onClick={() => setConfirmDelete(i)}
                         className="text-t-faint hover:text-red-500 transition-colors p-0.5"
                         title="Delete snapshot"
                       >

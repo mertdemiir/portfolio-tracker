@@ -2,9 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { DollarSign, TrendingUp, TrendingDown, Clock, Target, Plus, Trash2, Check, X, Share2, ChevronDown } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { usePortfolioContext } from '../context/PortfolioContext';
+import { useFxRates } from '../hooks/useFxRates';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { formatCurrency, formatSignedCurrency, formatPercent } from '../utils/formatters';
 import { EmptyState } from './EmptyState';
+import { AddEditStockModal } from './AddEditStockModal';
 import { PerformanceMetrics } from './PerformanceMetrics';
 import { DailyDigest } from './DailyDigest';
 import { ShareImageModal } from './ShareImageModal';
@@ -51,13 +53,17 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     portfolios,
     realizedPnl,
     snapshots,
+    addHolding,
+    apiKey,
   } = usePortfolioContext();
+  const { convertToBase, fxRates } = useFxRates(baseCurrency);
 
   const [milestones, setMilestones] = useLocalStorage<NWMilestone[]>('nw-milestones', []);
   const [addingMilestone, setAddingMilestone] = useState(false);
   const [newName, setNewName] = useState('');
   const [newValue, setNewValue] = useState('');
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [showTRY, setShowTRY] = useState(false);
   const [milestonesOpen, setMilestonesOpen] = useState(true);
   const tryRate = useTryRate(baseCurrency);
@@ -92,7 +98,23 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   }
 
   if (allEnrichedHoldings.length === 0) {
-    return <EmptyState onAdd={() => {}} />;
+    return (
+      <>
+        <EmptyState onAdd={() => setShowAddModal(true)} />
+        {showAddModal && (
+          <AddEditStockModal
+            apiKey={apiKey}
+            onSave={(data) => {
+              const holdingCurrency = data.currency || 'USD';
+              const fxReady = holdingCurrency === baseCurrency || (fxRates && fxRates.base === baseCurrency);
+              addHolding({ ...data, ...(fxReady ? { buyFxRate: convertToBase(1, holdingCurrency) } : {}) });
+              setShowAddModal(false);
+            }}
+            onClose={() => setShowAddModal(false)}
+          />
+        )}
+      </>
+    );
   }
 
   const activeName = activePortfolioId === 'all'

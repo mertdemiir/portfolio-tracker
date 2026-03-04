@@ -62,7 +62,8 @@ function parseCsvRow(line: string): string[] {
         current += char;
       }
     } else {
-      if (char === '"') {
+      if (char === '"' && current === '') {
+        // Only enter quote mode if `"` appears at the start of a field
         inQuotes = true;
       } else if (char === ',') {
         values.push(current.trim());
@@ -79,7 +80,7 @@ function parseCsvRow(line: string): string[] {
 export const HOLDING_FIELD_ALIASES: Record<string, string[]> = {
   ticker: ['symbol', 'ticker', 'stock symbol', 'security symbol', 'sym'],
   name: ['name', 'description', 'security name', 'company name', 'security description', 'stock name'],
-  shares: ['shares', 'quantity', 'qty', 'units', 'amount', 'shares/units'],
+  shares: ['shares', 'quantity', 'qty', 'units', 'shares/units'],
   buyPrice: ['buy price', 'cost basis per share', 'avg cost', 'average cost', 'cost per share', 'price paid', 'purchase price', 'cost/share'],
   buyDate: ['buy date', 'date acquired', 'acquisition date', 'purchase date', 'date purchased', 'date'],
   assetType: ['asset type', 'type', 'security type', 'asset class'],
@@ -91,7 +92,7 @@ export const TRANSACTION_FIELD_ALIASES: Record<string, string[]> = {
   ticker: ['symbol', 'ticker', 'stock symbol', 'security symbol'],
   name: ['name', 'description', 'security name', 'security description'],
   type: ['type', 'action', 'transaction type', 'buy/sell', 'side'],
-  shares: ['shares', 'quantity', 'qty', 'units', 'amount'],
+  shares: ['shares', 'quantity', 'qty', 'units'],
   pricePerShare: ['price', 'price per share', 'unit price', 'execution price', 'trade price'],
   total: ['total', 'amount', 'net amount', 'gross amount', 'total cost', 'proceeds'],
   notes: ['notes', 'memo', 'comments'],
@@ -110,7 +111,7 @@ export function autoDetectMapping(
 
     for (const [field, fieldAliases] of Object.entries(aliases)) {
       if (usedFields.has(field)) continue;
-      if (fieldAliases.some((alias) => normalized === alias || normalized.includes(alias))) {
+      if (fieldAliases.some((alias) => normalized === alias)) {
         mapping[header] = field;
         usedFields.add(field);
         matched = true;

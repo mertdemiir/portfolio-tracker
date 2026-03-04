@@ -8,6 +8,7 @@ import { LIVE_METAL_TICKERS } from '../utils/api';
 
 interface HoldingRowProps {
   holding: EnrichedHolding;
+  baseCurrency: string;
   categoryLabel?: string;
   showPortfolioBadge?: boolean;
   priceCache: PriceCache;
@@ -59,11 +60,12 @@ function getStaleWarning(holding: EnrichedHolding, priceCache: PriceCache): stri
   return null;
 }
 
-export function HoldingRow({ holding, categoryLabel, showPortfolioBadge, priceCache, isDraggable, onEdit, onDelete, onToggleFavorite, onMove, onTickerClick }: HoldingRowProps) {
+export function HoldingRow({ holding, baseCurrency, categoryLabel, showPortfolioBadge, priceCache, isDraggable, onEdit, onDelete, onToggleFavorite, onMove, onTickerClick }: HoldingRowProps) {
   const gainColor = holding.gainLoss >= 0 ? 'text-gain' : 'text-loss';
   const dailyColor = holding.dailyChange >= 0 ? 'text-gain' : 'text-loss';
   const config = ASSET_TYPE_CONFIG[holding.assetType ?? 'stock'];
   const staleWarning = getStaleWarning(holding, priceCache);
+  const showNativeCurrency = holding.nativeCurrency !== baseCurrency;
 
   const {
     attributes,
@@ -124,11 +126,25 @@ export function HoldingRow({ holding, categoryLabel, showPortfolioBadge, priceCa
         </td>
         <td className="px-4 py-3 text-right text-sm text-t-secondary tabular-nums">{holding.shares}</td>
         <td className="px-4 py-3 text-right text-sm text-t-secondary tabular-nums">
-          {formatCurrency(holding.buyPrice)}
+          <div>
+            {formatCurrency(holding.shares > 0 ? holding.costBasis / holding.shares : holding.buyPrice)}
+            {showNativeCurrency && (
+              <div className="text-[11px] text-t-faint">
+                ({formatCurrency(holding.buyPrice, holding.currency || 'USD')})
+              </div>
+            )}
+          </div>
         </td>
         <td className="px-4 py-3 text-right text-sm text-t-secondary tabular-nums">
           <div className="flex items-center justify-end gap-1">
-            {formatCurrency(holding.currentPrice)}
+            <div>
+              {formatCurrency(holding.currentPrice)}
+              {showNativeCurrency && (
+                <div className="text-[11px] text-t-faint">
+                  ({formatCurrency(holding.nativeCurrentPrice, holding.nativeCurrency)})
+                </div>
+              )}
+            </div>
             {staleWarning && (
               <span title={staleWarning}>
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
@@ -145,8 +161,10 @@ export function HoldingRow({ holding, categoryLabel, showPortfolioBadge, priceCa
         </td>
         <td className="px-4 py-3 text-right text-sm tabular-nums">
           {(() => {
-            const hasLivePrice = holding.assetType === 'stock' || holding.assetType === 'etf' || holding.assetType === 'crypto';
-            const showDash = holding.dailyChange === 0 && !hasLivePrice;
+            const isLiveMetal = holding.assetType === 'metal' && (LIVE_METAL_TICKERS as readonly string[]).includes(holding.ticker);
+            const hasLiveDailyChange = holding.assetType === 'stock' || holding.assetType === 'etf' || holding.assetType === 'crypto';
+            // Live metals have no reliable daily change data (API returns 0), so always show dash
+            const showDash = (holding.dailyChange === 0 && !hasLiveDailyChange) || isLiveMetal;
             return showDash ? (
               <span className="text-t-faint">&mdash;</span>
             ) : (
@@ -197,12 +215,10 @@ export function HoldingRow({ holding, categoryLabel, showPortfolioBadge, priceCa
         </td>
       </tr>
 
-      {/* Mobile card */}
-      <div
-        ref={setNodeRef}
-        style={dragStyle}
-        className="md:hidden bg-surface-card border border-b-default card-radius p-4 mb-3"
-      >
+      {/* Mobile card — wrapped in <tr><td> for valid table markup */}
+      <tr className="md:hidden">
+        <td colSpan={10} className="p-0 border-none">
+          <div className="bg-surface-card border border-b-default card-radius p-4 mb-3">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-start gap-2">
             {isDraggable && (
@@ -265,6 +281,11 @@ export function HoldingRow({ holding, categoryLabel, showPortfolioBadge, priceCa
                 </span>
               )}
             </p>
+            {showNativeCurrency && (
+              <p className="text-[11px] text-t-faint tabular-nums">
+                ({formatCurrency(holding.nativeCurrentPrice, holding.nativeCurrency)})
+              </p>
+            )}
           </div>
           <div>
             <span className="text-t-muted text-xs">Market Value</span>
@@ -277,7 +298,9 @@ export function HoldingRow({ holding, categoryLabel, showPortfolioBadge, priceCa
             </p>
           </div>
         </div>
-      </div>
+          </div>
+        </td>
+      </tr>
     </>
   );
 }

@@ -1,10 +1,11 @@
 import { useCallback } from 'react';
 import { useLocalStorage } from './useLocalStorage';
+import { todayDateString } from '../utils/formatters';
 import type { Portfolio } from '../types';
 import { DEFAULT_PORTFOLIO_ID } from '../types';
 
 const DEFAULT_PORTFOLIOS: Portfolio[] = [
-  { id: DEFAULT_PORTFOLIO_ID, name: 'My Portfolio', createdDate: new Date().toISOString().split('T')[0] },
+  { id: DEFAULT_PORTFOLIO_ID, name: 'My Portfolio', createdDate: todayDateString() },
 ];
 
 export function usePortfolios() {
@@ -16,7 +17,7 @@ export function usePortfolios() {
       const id = crypto.randomUUID();
       setPortfolios((prev) => [
         ...prev,
-        { id, name, createdDate: new Date().toISOString().split('T')[0] },
+        { id, name, createdDate: todayDateString() },
       ]);
       return id;
     },

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { WifiOff } from 'lucide-react';
 import { PortfolioProvider, usePortfolioContext } from './context/PortfolioContext';
 import { Layout } from './components/Layout';
 import { SettingsModal } from './components/SettingsModal';
@@ -12,6 +13,7 @@ import { FirePage } from './components/FirePage';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useAutoBackup } from './hooks/useAutoBackup';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
 import type { TabId } from './types';
 
 export interface NavFilter {
@@ -51,6 +53,7 @@ function AppContent() {
 
   // Auto-backup scheduling (Electron only, runs silently)
   useAutoBackup();
+  const isOnline = useOnlineStatus();
 
   if (!welcomeDismissed && !apiKey) {
     return (
@@ -66,6 +69,12 @@ function AppContent() {
 
   return (
     <Layout activeTab={activeTab} onTabChange={handleTabChange} onSettingsClick={() => setShowSettings(true)} latestPriceUpdate={latestPriceUpdate}>
+      {!isOnline && (
+        <div className="mb-4 p-3 bg-red-900/20 border border-red-800/30 rounded-lg text-sm text-red-400 flex items-center gap-2">
+          <WifiOff className="w-4 h-4 flex-shrink-0" />
+          You're offline — prices may be stale
+        </div>
+      )}
       {priceError && (
         <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
           {priceError}

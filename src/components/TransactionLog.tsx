@@ -1,20 +1,32 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Plus, Trash2, X, Check, ArrowUpDown, MessageSquare } from 'lucide-react';
 import { BarChart, Bar, ResponsiveContainer, XAxis, Tooltip } from 'recharts';
 import { usePortfolioContext } from '../context/PortfolioContext';
+import { useFxRates } from '../hooks/useFxRates';
 import { formatCurrency, formatSignedCurrency, formatDate } from '../utils/formatters';
 import { AddTransactionModal } from './AddTransactionModal';
+import { UndoToast } from './UndoToast';
+import { v4 as uuidv4 } from 'uuid';
 import { DEFAULT_PORTFOLIO_ID } from '../types';
+import type { Transaction, Holding } from '../types';
 import type { NavFilter } from '../App';
 
 type SortKey = 'date' | 'ticker' | 'type' | 'total';
+
+interface PendingUndo {
+  transaction: Transaction;
+  holdingSnapshot: Holding | null;
+  holdingAction: 'modified' | 'deleted' | 'created' | 'none';
+  createdHoldingId?: string;
+}
 
 interface TransactionLogProps {
   initialFilter?: NavFilter | null;
 }
 
 export function TransactionLog({ initialFilter }: TransactionLogProps) {
-  const { transactions, deleteTransaction, holdings, updateHolding, addHolding, deleteHolding, activePortfolioId } = usePortfolioContext();
+  const { transactions, deleteTransaction, restoreTransaction, holdings, updateHolding, deleteHolding, restoreHolding, realizedPnl, baseCurrency } = usePortfolioContext();
+  const { convertToBase } = useFxRates(baseCurrency);
   const [showModal, setShowModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
@@ -22,6 +34,8 @@ export function TransactionLog({ initialFilter }: TransactionLogProps) {
   const [filterTicker, setFilterTicker] = useState(initialFilter?.ticker || '');
   const [sortKey, setSortKey] = useState<SortKey>('date');
   const [sortAsc, setSortAsc] = useState(false);
+  const [pendingUndo, setPendingUndo] = useState<PendingUndo | null>(null);
+  const pendingUndoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Apply filter from cross-page navigation
   useEffect(() => {
@@ -38,6 +52,142 @@ export function TransactionLog({ initialFilter }: TransactionLogProps) {
       setSortAsc(false);
     }
   }
+
+  // --- Undo-toast deletion flow ---
+
+  function handleDeleteTransaction(t: Transaction) {
+    // Finalize any existing pending undo (makes previous deletion permanent)
+    if (pendingUndoTimerRef.current) {
+      clearTimeout(pendingUndoTimerRef.current);
+      pendingUndoTimerRef.current = null;
+    }
+    setPendingUndo(null);
+
+    // Find matching holding (same logic as before)
+    const allMatches = holdings.filter((h) => h.ticker.toUpperCase() === t.ticker.toUpperCase());
+    const txnPortfolioId = t.portfolioId || DEFAULT_PORTFOLIO_ID;
+    const match = allMatches.find((h) => (h.portfolioId || DEFAULT_PORTFOLIO_ID) === txnPortfolioId)
+      || allMatches[0]
+      || null;
+
+    // Snapshot the holding BEFORE any modifications
+    const holdingSnapshot: Holding | null = match ? { ...match } : null;
+    let holdingAction: PendingUndo['holdingAction'] = 'none';
+    let createdHoldingId: string | undefined;
+
+    if (match) {
+      const { id, ...data } = match;
+      if (t.type === 'buy') {
+        // Undo buy: reduce shares and recalculate cost basis
+        const newShares = match.shares - t.shares;
+        if (newShares > 0) {
+          const remainingBuys = transactions.filter(
+            (tx) => tx.id !== t.id && tx.type === 'buy' && tx.ticker.toUpperCase() === t.ticker.toUpperCase()
+          );
+          let newBuyPrice = match.buyPrice;
+          if (remainingBuys.length > 0) {
+            const totalCost = remainingBuys.reduce((s, tx) => s + tx.pricePerShare * tx.shares, 0);
+            const totalShares = remainingBuys.reduce((s, tx) => s + tx.shares, 0);
+            if (totalShares > 0) newBuyPrice = totalCost / totalShares;
+          }
+          updateHolding(id, { ...data, shares: newShares, buyPrice: newBuyPrice });
+          holdingAction = 'modified';
+        } else {
+          // This buy created the entire holding — remove it
+          deleteHolding(id);
+          holdingAction = 'deleted';
+        }
+      } else {
+        // Undo sell: restore shares
+        updateHolding(id, { ...data, shares: match.shares + t.shares });
+        holdingAction = 'modified';
+      }
+    } else if (t.type === 'sell') {
+      // Holding was fully sold and deleted — recreate it
+      createdHoldingId = uuidv4();
+      restoreHolding({
+        id: createdHoldingId,
+        ticker: t.ticker,
+        name: t.name,
+        shares: t.shares,
+        buyPrice: t.costBasisPerShare ?? t.pricePerShare,
+        buyDate: t.date,
+        assetType: t.assetType ?? 'stock',
+        inPortfolio: true,
+        category: t.category ?? 'investments',
+        ...(t.currency ? { currency: t.currency } : {}),
+        ...(t.portfolioId ? { portfolioId: t.portfolioId } : {}),
+      });
+      holdingAction = 'created';
+    }
+
+    deleteTransaction(t.id);
+    setConfirmDelete(null);
+
+    // Start 5-second undo window
+    const timerId = setTimeout(() => {
+      setPendingUndo(null);
+      pendingUndoTimerRef.current = null;
+    }, 5000);
+    pendingUndoTimerRef.current = timerId;
+
+    setPendingUndo({
+      transaction: t,
+      holdingSnapshot,
+      holdingAction,
+      createdHoldingId,
+    });
+  }
+
+  function handleUndo() {
+    if (!pendingUndo) return;
+
+    if (pendingUndoTimerRef.current) {
+      clearTimeout(pendingUndoTimerRef.current);
+      pendingUndoTimerRef.current = null;
+    }
+
+    // Restore the transaction with its original ID
+    restoreTransaction(pendingUndo.transaction);
+
+    // Restore the holding to its pre-deletion state
+    switch (pendingUndo.holdingAction) {
+      case 'modified': {
+        // Holding was modified (shares reduced for buy-undo, or shares added for sell-undo)
+        if (pendingUndo.holdingSnapshot) {
+          const { id, ...data } = pendingUndo.holdingSnapshot;
+          updateHolding(id, data);
+        }
+        break;
+      }
+      case 'deleted': {
+        // Holding was fully removed (buy-undo removed entire position)
+        if (pendingUndo.holdingSnapshot) {
+          restoreHolding(pendingUndo.holdingSnapshot);
+        }
+        break;
+      }
+      case 'created': {
+        // A new holding was recreated (sell-undo case) — remove it
+        if (pendingUndo.createdHoldingId) {
+          deleteHolding(pendingUndo.createdHoldingId);
+        }
+        break;
+      }
+      // 'none': no holding was affected
+    }
+
+    setPendingUndo(null);
+  }
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (pendingUndoTimerRef.current) {
+        clearTimeout(pendingUndoTimerRef.current);
+      }
+    };
+  }, []);
 
   const filtered = useMemo(() => {
     let list = [...transactions];
@@ -71,11 +221,11 @@ export function TransactionLog({ initialFilter }: TransactionLogProps) {
     return list;
   }, [transactions, filterType, filterTicker, sortKey, sortAsc]);
 
-  const totalBuys = transactions.filter((t) => t.type === 'buy').reduce((s, t) => s + t.total, 0);
-  const totalSells = transactions.filter((t) => t.type === 'sell').reduce((s, t) => s + t.total, 0);
-  const totalRealizedPnl = transactions
-    .filter((t) => t.type === 'sell' && t.costBasisPerShare !== undefined)
-    .reduce((s, t) => s + (t.pricePerShare - t.costBasisPerShare!) * t.shares, 0);
+  // Bug 5: currency-convert totalBuys/totalSells to base currency
+  const totalBuys = transactions.filter((t) => t.type === 'buy').reduce((s, t) => s + convertToBase(t.total, t.currency || 'USD'), 0);
+  const totalSells = transactions.filter((t) => t.type === 'sell').reduce((s, t) => s + convertToBase(t.total, t.currency || 'USD'), 0);
+  // Bug 4: use context's realizedPnl which is already FX-converted
+  const totalRealizedPnl = realizedPnl;
 
   const SortHeader = ({ label, field }: { label: string; field: SortKey }) => (
     <th
@@ -266,49 +416,7 @@ export function TransactionLog({ initialFilter }: TransactionLogProps) {
                       {confirmDelete === t.id ? (
                         <div className="flex items-center gap-1 justify-end">
                           <button
-                            onClick={() => {
-                              // Reverse the holding effect before deleting
-                              // Prefer matching by portfolio, then fall back to any match
-                              const allMatches = holdings.filter((h) => h.ticker.toUpperCase() === t.ticker.toUpperCase());
-                              const match = allMatches.find((h) => (h.portfolioId || DEFAULT_PORTFOLIO_ID) === activePortfolioId)
-                                || allMatches[0]
-                                || null;
-                              if (match) {
-                                const { id, ...data } = match;
-                                if (t.type === 'buy') {
-                                  // Undo buy: reduce shares
-                                  const newShares = match.shares - t.shares;
-                                  if (newShares > 0) {
-                                    // Keep cost basis as-is — recalculating is unreliable
-                                    // when intervening sells have changed the share count
-                                    updateHolding(id, { ...data, shares: newShares });
-                                  } else {
-                                    // This buy created the entire holding — remove it
-                                    deleteHolding(id);
-                                  }
-                                } else {
-                                  // Undo sell: restore shares
-                                  updateHolding(id, { ...data, shares: match.shares + t.shares });
-                                }
-                              } else if (t.type === 'sell') {
-                                // Holding was fully sold and deleted — recreate it
-                                // Use stored metadata from transaction, or sensible defaults
-                                addHolding({
-                                  ticker: t.ticker,
-                                  name: t.name,
-                                  shares: t.shares,
-                                  buyPrice: t.costBasisPerShare ?? t.pricePerShare,
-                                  buyDate: t.date,
-                                  assetType: t.assetType ?? 'stock',
-                                  inPortfolio: true,
-                                  category: t.category ?? 'investments',
-                                  ...(t.currency ? { currency: t.currency } : {}),
-                                  ...(t.portfolioId ? { portfolioId: t.portfolioId } : {}),
-                                });
-                              }
-                              deleteTransaction(t.id);
-                              setConfirmDelete(null);
-                            }}
+                            onClick={() => handleDeleteTransaction(t)}
                             className="text-loss hover:text-loss/80 p-0.5"
                           >
                             <Check size={14} />
@@ -346,6 +454,14 @@ export function TransactionLog({ initialFilter }: TransactionLogProps) {
           </div>
         )}
       </div>
+
+      {pendingUndo && (
+        <UndoToast
+          message="Transaction deleted"
+          onUndo={handleUndo}
+          onDismiss={() => setPendingUndo(null)}
+        />
+      )}
 
       {showModal && <AddTransactionModal onClose={() => setShowModal(false)} />}
     </div>

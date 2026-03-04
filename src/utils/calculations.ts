@@ -9,14 +9,14 @@ function resolvePrice(
   h: Holding,
   prices: PriceCache,
   convert: ConvertFn = identityConvert
-): { currentPrice: number; change: number; changePercent: number } {
+): { currentPrice: number; change: number; changePercent: number; nativePrice: number; nativeCurrency: string } {
   const key = `${h.assetType}:${h.ticker}`;
   const quote = prices[key];
   const holdingCurrency = h.currency || 'USD';
 
   if (h.assetType === 'cash') {
     // Cash: 1 unit of the currency, convert to base
-    return { currentPrice: convert(1, holdingCurrency), change: 0, changePercent: 0 };
+    return { currentPrice: convert(1, holdingCurrency), change: 0, changePercent: 0, nativePrice: 1, nativeCurrency: holdingCurrency };
   }
 
   if (quote?.currentPrice) {
@@ -27,14 +27,16 @@ function resolvePrice(
       currentPrice: convert(quote.currentPrice, priceCurrency),
       change: convert(quote.change ?? 0, priceCurrency),
       changePercent: quote.changePercent ?? 0,
+      nativePrice: quote.currentPrice,
+      nativeCurrency: priceCurrency,
     };
   }
 
   if ((h.assetType === 'metal' || h.assetType === 'custom') && h.manualPrice) {
-    return { currentPrice: convert(h.manualPrice, holdingCurrency), change: 0, changePercent: 0 };
+    return { currentPrice: convert(h.manualPrice, holdingCurrency), change: 0, changePercent: 0, nativePrice: h.manualPrice, nativeCurrency: holdingCurrency };
   }
 
-  return { currentPrice: convert(h.buyPrice, holdingCurrency), change: 0, changePercent: 0 };
+  return { currentPrice: convert(h.buyPrice, holdingCurrency), change: 0, changePercent: 0, nativePrice: h.buyPrice, nativeCurrency: holdingCurrency };
 }
 
 export function enrichHoldings(
@@ -50,9 +52,13 @@ export function enrichHoldings(
   }, 0);
 
   return holdings.map((h) => {
-    const { currentPrice, change, changePercent } = resolvePrice(h, prices, convert);
+    const { currentPrice, change, changePercent, nativePrice, nativeCurrency } = resolvePrice(h, prices, convert);
     const holdingCurrency = h.currency || 'USD';
-    const buyPriceConverted = convert(h.buyPrice, holdingCurrency);
+    // Use historical FX rate if available (forward-only), otherwise live rate.
+    // Guard: buyFxRate must be a positive number to be valid.
+    const buyPriceConverted = (h.buyFxRate != null && h.buyFxRate > 0)
+      ? h.buyPrice * h.buyFxRate
+      : convert(h.buyPrice, holdingCurrency);
     const marketValue = currentPrice * h.shares;
     const costBasis = buyPriceConverted * h.shares;
     const gainLoss = marketValue - costBasis;
@@ -64,6 +70,8 @@ export function enrichHoldings(
     return {
       ...h,
       currentPrice,
+      nativeCurrentPrice: nativePrice,
+      nativeCurrency,
       marketValue,
       costBasis,
       gainLoss,

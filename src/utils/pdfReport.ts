@@ -190,7 +190,9 @@ export async function generatePdfReport({
       }
       const change = m.endValue - m.startValue;
       const pct = m.startValue > 0 ? (change / m.startValue) * 100 : 0;
-      const label = new Date(m.month + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      // Bug 18: parse date parts manually to avoid UTC timezone shift
+      const [yr, mo] = m.month.split('-').map(Number);
+      const label = new Date(yr, mo - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
       pdf.text(label, margin, y);
       pdf.text(formatCurrency(m.startValue), margin + 50, y, { align: 'right' });

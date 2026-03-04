@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { RotateCcw, Plus, Trash2, Zap, AlertTriangle } from 'lucide-react';
 import { usePortfolioContext } from '../context/PortfolioContext';
@@ -49,6 +49,31 @@ export function Simulator() {
   );
 
   const [holdings, setHoldings] = useState<SimHolding[]>(initialHoldings);
+
+  // Bug 7: Sync prices from live data when they refresh
+  useEffect(() => {
+    setHoldings((prev) => {
+      const newMap = new Map(initialHoldings.map((h) => [h.id, h]));
+      const updated = prev
+        .map((h) => {
+          if (h.isHypothetical) return h;
+          const fresh = newMap.get(h.id);
+          if (fresh) {
+            return { ...h, currentPrice: fresh.currentPrice, costBasis: fresh.costBasis };
+          }
+          return null; // holding was removed
+        })
+        .filter((h): h is SimHolding => h !== null);
+      // Add any new holdings from initialHoldings not already in prev
+      for (const ih of initialHoldings) {
+        if (!updated.some((h) => h.id === ih.id)) {
+          updated.push(ih);
+        }
+      }
+      return updated;
+    });
+  }, [initialHoldings]);
+
   const [showAddForm, setShowAddForm] = useState(false);
   const [newTicker, setNewTicker] = useState('');
   const [newName, setNewName] = useState('');
@@ -72,7 +97,8 @@ export function Simulator() {
   }
 
   function applyShock(factor: number) {
-    setHoldings((prev) => prev.map((h) => ({ ...h, simPrice: parseFloat((h.currentPrice * factor).toFixed(2)) })));
+    // Bug 8: Apply shock to simPrice, not currentPrice, so shocks compound
+    setHoldings((prev) => prev.map((h) => ({ ...h, simPrice: parseFloat((h.simPrice * factor).toFixed(2)) })));
   }
 
   function resetAll() {

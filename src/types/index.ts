@@ -17,6 +17,7 @@ export interface Holding {
   isFavorite?: boolean;
   currency?: string; // ISO 4217, default 'USD'
   portfolioId?: string; // undefined = default portfolio
+  buyFxRate?: number; // conversion factor at purchase time: 1 unit of holding currency = buyFxRate units of base currency
 }
 
 export interface StockQuote {
@@ -28,6 +29,8 @@ export interface StockQuote {
 
 export interface EnrichedHolding extends Holding {
   currentPrice: number;
+  nativeCurrentPrice: number;
+  nativeCurrency: string;
   marketValue: number;
   costBasis: number;
   gainLoss: number;

@@ -50,7 +50,7 @@ export function Charts() {
   const summaryStats = useMemo(() => {
     if (snapshots.length === 0) return null;
     const currentNW = netWorthSummary.totalNetWorth;
-    const ath = Math.max(...snapshots.map(s => s.netWorthValue ?? s.totalValue));
+    const ath = snapshots.reduce((max, s) => Math.max(max, s.netWorthValue ?? s.totalValue), -Infinity);
     const drawdownPct = ath > 0 ? ((currentNW - ath) / ath) * 100 : 0;
     const filtered = filterByTimeRange(snapshots, timeRange);
     if (filtered.length < 2) return { currentNW, ath, drawdownPct, periodReturn: null };

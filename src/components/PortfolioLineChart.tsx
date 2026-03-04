@@ -9,7 +9,7 @@ interface PortfolioLineChartProps {
 }
 
 export function PortfolioLineChart({ snapshots }: PortfolioLineChartProps) {
-  const { theme } = usePortfolioContext();
+  const { theme, baseCurrency } = usePortfolioContext();
   const cc = getChartColors(theme);
   const withPortfolio = snapshots.filter((s) => s.portfolioValue != null);
 
@@ -30,8 +30,8 @@ export function PortfolioLineChart({ snapshots }: PortfolioLineChartProps) {
   }));
 
   const values = data.map((d) => d.value);
-  const minVal = Math.min(...values);
-  const maxVal = Math.max(...values);
+  const minVal = values.reduce((a, b) => Math.min(a, b), Infinity);
+  const maxVal = values.reduce((a, b) => Math.max(a, b), -Infinity);
   const range = maxVal - minVal || maxVal * 0.1;
   const padding = range * 0.15;
   const step = Math.pow(10, Math.floor(Math.log10(Math.max(range, 1))));
@@ -47,7 +47,14 @@ export function PortfolioLineChart({ snapshots }: PortfolioLineChartProps) {
           <XAxis dataKey="date" fontSize={12} stroke={cc.axis} />
           <YAxis
             domain={[yMin, yMax]}
-            tickFormatter={(v) => `$${(v / 1000).toFixed(0)}K`}
+            tickFormatter={(v) => {
+              // Bug 22: use baseCurrency instead of hardcoded $
+              try {
+                return new Intl.NumberFormat('en-US', {
+                  style: 'currency', currency: baseCurrency, notation: 'compact', maximumFractionDigits: 0,
+                }).format(v);
+              } catch { return `$${(v / 1000).toFixed(0)}K`; }
+            }}
             fontSize={12}
             stroke={cc.axis}
           />

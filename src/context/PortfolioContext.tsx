@@ -9,6 +9,7 @@ import { usePortfolios } from '../hooks/usePortfolios';
 import { useLiabilities } from '../hooks/useLiabilities';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { enrichHoldings, calculateSummary, calculateNetWorthSummary } from '../utils/calculations';
+import { LIVE_METAL_TICKERS } from '../utils/api';
 import { setGlobalBaseCurrency } from '../utils/formatters';
 import { DEFAULT_CATEGORIES, DEFAULT_PORTFOLIO_ID } from '../types';
 import { useTargetAllocations } from '../hooks/useTargetAllocations';
@@ -40,6 +41,7 @@ interface PortfolioContextValue {
   addHolding: (data: Omit<Holding, 'id'>) => void;
   updateHolding: (id: string, data: Omit<Holding, 'id'>) => void;
   deleteHolding: (id: string) => void;
+  restoreHolding: (holding: Holding) => void;
   // All holdings (net worth)
   allEnrichedHoldings: EnrichedHolding[];
   netWorthSummary: NetWorthSummary;
@@ -69,6 +71,7 @@ interface PortfolioContextValue {
   transactions: Transaction[];
   addTransaction: (data: Omit<Transaction, 'id'>) => void;
   deleteTransaction: (id: string) => void;
+  restoreTransaction: (txn: Transaction) => void;
   realizedPnl: number;
   // Benchmarks
   benchmarkData: { spx: BenchmarkDataPoint[]; btc: BenchmarkDataPoint[]; gold: BenchmarkDataPoint[] };
@@ -113,6 +116,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     addHolding,
     updateHolding,
     deleteHolding,
+    restoreHolding,
     saveSnapshot,
     addManualSnapshot,
     deleteSnapshot,
@@ -124,7 +128,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     useStockPrices(apiKey);
   const { targetAllocations, setTargetAllocation, removeTargetAllocation } =
     useTargetAllocations();
-  const { transactions, addTransaction, deleteTransaction } = useTransactions();
+  const { transactions, addTransaction, deleteTransaction, restoreTransaction } = useTransactions();
   const { benchmarkData, benchmarkEnabled, toggleBenchmark, importBenchmarkCsv, clearBenchmark, getBenchmarkDateRange } =
     useBenchmarks();
   const { theme, themePreference, setTheme, accentColor, setAccentColor } = useTheme();
@@ -205,7 +209,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     [filteredEnrichedHoldings]
   );
 
-  // Delete portfolio: move orphaned holdings to default
+  // Delete portfolio: move orphaned holdings AND transactions to default
   const deletePortfolio = useCallback(
     (id: string) => {
       if (id === DEFAULT_PORTFOLIO_ID) return;
@@ -216,9 +220,18 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
           updateHolding(h.id, { ...data, portfolioId: DEFAULT_PORTFOLIO_ID });
         }
       });
+      // Re-assign orphaned transactions to default portfolio
+      // (so realized P&L doesn't disappear when a portfolio is deleted)
+      transactions.forEach((t) => {
+        if (t.portfolioId === id) {
+          const { id: _txnId, ...txnData } = t;
+          deleteTransaction(t.id);
+          addTransaction({ ...txnData, portfolioId: DEFAULT_PORTFOLIO_ID });
+        }
+      });
       deletePortfolioRaw(id);
     },
-    [holdings, updateHolding, deletePortfolioRaw]
+    [holdings, updateHolding, deletePortfolioRaw, transactions, deleteTransaction, addTransaction]
   );
 
   const netWorthSummary = useMemo(
@@ -231,14 +244,20 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     [customCategories]
   );
 
-  // Realized P&L: sum of (sellPrice - costBasis) * shares for sell transactions
-  // filtered by active portfolio using the transaction's own portfolioId metadata,
-  // falling back to matching against current holdings for older transactions
+  // Realized P&L: sum of (sellPrice - costBasis) * shares for sell transactions,
+  // converted to base currency. Filtered by active portfolio using the transaction's
+  // own portfolioId metadata, falling back to matching against current holdings.
   const realizedPnl = useMemo(() => {
     const sellTxns = transactions.filter((t) => t.type === 'sell' && t.costBasisPerShare !== undefined);
 
+    const computeGain = (t: Transaction) => {
+      const gain = (t.pricePerShare - t.costBasisPerShare!) * t.shares;
+      const txnCurrency = t.currency || 'USD';
+      return convertToBase(gain, txnCurrency);
+    };
+
     if (activePortfolioId === 'all') {
-      return sellTxns.reduce((sum, t) => sum + (t.pricePerShare - t.costBasisPerShare!) * t.shares, 0);
+      return sellTxns.reduce((sum, t) => sum + computeGain(t), 0);
     }
 
     // For specific portfolio: use transaction's stored portfolioId if available,
@@ -255,17 +274,23 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
       );
     });
 
-    return filteredSells.reduce((sum, t) => sum + (t.pricePerShare - t.costBasisPerShare!) * t.shares, 0);
-  }, [transactions, activePortfolioId, holdings]);
+    return filteredSells.reduce((sum, t) => sum + computeGain(t), 0);
+  }, [transactions, activePortfolioId, holdings, convertToBase]);
 
-  // Save daily snapshot with NW, portfolio, and liabilities values
-  // Save when there are holdings OR liabilities (even if prices haven't loaded yet,
-  // the snapshot captures liabilities and any manually-priced assets)
+  // Save daily snapshot with NW, portfolio, and liabilities values.
+  // Only save once prices have finished loading (to avoid stale snapshots).
+  // If no holdings need API prices (all manual/cash), save immediately.
+  const needsApiPrices = useMemo(() => holdings.some((h) =>
+    h.assetType === 'stock' || h.assetType === 'etf' || h.assetType === 'crypto' ||
+    (h.assetType === 'metal' && (LIVE_METAL_TICKERS as readonly string[]).includes(h.ticker))
+  ), [holdings]);
+  const pricesReady = !needsApiPrices || !pricesLoading;
+
   useEffect(() => {
-    if (allEnrichedHoldings.length > 0 || liabilities.length > 0) {
+    if (pricesReady && (allEnrichedHoldings.length > 0 || liabilities.length > 0)) {
       saveSnapshot(netWorthSummary.totalNetWorth, netWorthSummary.totalPortfolioValue, netWorthSummary.totalLiabilities);
     }
-  }, [allEnrichedHoldings.length, liabilities.length, netWorthSummary.totalNetWorth, netWorthSummary.totalPortfolioValue, netWorthSummary.totalLiabilities, saveSnapshot]);
+  }, [pricesReady, allEnrichedHoldings.length, liabilities.length, netWorthSummary.totalNetWorth, netWorthSummary.totalPortfolioValue, netWorthSummary.totalLiabilities, saveSnapshot]);
 
   const value: PortfolioContextValue = useMemo(() => ({
     apiKey,
@@ -275,6 +300,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     addHolding,
     updateHolding,
     deleteHolding,
+    restoreHolding,
     allEnrichedHoldings,
     netWorthSummary,
     portfolioEnrichedHoldings,
@@ -298,6 +324,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     transactions,
     addTransaction,
     deleteTransaction,
+    restoreTransaction,
     realizedPnl,
     benchmarkData,
     benchmarkEnabled,
@@ -325,12 +352,12 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     filteredEnrichedHoldings,
     filteredPortfolioSummary,
   }), [
-    apiKey, setApiKey, hasApiKey, holdings, addHolding, updateHolding, deleteHolding,
+    apiKey, setApiKey, hasApiKey, holdings, addHolding, updateHolding, deleteHolding, restoreHolding,
     allEnrichedHoldings, netWorthSummary, portfolioEnrichedHoldings, portfolioSummary,
     snapshots, addManualSnapshot, deleteSnapshot, priceCache, pricesLoading, priceError,
     refreshPrices, customCategories, allCategories, addCustomCategory, deleteCustomCategory,
     targetAllocations, setTargetAllocation, removeTargetAllocation, transactions, addTransaction,
-    deleteTransaction, realizedPnl, benchmarkData, benchmarkEnabled, toggleBenchmark,
+    deleteTransaction, restoreTransaction, realizedPnl, benchmarkData, benchmarkEnabled, toggleBenchmark,
     importBenchmarkCsv, clearBenchmark, getBenchmarkDateRange, theme, themePreference, setTheme, accentColor,
     setAccentColor, baseCurrency, setBaseCurrency, portfolios, activePortfolioId,
     setActivePortfolioId, createPortfolio, renamePortfolio, deletePortfolio, liabilities,

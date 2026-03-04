@@ -1,4 +1,4 @@
-import { Sparkles, TrendingUp, TrendingDown, Target, X } from 'lucide-react';
+import { Sparkles, TrendingUp, TrendingDown, Target, Trophy } from 'lucide-react';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { formatSignedCurrency, formatPercent, formatCurrency, todayDateString } from '../utils/formatters';
@@ -12,11 +12,9 @@ export function DailyDigest() {
     snapshots,
   } = usePortfolioContext();
 
-  const [dismissedDate, setDismissedDate] = useLocalStorage('digest-dismissed-date', '');
   const [milestones] = useLocalStorage<NWMilestone[]>('nw-milestones', []);
 
   const today = todayDateString();
-  if (dismissedDate === today) return null;
   if (portfolioEnrichedHoldings.length === 0) return null;
 
   // Daily change
@@ -35,6 +33,30 @@ export function DailyDigest() {
   const yesterdayStr = `${yesterdayDate.getFullYear()}-${String(yesterdayDate.getMonth() + 1).padStart(2, '0')}-${String(yesterdayDate.getDate()).padStart(2, '0')}`;
   const yesterdaySnap = snapshots.find((s) => s.date === yesterdayStr);
   const nwDelta = yesterdaySnap ? netWorthSummary.totalNetWorth - yesterdaySnap.netWorthValue : null;
+
+  // Weekly comparison — find closest snapshot on or before 7 days ago
+  const weekAgoDate = new Date(todayParts[0], todayParts[1] - 1, todayParts[2]);
+  weekAgoDate.setDate(weekAgoDate.getDate() - 7);
+  const weekAgoStr = `${weekAgoDate.getFullYear()}-${String(weekAgoDate.getMonth() + 1).padStart(2, '0')}-${String(weekAgoDate.getDate()).padStart(2, '0')}`;
+  const weekAgoSnap = snapshots
+    .filter((s) => s.date <= weekAgoStr)
+    .sort((a, b) => b.date.localeCompare(a.date))[0] ?? null;
+  const nwWeekDelta = weekAgoSnap ? netWorthSummary.totalNetWorth - weekAgoSnap.netWorthValue : null;
+
+  // ATH detection — compare against all snapshots excluding today
+  const pastSnapshots = snapshots.filter((s) => s.date !== today);
+
+  const athNW = pastSnapshots.length > 0
+    ? pastSnapshots.reduce((max, s) => Math.max(max, s.netWorthValue ?? s.totalValue), 0)
+    : null;
+  const isNWATH = athNW !== null && athNW > 0 && netWorthSummary.totalNetWorth > athNW;
+
+  const pastWithPortfolio = pastSnapshots.filter((s) => s.portfolioValue != null);
+  const athPortfolio = pastWithPortfolio.length > 0
+    ? pastWithPortfolio.reduce((max, s) => Math.max(max, s.portfolioValue!), 0)
+    : null;
+  const isPortfolioATH = athPortfolio !== null && athPortfolio > 0
+    && portfolioSummary.totalValue > athPortfolio;
 
   // Next milestone
   const nextMilestone = milestones.find((m) => netWorthSummary.totalNetWorth < m.value);
@@ -67,7 +89,16 @@ export function DailyDigest() {
     });
   }
 
-  // Line 4: Milestone proximity
+  // Line 4: NW vs last week
+  if (nwWeekDelta !== null && nwWeekDelta !== 0) {
+    lines.push({
+      icon: nwWeekDelta >= 0 ? TrendingUp : TrendingDown,
+      text: `Net worth is ${nwWeekDelta >= 0 ? 'up' : 'down'} ${formatSignedCurrency(nwWeekDelta)} from last week`,
+      color: nwWeekDelta >= 0 ? 'text-gain' : 'text-loss',
+    });
+  }
+
+  // Milestone proximity
   if (nextMilestone && milestoneDistance !== null) {
     lines.push({
       icon: Target,
@@ -76,20 +107,29 @@ export function DailyDigest() {
     });
   }
 
+  // ATH notifications — only when current value exceeds all past snapshots
+  if (isNWATH) {
+    lines.push({
+      icon: Trophy,
+      text: 'Net worth hit a new all-time high!',
+      color: 'text-gain',
+    });
+  }
+  if (isPortfolioATH && !isNWATH) {
+    lines.push({
+      icon: Trophy,
+      text: 'Portfolio hit a new all-time high!',
+      color: 'text-gain',
+    });
+  }
+
   if (lines.length === 0) return null;
 
   const borderColor = gained ? 'border-l-gain' : 'border-l-loss';
 
   return (
-    <div className={`bg-surface-card card-radius border border-b-default border-l-4 ${borderColor} p-4 mb-6 relative`}>
-      <button
-        onClick={() => setDismissedDate(today)}
-        className="absolute top-2.5 right-2.5 p-1 text-t-faint hover:text-t-muted transition-colors rounded-md hover:bg-surface-alt"
-        title="Dismiss for today"
-      >
-        <X size={14} />
-      </button>
-      <div className="space-y-2 pr-6">
+    <div className={`bg-surface-card card-radius border border-b-default border-l-4 ${borderColor} p-4 mb-6`}>
+      <div className="space-y-2">
         {lines.map((line, i) => (
           <div key={i} className="flex items-center gap-2.5">
             <line.icon className={`w-3.5 h-3.5 flex-shrink-0 ${line.color}`} />

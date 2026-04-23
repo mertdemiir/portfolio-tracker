@@ -182,7 +182,12 @@ export function SettingsModal({
       if (backup.theme) localStorage.setItem('theme', JSON.stringify(backup.theme));
       if (backup.benchmarkEnabled) localStorage.setItem('benchmark-enabled', JSON.stringify(backup.benchmarkEnabled));
 
-      window.location.reload();
+      // Show a success state BEFORE reloading so the user understands why
+      // the app is about to reload. (Full removal of the reload is deferred
+      // to Phase 3 — it requires the context split so consumers can
+      // re-hydrate from storage without a page-level refresh.)
+      setBackupStatus('Backup imported — reloading…');
+      setTimeout(() => window.location.reload(), 1200);
     } catch {
       setBackupStatus('Failed to parse backup file.');
       setTimeout(() => setBackupStatus(null), 3000);

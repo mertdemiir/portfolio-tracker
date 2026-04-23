@@ -1,8 +1,14 @@
 /**
  * Parse a CSV string into headers and row objects.
- * Handles quoted fields with commas and escaped quotes.
+ * Handles quoted fields with commas and escaped quotes. Strips the UTF-8
+ * BOM (0xFEFF) that Excel/Numbers exports prepend — without this the first
+ * header name starts with the BOM character and auto-detect fails to
+ * match common aliases.
  */
 export function parseCsv(csvText: string): { headers: string[]; rows: Record<string, string>[] } {
+  if (csvText.charCodeAt(0) === 0xfeff) {
+    csvText = csvText.slice(1);
+  }
   const lines = splitCsvLines(csvText);
   if (lines.length === 0) return { headers: [], rows: [] };
 

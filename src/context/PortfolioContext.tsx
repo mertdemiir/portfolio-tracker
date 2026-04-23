@@ -193,13 +193,23 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     [portfolioEnrichedHoldings]
   );
 
-  // Filtered by active portfolio (for holdings table, charts, etc.)
+  // Filtered by active portfolio — ALWAYS restricted to inPortfolio holdings.
+  //
+  // Consumers of this accessor (Dashboard metrics, allocation pies, P&L cards,
+  // simulator) want the set of holdings a user tracks as *investments*, not
+  // net-worth-only assets like a house or car. Previously the "all" branch
+  // filtered to inPortfolio but the specific-bucket branch did not, causing
+  // "Portfolio Value" on a specific bucket to include NW-only items. Fix:
+  // filter by inPortfolio uniformly across scopes.
+  //
+  // The HoldingsTable has its own filter UI (All / Portfolio / Other Assets)
+  // and reads allEnrichedHoldings directly — it is unaffected by this change.
   const filteredEnrichedHoldings = useMemo(() => {
     if (activePortfolioId === 'all') return portfolioEnrichedHoldings;
-    // When viewing a specific portfolio bucket, include ALL holdings in it
-    // (both portfolio and NW-only) so the user sees everything in that bucket
     const filtered = holdings.filter(
-      (h) => (h.portfolioId || DEFAULT_PORTFOLIO_ID) === activePortfolioId
+      (h) =>
+        (h.portfolioId || DEFAULT_PORTFOLIO_ID) === activePortfolioId &&
+        h.inPortfolio
     );
     return enrichHoldings(filtered, priceCache, convertToBase);
   }, [activePortfolioId, holdings, priceCache, convertToBase, portfolioEnrichedHoldings]);

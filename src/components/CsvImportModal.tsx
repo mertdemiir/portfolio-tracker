@@ -304,6 +304,9 @@ export function CsvImportModal({ onClose }: CsvImportModalProps) {
           <div>
             <p className="text-sm text-t-muted mb-4">
               {validRows.length} of {rows.length} rows valid and ready to import.
+              {rows.length - validRows.length > 0 && (
+                <> <span className="text-amber-600 dark:text-amber-400">{rows.length - validRows.length} will be skipped due to errors.</span></>
+              )}
             </p>
             <div className="overflow-x-auto mb-6 max-h-[300px] overflow-y-auto">
               <table className="w-full text-xs">
@@ -338,7 +341,9 @@ export function CsvImportModal({ onClose }: CsvImportModalProps) {
                 </tbody>
               </table>
               {rows.length > 50 && (
-                <p className="text-xs text-t-faint mt-2">Showing first 50 of {rows.length} rows.</p>
+                <p className="text-xs text-t-faint mt-2">
+                  Preview shows first 50 rows. {rows.length - 50} more row{rows.length - 50 === 1 ? '' : 's'} will be imported.
+                </p>
               )}
             </div>
             <div className="flex justify-between">

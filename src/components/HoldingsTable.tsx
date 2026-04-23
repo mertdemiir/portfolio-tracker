@@ -427,6 +427,10 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
             setShowAddModal(false);
           }}
           onClose={() => setShowAddModal(false)}
+          onEditExisting={(existing) => {
+            setShowAddModal(false);
+            setEditingHolding(existing);
+          }}
         />
       )}
 

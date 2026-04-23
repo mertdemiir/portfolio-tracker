@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
-import { X, TrendingUp, BarChart3, Bitcoin, CircleDollarSign, Gem, Package, Plus } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { X, TrendingUp, BarChart3, Bitcoin, CircleDollarSign, Gem, Package, Plus, AlertTriangle } from 'lucide-react';
 import { SymbolSearch } from './SymbolSearch';
 import { CryptoSearch } from './CryptoSearch';
 import { ApiKeyPrompt } from './ApiKeyPrompt';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { useFxRates } from '../hooks/useFxRates';
 import { decideBuyFxRate } from '../utils/fxHelpers';
+import { formatCurrency } from '../utils/formatters';
 import { ASSET_TYPE_CONFIG, getDefaultCategory, DEFAULT_PORTFOLIO_ID, SUPPORTED_CURRENCIES } from '../types';
 import type { Holding, AssetType } from '../types';
 
@@ -41,10 +42,16 @@ interface AddEditStockModalProps {
   holding?: Holding | null;
   onSave: (data: Omit<Holding, 'id'>) => void;
   onClose: () => void;
+  /**
+   * Optional: invoked when the user chooses "Edit existing instead" from the
+   * duplicate-ticker warning. Caller is expected to close this modal and
+   * reopen it in edit mode with the passed holding.
+   */
+  onEditExisting?: (holding: Holding) => void;
 }
 
-export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditStockModalProps) {
-  const { allCategories, addCustomCategory, setApiKey, hasApiKey, addTransaction, portfolios, activePortfolioId, baseCurrency } = usePortfolioContext();
+export function AddEditStockModal({ apiKey, holding, onSave, onClose, onEditExisting }: AddEditStockModalProps) {
+  const { allCategories, addCustomCategory, setApiKey, hasApiKey, addTransaction, portfolios, activePortfolioId, baseCurrency, holdings } = usePortfolioContext();
   const { fxRates, convertToBase } = useFxRates(baseCurrency);
 
   const [assetType, setAssetType] = useState<AssetType>(holding?.assetType ?? 'stock');
@@ -69,6 +76,22 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
 
   const isEdit = !!holding;
   const config = ASSET_TYPE_CONFIG[assetType];
+
+  // Duplicate detection: if the user is ADDING a holding with a ticker that
+  // already exists in the chosen portfolio bucket, surface a warning so they
+  // can choose to edit the existing lot instead of unknowingly creating two
+  // separate positions for the same ticker.
+  const duplicateHolding = useMemo<Holding | null>(() => {
+    if (isEdit) return null;
+    const tickerNorm = ticker.trim().toUpperCase();
+    if (!tickerNorm) return null;
+    const match = holdings.find(
+      (h) =>
+        h.ticker.toUpperCase() === tickerNorm &&
+        (h.portfolioId || DEFAULT_PORTFOLIO_ID) === portfolioId
+    );
+    return match ?? null;
+  }, [holdings, ticker, portfolioId, isEdit]);
 
   // Auto-set buy price to 1 for cash
   useEffect(() => {
@@ -598,6 +621,31 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
             </div>
           )}
 
+          {/* Duplicate-ticker warning */}
+          {duplicateHolding && (
+            <div
+              role="alert"
+              className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-sm"
+            >
+              <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" aria-hidden="true" />
+              <div className="flex-1">
+                <p className="text-amber-700 dark:text-amber-400">
+                  You already own <strong>{duplicateHolding.ticker}</strong> in this portfolio
+                  {' '}({duplicateHolding.shares} @ {formatCurrency(duplicateHolding.buyPrice, duplicateHolding.currency || 'USD')}).
+                </p>
+                {onEditExisting && (
+                  <button
+                    type="button"
+                    onClick={() => onEditExisting(duplicateHolding)}
+                    className="mt-1 text-xs font-medium text-accent hover:text-accent-hover underline"
+                  >
+                    Edit the existing lot instead
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Buttons */}
           <div className="flex gap-3 pt-2">
             <button
@@ -611,7 +659,11 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
               type="submit"
               className="flex-1 px-4 py-2.5 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors"
             >
-              {isEdit ? 'Save Changes' : `Add ${config.label}`}
+              {isEdit
+                ? 'Save Changes'
+                : duplicateHolding
+                ? `Add as separate lot`
+                : `Add ${config.label}`}
             </button>
           </div>
         </form>

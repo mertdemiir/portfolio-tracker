@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { DollarSign, TrendingUp, TrendingDown, Clock, Target, Plus, Trash2, Check, X, Share2, ChevronDown } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useExchangeRate } from '../hooks/useExchangeRate';
 import { formatCurrency, formatSignedCurrency, formatPercent } from '../utils/formatters';
 import { EmptyState } from './EmptyState';
 import { AddEditStockModal } from './AddEditStockModal';
@@ -15,24 +16,6 @@ import type { NavFilter } from '../App';
 
 interface DashboardProps {
   onNavigate?: (tab: TabId, filter?: NavFilter) => void;
-}
-
-function useTryRate(baseCurrency: string) {
-  const [rate, setRate] = useState<number | null>(null);
-
-  const fetchRate = useCallback(async () => {
-    if (baseCurrency === 'TRY') { setRate(1); return; }
-    try {
-      const res = await fetch(`https://api.frankfurter.app/latest?from=${baseCurrency}&to=TRY`);
-      if (!res.ok) return;
-      const data = await res.json();
-      setRate(data.rates?.TRY ?? null);
-    } catch { /* keep cached */ }
-  }, [baseCurrency]);
-
-  useEffect(() => { fetchRate(); }, [fetchRate]);
-
-  return rate;
 }
 
 const CATEGORY_COLORS = [
@@ -64,7 +47,8 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showTRY, setShowTRY] = useState(false);
   const [milestonesOpen, setMilestonesOpen] = useState(true);
-  const tryRate = useTryRate(baseCurrency);
+  // Cached 1h TRY conversion — shared across components via localStorage.
+  const tryRate = useExchangeRate(baseCurrency, 'TRY');
 
   // Migrate old single nw-target to milestones
   useEffect(() => {
@@ -108,6 +92,12 @@ export function Dashboard({ onNavigate }: DashboardProps) {
               setShowAddModal(false);
             }}
             onClose={() => setShowAddModal(false)}
+            // Dashboard empty-state has no edit surface; if the user wants
+            // to edit an existing holding, send them to the Holdings tab.
+            onEditExisting={() => {
+              setShowAddModal(false);
+              onNavigate?.('holdings');
+            }}
           />
         )}
       </>

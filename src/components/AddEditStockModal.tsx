@@ -4,6 +4,8 @@ import { SymbolSearch } from './SymbolSearch';
 import { CryptoSearch } from './CryptoSearch';
 import { ApiKeyPrompt } from './ApiKeyPrompt';
 import { usePortfolioContext } from '../context/PortfolioContext';
+import { useFxRates } from '../hooks/useFxRates';
+import { decideBuyFxRate } from '../utils/fxHelpers';
 import { ASSET_TYPE_CONFIG, getDefaultCategory, DEFAULT_PORTFOLIO_ID, SUPPORTED_CURRENCIES } from '../types';
 import type { Holding, AssetType } from '../types';
 
@@ -42,7 +44,8 @@ interface AddEditStockModalProps {
 }
 
 export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditStockModalProps) {
-  const { allCategories, addCustomCategory, setApiKey, hasApiKey, addTransaction, portfolios, activePortfolioId } = usePortfolioContext();
+  const { allCategories, addCustomCategory, setApiKey, hasApiKey, addTransaction, portfolios, activePortfolioId, baseCurrency } = usePortfolioContext();
+  const { fxRates, convertToBase } = useFxRates(baseCurrency);
 
   const [assetType, setAssetType] = useState<AssetType>(holding?.assetType ?? 'stock');
   const [ticker, setTicker] = useState(holding?.ticker ?? '');
@@ -110,6 +113,21 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
     if (!validate()) return;
     const parsedShares = parseFloat(shares);
     const parsedPrice = assetType === 'cash' ? 1 : parseFloat(buyPrice);
+
+    // Decide buyFxRate:
+    //  - New holding: capture current live rate if available
+    //  - Edit, currency unchanged: preserve the historical rate (fix for
+    //    the buyFxRate-wipe-on-edit bug)
+    //  - Edit, currency changed: recapture at current live rate
+    const buyFxRate = decideBuyFxRate({
+      newCurrency: currency || 'USD',
+      baseCurrency,
+      existingBuyFxRate: holding?.buyFxRate,
+      existingCurrency: holding?.currency ?? (isEdit ? 'USD' : undefined),
+      fxRates,
+      convertToBase,
+    });
+
     onSave({
       ticker,
       name: name || ticker,
@@ -122,6 +140,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose }: AddEditS
       skipStaleCheck,
       portfolioId,
       ...(currency !== 'USD' || assetType === 'cash' ? { currency } : {}),
+      ...(buyFxRate !== undefined ? { buyFxRate } : {}),
       ...(holding?.isFavorite ? { isFavorite: true } : {}),
       ...(manualPrice ? { manualPrice: parseFloat(manualPrice), lastManualPriceUpdate: new Date().toISOString().split('T')[0] } : {}),
       ...(coinGeckoId ? { coinGeckoId } : {}),

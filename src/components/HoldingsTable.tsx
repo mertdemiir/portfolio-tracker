@@ -11,7 +11,6 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { usePortfolioContext } from '../context/PortfolioContext';
-import { useFxRates } from '../hooks/useFxRates';
 import { useHoldingOrder } from '../hooks/useHoldingOrder';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { HoldingRow } from './HoldingRow';
@@ -46,7 +45,6 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
     portfolios,
     baseCurrency,
   } = usePortfolioContext();
-  const { convertToBase, fxRates } = useFxRates(baseCurrency);
 
   const { order: holdingOrder, syncOrder, reorder } = useHoldingOrder();
 
@@ -164,9 +162,8 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
           <AddEditStockModal
             apiKey={apiKey}
             onSave={(data) => {
-              const holdingCurrency = data.currency || 'USD';
-              const fxReady = holdingCurrency === baseCurrency || (fxRates && fxRates.base === baseCurrency);
-              addHolding({ ...data, ...(fxReady ? { buyFxRate: convertToBase(1, holdingCurrency) } : {}) });
+              // buyFxRate is decided inside the modal via decideBuyFxRate
+              addHolding(data);
               setShowAddModal(false);
             }}
             onClose={() => setShowAddModal(false)}
@@ -426,9 +423,7 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
         <AddEditStockModal
           apiKey={apiKey}
           onSave={(data) => {
-            const holdingCurrency = data.currency || 'USD';
-            const fxReady = holdingCurrency === baseCurrency || (fxRates && fxRates.base === baseCurrency);
-            addHolding({ ...data, ...(fxReady ? { buyFxRate: convertToBase(1, holdingCurrency) } : {}) });
+            addHolding(data);
             setShowAddModal(false);
           }}
           onClose={() => setShowAddModal(false)}

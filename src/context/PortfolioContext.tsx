@@ -278,13 +278,30 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   }, [transactions, activePortfolioId, holdings, convertToBase]);
 
   // Save daily snapshot with NW, portfolio, and liabilities values.
-  // Only save once prices have finished loading (to avoid stale snapshots).
-  // If no holdings need API prices (all manual/cash), save immediately.
-  const needsApiPrices = useMemo(() => holdings.some((h) =>
-    h.assetType === 'stock' || h.assetType === 'etf' || h.assetType === 'crypto' ||
-    (h.assetType === 'metal' && (LIVE_METAL_TICKERS as readonly string[]).includes(h.ticker))
-  ), [holdings]);
-  const pricesReady = !needsApiPrices || !pricesLoading;
+  //
+  // We must never write a snapshot while prices are unknown for any
+  // API-backed holding — otherwise fresh installs or first-launch-after-reset
+  // scenarios would persist zeroed / buy-price-fallback values and permanently
+  // corrupt the net-worth history line.
+  //
+  // The rule:
+  //   - Every API-backed holding (stock, ETF, crypto, live metals) must have
+  //     a priceCache entry (any age — we just need to know at least one fetch
+  //     has succeeded for it since the user added it).
+  //   - If the portfolio contains zero API-backed holdings, there's nothing
+  //     to wait for; save immediately.
+  const apiBackedHoldings = useMemo(
+    () => holdings.filter((h) =>
+      h.assetType === 'stock' || h.assetType === 'etf' || h.assetType === 'crypto' ||
+      (h.assetType === 'metal' && (LIVE_METAL_TICKERS as readonly string[]).includes(h.ticker))
+    ),
+    [holdings]
+  );
+  const allApiHoldingsFetched = useMemo(
+    () => apiBackedHoldings.every((h) => priceCache[`${h.assetType}:${h.ticker}`] !== undefined),
+    [apiBackedHoldings, priceCache]
+  );
+  const pricesReady = apiBackedHoldings.length === 0 || (allApiHoldingsFetched && !pricesLoading);
 
   useEffect(() => {
     if (pricesReady && (allEnrichedHoldings.length > 0 || liabilities.length > 0)) {

@@ -315,11 +315,11 @@ export function FirePage() {
       settings.annualExpenses,
       30, // 30 year retirement
       settings.expectedReturn / 100,
-      0.15, // 15% standard deviation (typical equity volatility)
+      settings.portfolioVolatility / 100,
       settings.inflationRate / 100,
       1000,
     );
-  }, [settings.annualExpenses, settings.expectedReturn, settings.inflationRate, fireNumber]);
+  }, [settings.annualExpenses, settings.expectedReturn, settings.portfolioVolatility, settings.inflationRate, fireNumber]);
 
   const monteCarloChartData = useMemo(() => {
     if (!monteCarlo) return [];
@@ -430,6 +430,14 @@ export function FirePage() {
                 suffix="x"
                 step={0.05}
                 hint="1.5 = 150% of expenses"
+              />
+              <SettingsInput
+                label="Volatility"
+                value={settings.portfolioVolatility}
+                onChange={handleChange('portfolioVolatility')}
+                suffix="%"
+                step={0.5}
+                hint="15% ≈ 90/10 · 10% ≈ 60/40"
               />
             </div>
             {currentNetWorth > 0 && (
@@ -634,7 +642,7 @@ export function FirePage() {
                 </div>
               </div>
               <p className="text-xs text-t-faint mb-4">
-                1,000 simulations starting from {formatCompactCurrency(fireNumber)} FIRE number · {formatCurrency(settings.annualExpenses)}/yr withdrawal · 15% volatility
+                1,000 simulations starting from {formatCompactCurrency(fireNumber)} FIRE number · {formatCurrency(settings.annualExpenses)}/yr withdrawal · {settings.portfolioVolatility}% volatility
               </p>
 
               <ResponsiveContainer width="100%" height={320}>

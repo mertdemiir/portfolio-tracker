@@ -90,11 +90,13 @@ export function usePortfolio() {
         const existing = prev.find((s) => s.date === today);
         if (existing?.name) {
           // Manual snapshot exists: only update portfolioValue/liabilities,
-          // preserve the user's custom netWorthValue and name
+          // preserve the user's custom netWorthValue and name.
+          // We persist totalLiabilities even when it's 0 so that paying off
+          // the last liability is reflected (previous behavior dropped zero).
           return prev.map((s) => s.date === today ? {
             ...s,
             portfolioValue,
-            ...(totalLiabilities !== undefined && totalLiabilities > 0 ? { totalLiabilities } : {}),
+            ...(totalLiabilities !== undefined ? { totalLiabilities } : {}),
           } : s);
         }
         const snapshot: PortfolioSnapshot = {
@@ -102,7 +104,7 @@ export function usePortfolio() {
           totalValue: netWorthValue,
           netWorthValue,
           portfolioValue,
-          ...(totalLiabilities !== undefined && totalLiabilities > 0 && { totalLiabilities }),
+          ...(totalLiabilities !== undefined && { totalLiabilities }),
         };
         if (existing) {
           return prev.map((s) => (s.date === today ? snapshot : s));

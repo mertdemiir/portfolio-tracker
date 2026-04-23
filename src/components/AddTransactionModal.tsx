@@ -20,7 +20,7 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
   const [pricePerShare, setPricePerShare] = useState('');
   const [notes, setNotes] = useState('');
   const [suggestions, setSuggestions] = useState<{ ticker: string; name: string }[]>([]);
-  const [sellError, setSellError] = useState('');
+  const [submitError, setSubmitError] = useState('');
 
   useEffect(() => {
     function handleEsc(e: KeyboardEvent) {
@@ -55,7 +55,7 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSellError('');
+    setSubmitError('');
     const s = parseFloat(shares);
     const p = parseFloat(pricePerShare);
     if (!date || !ticker.trim() || isNaN(s) || s <= 0 || isNaN(p) || p <= 0) return;
@@ -70,11 +70,11 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
     // Sell validation: must have a matching holding with enough shares
     if (type === 'sell') {
       if (!match) {
-        setSellError(`No holding found for ${tickerNorm}. Cannot sell what you don't own.`);
+        setSubmitError(`No holding found for ${tickerNorm}. Cannot sell what you don't own.`);
         return;
       }
       if (s > match.shares) {
-        setSellError(`You only own ${match.shares} shares of ${tickerNorm}. Cannot sell ${s}.`);
+        setSubmitError(`You only own ${match.shares} shares of ${tickerNorm}. Cannot sell ${s}.`);
         return;
       }
     }
@@ -106,17 +106,30 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
           updateHolding(id, { ...data, shares: remaining });
         }
       } else {
-        // Buy: increase shares and recalculate weighted average cost basis
+        // Buy (DCA into existing holding): increase shares and recalculate
+        // weighted average cost basis + buyFxRate.
+        const holdingCurrency = match.currency || 'USD';
+        const needsFx = holdingCurrency !== baseCurrency;
+        const fxReady = !needsFx || (fxRates && fxRates.base === baseCurrency);
+
+        // If this is a foreign-currency DCA and rates are not loaded, refuse
+        // to write anything — otherwise we'd update buyPrice but leave
+        // buyFxRate stale, silently drifting the cost basis.
+        if (!fxReady) {
+          setSubmitError(
+            `Waiting for live exchange rates for ${holdingCurrency}. ` +
+            `Try again in a moment, or check your internet connection.`
+          );
+          return;
+        }
+
         const oldCost = match.shares * match.buyPrice;
         const newCost = s * p;
         const newShares = match.shares + s;
         const avgPrice = (oldCost + newCost) / newShares;
-        // Recalculate weighted-average buyFxRate for DCA.
-        // Only store buyFxRate when FX rates are available (or not needed, e.g. USD→USD).
-        const holdingCurrency = match.currency || 'USD';
-        const fxReady = holdingCurrency === baseCurrency || (fxRates && fxRates.base === baseCurrency);
         const updatedData: typeof data & { buyFxRate?: number } = { ...data, shares: newShares, buyPrice: avgPrice };
-        if (fxReady) {
+
+        if (needsFx && fxRates && fxRates.base === baseCurrency) {
           const currentFxRate = convertToBase(1, holdingCurrency);
           const oldFxRate = match.buyFxRate ?? currentFxRate; // fallback for pre-existing holdings
           updatedData.buyFxRate = (match.shares * oldFxRate + s * currentFxRate) / newShares;
@@ -268,9 +281,9 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
             />
           </div>
 
-          {/* Sell error */}
-          {sellError && (
-            <p className="text-sm text-loss bg-loss-bg rounded-lg px-3 py-2">{sellError}</p>
+          {/* Submission error (sell validation or FX not ready) */}
+          {submitError && (
+            <p role="alert" className="text-sm text-loss bg-loss-bg rounded-lg px-3 py-2">{submitError}</p>
           )}
 
           {/* Submit */}

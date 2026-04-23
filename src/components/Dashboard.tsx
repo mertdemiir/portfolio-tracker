@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { DollarSign, TrendingUp, TrendingDown, Clock, Target, Plus, Trash2, Check, X, Share2, ChevronDown } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { usePortfolioContext } from '../context/PortfolioContext';
-import { useFxRates } from '../hooks/useFxRates';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { formatCurrency, formatSignedCurrency, formatPercent } from '../utils/formatters';
 import { EmptyState } from './EmptyState';
@@ -56,7 +55,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     addHolding,
     apiKey,
   } = usePortfolioContext();
-  const { convertToBase, fxRates } = useFxRates(baseCurrency);
 
   const [milestones, setMilestones] = useLocalStorage<NWMilestone[]>('nw-milestones', []);
   const [addingMilestone, setAddingMilestone] = useState(false);
@@ -105,9 +103,8 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           <AddEditStockModal
             apiKey={apiKey}
             onSave={(data) => {
-              const holdingCurrency = data.currency || 'USD';
-              const fxReady = holdingCurrency === baseCurrency || (fxRates && fxRates.base === baseCurrency);
-              addHolding({ ...data, ...(fxReady ? { buyFxRate: convertToBase(1, holdingCurrency) } : {}) });
+              // buyFxRate is decided inside the modal
+              addHolding(data);
               setShowAddModal(false);
             }}
             onClose={() => setShowAddModal(false)}

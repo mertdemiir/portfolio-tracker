@@ -6,6 +6,7 @@ import { CsvImportModal } from './CsvImportModal';
 import { ManagePortfoliosModal } from './ManagePortfoliosModal';
 import { gatherBackupData, parseBackup, serializeBackup } from '../data/backup';
 import { updateAppMeta } from '../data/schema';
+import { formatMonthYear } from '../utils/dateHelpers';
 import type { CustomCategory, ThemeId, BenchmarkId } from '../types';
 import { BENCHMARK_CONFIG, ACCENT_PRESETS, SUPPORTED_CURRENCIES } from '../types';
 
@@ -401,9 +402,9 @@ export function SettingsModal({
                   </div>
                   {range ? (
                     <p className="text-xs text-t-muted mb-2">
-                      {new Date(range.from).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                      {formatMonthYear(range.from)}
                       {' – '}
-                      {new Date(range.to).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                      {formatMonthYear(range.to)}
                       {' · '}
                       {range.count} data points
                     </p>

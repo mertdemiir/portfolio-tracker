@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { getChartColors } from '../hooks/useTheme';
+import { parseLocalDate, formatMonthDay, formatLongDate } from '../utils/dateHelpers';
 import type { PortfolioSnapshot, TimeRange } from '../types';
 import { filterByTimeRange } from './NetWorthLineChart';
 
@@ -26,16 +27,19 @@ export function RollingReturnsChart({ snapshots, timeRange }: Props) {
 
     const result: { date: string; return1Y: number }[] = [];
     for (const s of filtered) {
-      const d = new Date(s.date);
+      // Compute year-ago date using local-time math to avoid UTC drift.
+      const d = parseLocalDate(s.date);
+      if (isNaN(d.getTime())) continue;
       d.setFullYear(d.getFullYear() - 1);
-      const yearAgoStr = d.toISOString().split('T')[0];
+      const yearAgoTs = d.getTime();
 
-      // Find closest snapshot to year-ago date
+      // Find closest snapshot to year-ago date (within 45 days)
       let closest: { date: string; value: number } | null = null;
       let minDiff = Infinity;
+      const windowMs = 45 * 24 * 60 * 60 * 1000;
       for (const [date, value] of dateMap) {
-        const diff = Math.abs(new Date(date).getTime() - new Date(yearAgoStr).getTime());
-        if (diff < minDiff && diff < 45 * 24 * 60 * 60 * 1000) { // within 45 days
+        const diff = Math.abs(parseLocalDate(date).getTime() - yearAgoTs);
+        if (diff < minDiff && diff < windowMs) {
           minDiff = diff;
           closest = { date, value };
         }
@@ -70,7 +74,7 @@ export function RollingReturnsChart({ snapshots, timeRange }: Props) {
           <XAxis
             dataKey="date"
             tick={{ fontSize: 10, fill: colors.axis }}
-            tickFormatter={(d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short' })}
+            tickFormatter={(d: string) => formatMonthDay(d).split(' ')[0]}
           />
           <YAxis
             tick={{ fontSize: 10, fill: colors.axis }}
@@ -86,7 +90,7 @@ export function RollingReturnsChart({ snapshots, timeRange }: Props) {
               color: colors.tooltipText,
               boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
             }}
-            labelFormatter={(d) => new Date(String(d)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            labelFormatter={(d) => formatLongDate(String(d))}
             formatter={(v) => [`${Number(v).toFixed(2)}%`, '1Y Return']}
           />
           <Line

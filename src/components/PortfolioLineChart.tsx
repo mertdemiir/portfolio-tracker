@@ -1,6 +1,7 @@
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { getChartColors } from '../hooks/useTheme';
+import { formatMonthDay, formatLongDate } from '../utils/dateHelpers';
 import type { PortfolioSnapshot } from '../types';
 import { formatCurrency } from '../utils/formatters';
 
@@ -24,8 +25,9 @@ export function PortfolioLineChart({ snapshots }: PortfolioLineChartProps) {
     );
   }
 
+  // Use ISO date as x-axis key, format only in the tick/tooltip.
   const data = withPortfolio.map((s) => ({
-    date: new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    date: s.date,
     value: parseFloat((s.portfolioValue!).toFixed(2)),
   }));
 
@@ -44,11 +46,16 @@ export function PortfolioLineChart({ snapshots }: PortfolioLineChartProps) {
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={data} margin={{ left: 10, right: 20 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} />
-          <XAxis dataKey="date" fontSize={12} stroke={cc.axis} />
+          <XAxis
+            dataKey="date"
+            fontSize={12}
+            stroke={cc.axis}
+            tickFormatter={(d: string) => formatMonthDay(d)}
+          />
           <YAxis
             domain={[yMin, yMax]}
             tickFormatter={(v) => {
-              // Bug 22: use baseCurrency instead of hardcoded $
+              // Use baseCurrency instead of hardcoded $
               try {
                 return new Intl.NumberFormat('en-US', {
                   style: 'currency', currency: baseCurrency, notation: 'compact', maximumFractionDigits: 0,
@@ -60,6 +67,7 @@ export function PortfolioLineChart({ snapshots }: PortfolioLineChartProps) {
           />
           <Tooltip
             formatter={(value) => formatCurrency(value as number)}
+            labelFormatter={(d) => formatLongDate(String(d ?? ''))}
             labelStyle={{ fontWeight: 600, color: cc.tooltipText }}
             contentStyle={{
               borderRadius: '10px',

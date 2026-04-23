@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, FileText, Download } from 'lucide-react';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { generatePdfReport } from '../utils/pdfReport';
+import { parseLocalDate } from '../utils/dateHelpers';
 import type { ReportPeriod } from '../types';
 
 interface PdfReportModalProps {
@@ -39,28 +40,24 @@ export function PdfReportModal({ onClose }: PdfReportModalProps) {
     try {
       const periodLabel = PERIODS.find((p) => p.value === period)?.label || 'All Time';
 
-      // Filter snapshots by period
+      // Filter snapshots by period. Parse s.date via parseLocalDate so the
+      // comparison doesn't drift by a day due to UTC interpretation.
       let filteredSnapshots = snapshots;
       const now = new Date();
+      const cutoff = new Date(now);
       switch (period) {
-        case 'last-month': {
-          const cutoff = new Date(now);
+        case 'last-month':
           cutoff.setMonth(cutoff.getMonth() - 1);
-          filteredSnapshots = snapshots.filter((s) => new Date(s.date) >= cutoff);
           break;
-        }
-        case 'last-quarter': {
-          const cutoff = new Date(now);
+        case 'last-quarter':
           cutoff.setMonth(cutoff.getMonth() - 3);
-          filteredSnapshots = snapshots.filter((s) => new Date(s.date) >= cutoff);
           break;
-        }
-        case 'last-year': {
-          const cutoff = new Date(now);
+        case 'last-year':
           cutoff.setFullYear(cutoff.getFullYear() - 1);
-          filteredSnapshots = snapshots.filter((s) => new Date(s.date) >= cutoff);
           break;
-        }
+      }
+      if (period !== 'all-time') {
+        filteredSnapshots = snapshots.filter((s) => parseLocalDate(s.date) >= cutoff);
       }
 
       const blob = await generatePdfReport({

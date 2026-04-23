@@ -4,6 +4,7 @@ import { BarChart, Bar, ResponsiveContainer, XAxis, Tooltip } from 'recharts';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { useFxRates } from '../hooks/useFxRates';
 import { formatCurrency, formatSignedCurrency, formatDate } from '../utils/formatters';
+import { formatMonthShortYear } from '../utils/dateHelpers';
 import { AddTransactionModal } from './AddTransactionModal';
 import { UndoToast } from './UndoToast';
 import { v4 as uuidv4 } from 'uuid';
@@ -267,7 +268,9 @@ export function TransactionLog({ initialFilter }: TransactionLogProps) {
           .slice(-12)
           .map(d => ({
             ...d,
-            label: new Date(d.month + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+            // d.month is YYYY-MM; append -01 and format via parseLocalDate so
+            // the label doesn't drift into the prior month in negative TZs.
+            label: formatMonthShortYear(`${d.month}-01`),
           }));
 
         if (chartData.length < 2) return null;

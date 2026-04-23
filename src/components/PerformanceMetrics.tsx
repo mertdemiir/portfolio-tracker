@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { formatPercent, formatCurrency } from '../utils/formatters';
+import { parseLocalDate } from '../utils/dateHelpers';
 import type { PortfolioSnapshot, EnrichedHolding } from '../types';
 
 /**
@@ -36,7 +37,8 @@ function computeCAGR(
 
   if (startValue <= 0) return null;
 
-  const startDate = new Date(startSnap.date);
+  const startDate = parseLocalDate(startSnap.date);
+  if (isNaN(startDate.getTime())) return null;
   const now = new Date();
   const days = (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
   if (days < 30) return null; // need ≥ 30 days for a meaningful annualised rate

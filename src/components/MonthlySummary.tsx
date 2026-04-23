@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { formatCurrency, formatPercent } from '../utils/formatters';
+import { formatMonthYear } from '../utils/dateHelpers';
 
 type ViewMode = 'monthly' | 'yearly';
 
@@ -13,7 +14,10 @@ interface PeriodSummary {
 }
 
 function formatMonthKey(key: string): string {
-  return new Date(key + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  // key is "YYYY-MM" — append -01 to make a valid YYYY-MM-DD, then format
+  // via parseLocalDate so the label doesn't drift to the previous month in
+  // non-UTC timezones.
+  return formatMonthYear(`${key}-01`);
 }
 
 function buildSummaries(

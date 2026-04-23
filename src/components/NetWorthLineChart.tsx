@@ -1,6 +1,7 @@
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Legend } from 'recharts';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { getChartColors } from '../hooks/useTheme';
+import { formatMonthDay, formatLongDate } from '../utils/dateHelpers';
 import type { PortfolioSnapshot, NWMilestone, BenchmarkDataPoint, BenchmarkEnabled, BenchmarkId, TimeRange, TimelineAnnotation } from '../types';
 import { BENCHMARK_CONFIG } from '../types';
 import { formatCurrency, formatCompactCurrency } from '../utils/formatters';
@@ -114,12 +115,16 @@ export function NetWorthLineChart({
       firstBenchmarkValues[key] = findClosestValue(benchmarkData[key], sortedSnapshots[0].date);
     }
 
+    // Use ISO date (YYYY-MM-DD) as the x-axis key. The previous approach used
+    // a locale-formatted "MMM d" string which collides across years — e.g.
+    // Feb 1 2024 and Feb 1 2025 both rendered "Feb 1", so annotations matched
+    // the wrong row and benchmarks looked like they had gaps.
     const data = sortedSnapshots.map((s) => {
       const nwVal = s.netWorthValue ?? s.totalValue;
       const nwPct = firstNW > 0 ? ((nwVal - firstNW) / firstNW) * 100 : 0;
 
       const point: Record<string, number | string> = {
-        date: new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        date: s.date,
         nw: parseFloat(nwPct.toFixed(2)),
       };
 
@@ -188,7 +193,12 @@ export function NetWorthLineChart({
         <ResponsiveContainer width="100%" height={400}>
           <LineChart data={data} margin={{ left: 10, right: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} />
-            <XAxis dataKey="date" fontSize={12} stroke={cc.axis} />
+            <XAxis
+              dataKey="date"
+              fontSize={12}
+              stroke={cc.axis}
+              tickFormatter={(d: string) => formatMonthDay(d)}
+            />
             <YAxis
               domain={[Math.floor(minVal - padding), Math.ceil(maxVal + padding)]}
               tickFormatter={(v) => `${v > 0 ? '+' : ''}${v.toFixed(0)}%`}
@@ -204,6 +214,7 @@ export function NetWorthLineChart({
                     : BENCHMARK_CONFIG[name as BenchmarkId]?.label ?? name;
                 return [`${v > 0 ? '+' : ''}${v.toFixed(2)}%`, label];
               }}
+              labelFormatter={(d) => formatLongDate(String(d ?? ''))}
               labelStyle={{ fontWeight: 600, color: cc.tooltipText }}
               contentStyle={{
                 borderRadius: '10px',
@@ -221,13 +232,14 @@ export function NetWorthLineChart({
             />
             <ReferenceLine y={0} stroke={cc.axis} strokeDasharray="3 3" />
             {visibleAnnotations.map((ann) => {
-              const formatted = new Date(ann.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-              const exists = data.some((d) => d.date === formatted);
+              // Match annotations by their ISO date directly — no formatting
+              // step means no cross-year collisions.
+              const exists = data.some((d) => d.date === ann.date);
               if (!exists) return null;
               return (
                 <ReferenceLine
                   key={ann.id}
-                  x={formatted}
+                  x={ann.date}
                   stroke={ann.color || 'var(--accent)'}
                   strokeDasharray="4 3"
                   strokeWidth={1.5}
@@ -263,9 +275,10 @@ export function NetWorthLineChart({
   }
 
   // ── Default: absolute dollar value view ──
+  // Use ISO date (YYYY-MM-DD) as x-axis key to avoid cross-year collisions.
   const sortedSnapshots = [...filteredSnapshots].sort((a, b) => a.date.localeCompare(b.date));
   const data = sortedSnapshots.map((s) => ({
-    date: new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    date: s.date,
     value: parseFloat((s.netWorthValue ?? s.totalValue).toFixed(2)),
   }));
 
@@ -287,7 +300,12 @@ export function NetWorthLineChart({
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={data} margin={{ left: 10, right: 20 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} />
-          <XAxis dataKey="date" fontSize={12} stroke={cc.axis} />
+          <XAxis
+            dataKey="date"
+            fontSize={12}
+            stroke={cc.axis}
+            tickFormatter={(d: string) => formatMonthDay(d)}
+          />
           <YAxis
             domain={[yMin, yMax]}
             tickFormatter={(v) => formatCompactCurrency(v)}
@@ -296,6 +314,7 @@ export function NetWorthLineChart({
           />
           <Tooltip
             formatter={(value) => formatCurrency(value as number)}
+            labelFormatter={(d) => formatLongDate(String(d ?? ''))}
             labelStyle={{ fontWeight: 600, color: cc.tooltipText }}
             contentStyle={{
               borderRadius: '10px',
@@ -307,13 +326,12 @@ export function NetWorthLineChart({
             }}
           />
           {visibleAnnotations.map((ann) => {
-            const formatted = new Date(ann.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            const exists = data.some((d) => d.date === formatted);
+            const exists = data.some((d) => d.date === ann.date);
             if (!exists) return null;
             return (
               <ReferenceLine
                 key={`ann-${ann.id}`}
-                x={formatted}
+                x={ann.date}
                 stroke={ann.color || 'var(--accent)'}
                 strokeDasharray="4 3"
                 strokeWidth={1.5}

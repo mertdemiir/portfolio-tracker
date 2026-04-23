@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { getChartColors } from '../hooks/useTheme';
+import { formatMonthDay, formatLongDate } from '../utils/dateHelpers';
 import type { PortfolioSnapshot, TimeRange } from '../types';
 import { filterByTimeRange } from './NetWorthLineChart';
 
@@ -48,7 +49,7 @@ export function DrawdownChart({ snapshots, timeRange }: Props) {
           <XAxis
             dataKey="date"
             tick={{ fontSize: 10, fill: colors.axis }}
-            tickFormatter={(d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short' })}
+            tickFormatter={(d: string) => formatMonthDay(d).split(' ')[0]}
           />
           <YAxis
             tick={{ fontSize: 10, fill: colors.axis }}
@@ -64,7 +65,7 @@ export function DrawdownChart({ snapshots, timeRange }: Props) {
               color: colors.tooltipText,
               boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
             }}
-            labelFormatter={(d) => new Date(String(d)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            labelFormatter={(d) => formatLongDate(String(d))}
             formatter={(v) => [`${Number(v).toFixed(2)}%`, 'Drawdown']}
           />
           <Area

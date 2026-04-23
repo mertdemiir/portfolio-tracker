@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocalStorage } from './useLocalStorage';
+import { gatherBackupData, serializeBackup } from '../data/backup';
+import { updateAppMeta } from '../data/schema';
 
 interface AutoBackupSettings {
   enabled: boolean;
@@ -18,37 +20,6 @@ const DEFAULT_SETTINGS: AutoBackupSettings = {
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 const WEEK_MS = 7 * DAY_MS;
-
-function gatherBackupData(): string {
-  const backup = {
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    holdings: JSON.parse(localStorage.getItem('portfolio-holdings') || '[]'),
-    snapshots: JSON.parse(localStorage.getItem('portfolio-snapshots') || '[]'),
-    customCategories: JSON.parse(localStorage.getItem('custom-categories') || '[]'),
-    apiKey: localStorage.getItem('finnhub-api-key')?.replace(/^"|"$/g, '') || '',
-    transactions: JSON.parse(localStorage.getItem('transactions') || '[]'),
-    targetAllocations: JSON.parse(localStorage.getItem('target-allocations') || '[]'),
-    nwMilestones: JSON.parse(localStorage.getItem('nw-milestones') || '[]'),
-    benchmarkDataSpx: JSON.parse(localStorage.getItem('benchmark-data-spx') || '[]'),
-    benchmarkDataBtc: JSON.parse(localStorage.getItem('benchmark-data-btc') || '[]'),
-    benchmarkDataGold: JSON.parse(localStorage.getItem('benchmark-data-gold') || '[]'),
-    accentColor: localStorage.getItem('accent-color')?.replace(/^"|"$/g, '') || '#3b82f6',
-    watchlistItems: JSON.parse(localStorage.getItem('watchlist-items') || '[]'),
-    holdingOrder: JSON.parse(localStorage.getItem('holding-order') || '[]'),
-    baseCurrency: localStorage.getItem('base-currency')?.replace(/^"|"$/g, '') || 'USD',
-    portfolios: JSON.parse(localStorage.getItem('portfolios') || '[]'),
-    liabilities: JSON.parse(localStorage.getItem('liabilities') || '[]'),
-    annotations: JSON.parse(localStorage.getItem('timeline-annotations') || '[]'),
-    theme: localStorage.getItem('theme')?.replace(/^"|"$/g, '') || 'dark',
-    benchmarkEnabled: JSON.parse(localStorage.getItem('benchmark-enabled') || '{}'),
-    fireSettings: JSON.parse(localStorage.getItem('fire-settings') || '{}'),
-    autoBackupSettings: JSON.parse(localStorage.getItem('auto-backup-settings') || '{}'),
-    digestDismissedDate: localStorage.getItem('digest-dismissed-date')?.replace(/^"|"$/g, '') || '',
-    activePortfolio: localStorage.getItem('active-portfolio')?.replace(/^"|"$/g, '') || 'all',
-  };
-  return JSON.stringify(backup, null, 2);
-}
 
 function isDue(settings: AutoBackupSettings): boolean {
   if (!settings.enabled || !settings.folderPath) return false;
@@ -71,10 +42,12 @@ export function useAutoBackup() {
     const current = settingsRef.current;
     if (!current.enabled || !current.folderPath || !window.electronAPI) return;
     try {
-      const data = gatherBackupData();
+      const data = serializeBackup(gatherBackupData('auto'));
       const result = await window.electronAPI.autoBackup(data, current.folderPath);
       if (result.success) {
-        setSettings((prev) => ({ ...prev, lastBackup: new Date().toISOString() }));
+        const now = new Date().toISOString();
+        setSettings((prev) => ({ ...prev, lastBackup: now }));
+        updateAppMeta({ lastBackupAt: now });
       }
     } catch {
       // Silently fail for auto backup

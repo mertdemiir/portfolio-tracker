@@ -4,6 +4,8 @@ import { usePortfolioContext } from '../context/PortfolioContext';
 import { useAutoBackup } from '../hooks/useAutoBackup';
 import { CsvImportModal } from './CsvImportModal';
 import { ManagePortfoliosModal } from './ManagePortfoliosModal';
+import { gatherBackupData, parseBackup, serializeBackup } from '../data/backup';
+import { updateAppMeta } from '../data/schema';
 import type { CustomCategory, ThemeId, BenchmarkId } from '../types';
 import { BENCHMARK_CONFIG, ACCENT_PRESETS, SUPPORTED_CURRENCIES } from '../types';
 
@@ -103,47 +105,24 @@ export function SettingsModal({
   }
 
   async function handleExport() {
-    const backup = {
-      version: 1,
-      exportedAt: new Date().toISOString(),
-      holdings: JSON.parse(localStorage.getItem('portfolio-holdings') || '[]'),
-      snapshots: JSON.parse(localStorage.getItem('portfolio-snapshots') || '[]'),
-      customCategories: JSON.parse(localStorage.getItem('custom-categories') || '[]'),
-      apiKey: localStorage.getItem('finnhub-api-key')?.replace(/^"|"$/g, '') || '',
-      transactions: JSON.parse(localStorage.getItem('transactions') || '[]'),
-      targetAllocations: JSON.parse(localStorage.getItem('target-allocations') || '[]'),
-      nwTarget: JSON.parse(localStorage.getItem('nw-target') || 'null'),
-      nwMilestones: JSON.parse(localStorage.getItem('nw-milestones') || '[]'),
-      benchmarkDataSpx: JSON.parse(localStorage.getItem('benchmark-data-spx') || '[]'),
-      benchmarkDataBtc: JSON.parse(localStorage.getItem('benchmark-data-btc') || '[]'),
-      benchmarkDataGold: JSON.parse(localStorage.getItem('benchmark-data-gold') || '[]'),
-      accentColor: localStorage.getItem('accent-color')?.replace(/^"|"$/g, '') || '#3b82f6',
-      watchlistItems: JSON.parse(localStorage.getItem('watchlist-items') || '[]'),
-      holdingOrder: JSON.parse(localStorage.getItem('holding-order') || '[]'),
-      baseCurrency: localStorage.getItem('base-currency')?.replace(/^"|"$/g, '') || 'USD',
-      portfolios: JSON.parse(localStorage.getItem('portfolios') || '[]'),
-      liabilities: JSON.parse(localStorage.getItem('liabilities') || '[]'),
-      annotations: JSON.parse(localStorage.getItem('timeline-annotations') || '[]'),
-      theme: localStorage.getItem('theme')?.replace(/^"|"$/g, '') || 'dark',
-      benchmarkEnabled: JSON.parse(localStorage.getItem('benchmark-enabled') || '{}'),
-    };
-
+    const payload = serializeBackup(gatherBackupData('manual'));
     if (isElectron) {
-      const result = await window.electronAPI!.exportData(JSON.stringify(backup, null, 2));
+      const result = await window.electronAPI!.exportData(payload);
       if (result.success) {
+        updateAppMeta({ lastBackupAt: new Date().toISOString() });
         setBackupStatus('Backup saved!');
       } else if (!result.cancelled) {
         setBackupStatus(`Export failed: ${result.error}`);
       }
     } else {
-      // Browser fallback: download as file
-      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const blob = new Blob([payload], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `portfolio-backup-${new Date().toISOString().split('T')[0]}.json`;
       a.click();
       URL.revokeObjectURL(url);
+      updateAppMeta({ lastBackupAt: new Date().toISOString() });
       setBackupStatus('Backup downloaded!');
     }
     setTimeout(() => setBackupStatus(null), 3000);
@@ -173,9 +152,9 @@ export function SettingsModal({
     }
 
     try {
-      const backup = JSON.parse(jsonString!);
+      const backup = parseBackup(jsonString!);
       if (!backup.holdings || !backup.snapshots) {
-        setBackupStatus('Invalid backup file.');
+        setBackupStatus('Invalid backup file: missing holdings or snapshots.');
         setTimeout(() => setBackupStatus(null), 3000);
         return;
       }

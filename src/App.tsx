@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { WifiOff } from 'lucide-react';
 import { PortfolioProvider, usePortfolioContext } from './context/PortfolioContext';
 import { Layout } from './components/Layout';
@@ -11,9 +11,11 @@ import { Simulator } from './components/Simulator';
 import { Watchlist } from './components/Watchlist';
 import { FirePage } from './components/FirePage';
 import { WelcomeScreen } from './components/WelcomeScreen';
+import { PreUpdateNagModal } from './components/PreUpdateNagModal';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useAutoBackup } from './hooks/useAutoBackup';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
+import { readAppMeta, updateAppMeta } from './data/schema';
 import type { TabId } from './types';
 
 export interface NavFilter {
@@ -36,6 +38,31 @@ function AppContent() {
   const [welcomeDismissed, setWelcomeDismissed] = useLocalStorage('welcome-dismissed', false);
   const [navFilter, setNavFilter] = useState<NavFilter | null>(null);
 
+  // Pre-update nag: shown exactly once per app version change. Only runs
+  // if the user has existing data (so fresh installs aren't nagged).
+  const currentAppVersion = import.meta.env.APP_VERSION;
+  const [showPreUpdateNag, setShowPreUpdateNag] = useState<{ storedVersion: string | null } | null>(() => {
+    const meta = readAppMeta();
+    const hasExistingData = !!localStorage.getItem('portfolio-holdings');
+    if (!hasExistingData) {
+      // Fresh install — nothing to back up; stamp current version silently
+      updateAppMeta({ lastAppVersion: currentAppVersion, preUpdateAckVersion: currentAppVersion });
+      return null;
+    }
+    const alreadyAcked = meta.preUpdateAckVersion === currentAppVersion;
+    if (alreadyAcked) return null;
+    return { storedVersion: meta.lastAppVersion };
+  });
+  useEffect(() => {
+    // If we decided not to nag, still keep lastAppVersion fresh
+    if (!showPreUpdateNag) {
+      const meta = readAppMeta();
+      if (meta.lastAppVersion !== currentAppVersion) {
+        updateAppMeta({ lastAppVersion: currentAppVersion });
+      }
+    }
+  }, [showPreUpdateNag, currentAppVersion]);
+
   function navigateTo(tab: TabId, filter?: NavFilter) {
     setNavFilter(filter || null);
     setActiveTab(tab);
@@ -54,6 +81,16 @@ function AppContent() {
   // Auto-backup scheduling (Electron only, runs silently)
   useAutoBackup();
   const isOnline = useOnlineStatus();
+
+  if (showPreUpdateNag) {
+    return (
+      <PreUpdateNagModal
+        currentAppVersion={currentAppVersion}
+        storedAppVersion={showPreUpdateNag.storedVersion}
+        onAcknowledged={() => setShowPreUpdateNag(null)}
+      />
+    );
+  }
 
   if (!welcomeDismissed && !apiKey) {
     return (

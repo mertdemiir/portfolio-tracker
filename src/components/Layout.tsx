@@ -1,5 +1,8 @@
-import { LayoutDashboard, List, BarChart3, Receipt, FlaskConical, Settings, Eye, Flame } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { LayoutDashboard, List, BarChart3, Receipt, FlaskConical, Settings, Eye, Flame, Download } from 'lucide-react';
 import { PortfolioSelector } from './PortfolioSelector';
+import { gatherBackupData, serializeBackup } from '../data/backup';
+import { updateAppMeta } from '../data/schema';
 import type { TabId } from '../types';
 
 interface LayoutProps {
@@ -33,8 +36,60 @@ function formatAsOf(timestamp: number): { text: string; stale: boolean } {
   return { text: `${Math.floor(diffHr / 24)}d ago`, stale: true };
 }
 
+async function exportBackup(): Promise<'success' | 'cancelled' | 'error'> {
+  try {
+    const payload = serializeBackup(gatherBackupData('manual'));
+    const isElectron = !!window.electronAPI;
+    if (isElectron) {
+      const result = await window.electronAPI!.exportData(payload);
+      if (result.cancelled) return 'cancelled';
+      if (!result.success) return 'error';
+    } else {
+      const blob = new Blob([payload], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `portfolio-backup-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    updateAppMeta({ lastBackupAt: new Date().toISOString() });
+    return 'success';
+  } catch {
+    return 'error';
+  }
+}
+
 export function Layout({ activeTab, onTabChange, onSettingsClick, latestPriceUpdate, children }: LayoutProps) {
   const asOf = latestPriceUpdate ? formatAsOf(latestPriceUpdate) : null;
+  const [exportFlash, setExportFlash] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
+  async function handleExport() {
+    setExportFlash('saving');
+    const result = await exportBackup();
+    if (result === 'cancelled') {
+      setExportFlash('idle');
+      return;
+    }
+    setExportFlash(result === 'success' ? 'saved' : 'error');
+    setTimeout(() => setExportFlash('idle'), 2000);
+  }
+
+  // Keyboard shortcut: Cmd/Ctrl+Shift+E exports a backup
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      const isCmdOrCtrl = e.metaKey || e.ctrlKey;
+      if (isCmdOrCtrl && e.shiftKey && (e.key === 'E' || e.key === 'e')) {
+        e.preventDefault();
+        handleExport();
+      }
+    }
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+    // handleExport is stable within a single mount lifecycle
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="min-h-screen bg-surface pb-20 md:pb-0">
       {/* Header */}
@@ -71,13 +126,35 @@ export function Layout({ activeTab, onTabChange, onSettingsClick, latestPriceUpd
                 {asOf.stale ? '⚠ ' : ''}as of {asOf.text}
               </span>
             )}
+            <button
+              onClick={handleExport}
+              disabled={exportFlash === 'saving'}
+              className={`p-2 rounded-lg transition-colors ml-2 ${
+                exportFlash === 'saved'
+                  ? 'text-gain'
+                  : exportFlash === 'error'
+                  ? 'text-loss'
+                  : 'text-t-muted hover:bg-surface-alt'
+              }`}
+              title={
+                exportFlash === 'saved'
+                  ? 'Backup saved'
+                  : exportFlash === 'error'
+                  ? 'Export failed — see console'
+                  : 'Export backup (⌘⇧E)'
+              }
+              aria-label="Export backup"
+            >
+              <Download className="w-[18px] h-[18px]" aria-hidden="true" />
+            </button>
             {onSettingsClick && (
               <button
                 onClick={onSettingsClick}
-                className="p-2 hover:bg-surface-alt rounded-lg transition-colors ml-2"
+                className="p-2 hover:bg-surface-alt rounded-lg transition-colors ml-1"
                 title="Settings"
+                aria-label="Settings"
               >
-                <Settings className="w-[18px] h-[18px] text-t-muted" />
+                <Settings className="w-[18px] h-[18px] text-t-muted" aria-hidden="true" />
               </button>
             )}
           </div>

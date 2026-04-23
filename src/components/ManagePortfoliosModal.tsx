@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Pencil, Check } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, Trash2, Pencil, Check, X } from 'lucide-react';
+import { Modal } from './Modal';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { DEFAULT_PORTFOLIO_ID } from '../types';
 
@@ -14,14 +15,6 @@ export function ManagePortfoliosModal({ onClose }: ManagePortfoliosModalProps) {
   const [editName, setEditName] = useState('');
   // Bug 37: inline confirmation instead of native confirm()
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-
-  useEffect(() => {
-    function handleEsc(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    document.addEventListener('keydown', handleEsc);
-    return () => document.removeEventListener('keydown', handleEsc);
-  }, [onClose]);
 
   function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -55,17 +48,8 @@ export function ManagePortfoliosModal({ onClose }: ManagePortfoliosModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-surface-card rounded-2xl shadow-xl w-full max-w-sm p-6 animate-modal-enter">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-t-primary">Manage Portfolios</h2>
-          <button onClick={onClose} className="p-1 hover:bg-surface-alt rounded-lg transition-colors">
-            <X className="w-5 h-5 text-t-muted" />
-          </button>
-        </div>
-
-        <div className="space-y-2 mb-4">
+    <Modal title="Manage Portfolios" onClose={onClose} size="sm">
+      <div className="space-y-2 mb-4">
           {portfolios.map((p) => {
             const count = holdings.filter((h) => (h.portfolioId || DEFAULT_PORTFOLIO_ID) === p.id).length;
             const isDefault = p.id === DEFAULT_PORTFOLIO_ID;
@@ -83,11 +67,19 @@ export function ManagePortfoliosModal({ onClose }: ManagePortfoliosModalProps) {
                       className="flex-1 px-2 py-1 border border-b-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
                       autoFocus
                     />
-                    <button onClick={saveEdit} className="p-1 text-gain hover:text-gain">
-                      <Check size={14} />
+                    <button
+                      onClick={saveEdit}
+                      className="p-1 text-gain hover:text-gain"
+                      aria-label="Save portfolio name"
+                    >
+                      <Check size={14} aria-hidden="true" />
                     </button>
-                    <button onClick={() => setEditingId(null)} className="p-1 text-t-faint hover:text-t-muted">
-                      <X size={14} />
+                    <button
+                      onClick={() => setEditingId(null)}
+                      className="p-1 text-t-faint hover:text-t-muted"
+                      aria-label="Cancel rename"
+                    >
+                      <X size={14} aria-hidden="true" />
                     </button>
                   </>
                 ) : (
@@ -99,8 +91,9 @@ export function ManagePortfoliosModal({ onClose }: ManagePortfoliosModalProps) {
                     <button
                       onClick={() => startEditing(p.id, p.name)}
                       className="p-1 text-t-faint hover:text-t-secondary transition-colors"
+                      aria-label={`Rename ${p.name}`}
                     >
-                      <Pencil size={13} />
+                      <Pencil size={13} aria-hidden="true" />
                     </button>
                     {!isDefault && confirmDeleteId === p.id ? (
                       <div className="flex items-center gap-1">
@@ -109,23 +102,26 @@ export function ManagePortfoliosModal({ onClose }: ManagePortfoliosModalProps) {
                           onClick={() => handleDelete(p.id)}
                           className="p-1 text-loss hover:text-loss/80 transition-colors"
                           title="Confirm delete"
+                          aria-label={`Confirm delete ${p.name}`}
                         >
-                          <Check size={13} />
+                          <Check size={13} aria-hidden="true" />
                         </button>
                         <button
                           onClick={() => setConfirmDeleteId(null)}
                           className="p-1 text-t-faint hover:text-t-muted transition-colors"
                           title="Cancel"
+                          aria-label="Cancel delete"
                         >
-                          <X size={13} />
+                          <X size={13} aria-hidden="true" />
                         </button>
                       </div>
                     ) : !isDefault && (
                       <button
                         onClick={() => setConfirmDeleteId(p.id)}
                         className="p-1 text-t-faint hover:text-loss transition-colors"
+                        aria-label={`Delete ${p.name}`}
                       >
-                        <Trash2 size={13} />
+                        <Trash2 size={13} aria-hidden="true" />
                       </button>
                     )}
                   </>
@@ -148,11 +144,10 @@ export function ManagePortfoliosModal({ onClose }: ManagePortfoliosModalProps) {
             disabled={!newName.trim()}
             className="inline-flex items-center gap-1 px-3 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover disabled:opacity-50 transition-colors"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4" aria-hidden="true" />
             Add
           </button>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }

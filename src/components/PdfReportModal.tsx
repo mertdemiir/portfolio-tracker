@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { X, FileText, Download } from 'lucide-react';
+import { useState } from 'react';
+import { FileText, Download } from 'lucide-react';
+import { Modal } from './Modal';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { generatePdfReport } from '../utils/pdfReport';
 import { parseLocalDate } from '../utils/dateHelpers';
@@ -26,14 +27,6 @@ export function PdfReportModal({ onClose }: PdfReportModalProps) {
 
   const [period, setPeriod] = useState<ReportPeriod>('all-time');
   const [generating, setGenerating] = useState(false);
-
-  useEffect(() => {
-    function handleEsc(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    document.addEventListener('keydown', handleEsc);
-    return () => document.removeEventListener('keydown', handleEsc);
-  }, [onClose]);
 
   async function handleGenerate() {
     setGenerating(true);
@@ -89,20 +82,17 @@ export function PdfReportModal({ onClose }: PdfReportModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-surface-card rounded-2xl shadow-xl w-full max-w-sm p-6 animate-modal-enter">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-accent" />
-            <h2 className="text-lg font-semibold text-t-primary">Generate PDF Report</h2>
-          </div>
-          <button onClick={onClose} className="p-1 hover:bg-surface-alt rounded-lg transition-colors">
-            <X className="w-5 h-5 text-t-muted" />
-          </button>
-        </div>
-
-        <div className="mb-4">
+    <Modal
+      title={
+        <span className="flex items-center gap-2">
+          <FileText className="w-5 h-5 text-accent" aria-hidden="true" />
+          Generate PDF Report
+        </span>
+      }
+      onClose={onClose}
+      size="sm"
+    >
+      <div className="mb-4">
           <label className="block text-sm font-medium text-t-secondary mb-2">Report Period</label>
           <div className="grid grid-cols-2 gap-2">
             {PERIODS.map((p) => (
@@ -137,12 +127,11 @@ export function PdfReportModal({ onClose }: PdfReportModalProps) {
             </>
           ) : (
             <>
-              <Download className="w-4 h-4" />
+              <Download className="w-4 h-4" aria-hidden="true" />
               Generate Report
             </>
           )}
         </button>
-      </div>
-    </div>
+    </Modal>
   );
 }

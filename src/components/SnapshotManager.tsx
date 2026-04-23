@@ -149,26 +149,29 @@ export function SnapshotManager() {
                       <div className="flex items-center gap-1 justify-end">
                         <button
                           onClick={() => { deleteSnapshot(s.date); setConfirmDelete(null); }}
-                          className="text-red-600 hover:text-red-700 p-0.5"
+                          className="text-loss hover:text-loss/80 p-0.5"
                           title="Confirm delete"
+                          aria-label="Confirm delete snapshot"
                         >
-                          <Check size={14} />
+                          <Check size={14} aria-hidden="true" />
                         </button>
                         <button
                           onClick={() => setConfirmDelete(null)}
                           className="text-t-faint hover:text-t-muted p-0.5"
                           title="Cancel"
+                          aria-label="Cancel delete"
                         >
-                          <X size={14} />
+                          <X size={14} aria-hidden="true" />
                         </button>
                       </div>
                     ) : (
                       <button
                         onClick={() => setConfirmDelete(i)}
-                        className="text-t-faint hover:text-red-500 transition-colors p-0.5"
+                        className="text-t-faint hover:text-loss transition-colors p-0.5"
                         title="Delete snapshot"
+                        aria-label={`Delete snapshot from ${s.date}`}
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={14} aria-hidden="true" />
                       </button>
                     )}
                   </td>

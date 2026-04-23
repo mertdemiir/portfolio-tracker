@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Download, EyeOff, Eye } from 'lucide-react';
+import { Download, EyeOff, Eye } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import { Modal } from './Modal';
 import { ShareCard } from './ShareCard';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import type { EnrichedHolding, NetWorthSummary, PortfolioSummary } from '../types';
@@ -43,14 +44,6 @@ export function ShareImageModal({ netWorthSummary, portfolioSummary, topHoldings
     capture();
   }, [capture, anonymize]);
 
-  useEffect(() => {
-    function handleEsc(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    document.addEventListener('keydown', handleEsc);
-    return () => document.removeEventListener('keydown', handleEsc);
-  }, [onClose]);
-
   function handleDownload() {
     if (!imageUrl) return;
     const link = document.createElement('a');
@@ -60,16 +53,7 @@ export function ShareImageModal({ netWorthSummary, portfolioSummary, topHoldings
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-surface-card rounded-2xl shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto animate-modal-enter">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-t-primary">Share Portfolio Snapshot</h2>
-          <button onClick={onClose} className="p-1 hover:bg-surface-alt rounded-lg transition-colors">
-            <X className="w-5 h-5 text-t-muted" />
-          </button>
-        </div>
-
+    <Modal title="Share Portfolio Snapshot" onClose={onClose} size="2xl">
         {/* Hidden render target */}
         <div style={{ position: 'absolute', left: -9999, top: 0 }}>
           <ShareCard
@@ -111,7 +95,6 @@ export function ShareImageModal({ netWorthSummary, portfolioSummary, topHoldings
             Download PNG
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

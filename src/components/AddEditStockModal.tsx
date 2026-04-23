@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { X, TrendingUp, BarChart3, Bitcoin, CircleDollarSign, Gem, Package, Plus, AlertTriangle } from 'lucide-react';
+import { TrendingUp, BarChart3, Bitcoin, CircleDollarSign, Gem, Package, Plus, AlertTriangle } from 'lucide-react';
 import { SymbolSearch } from './SymbolSearch';
 import { CryptoSearch } from './CryptoSearch';
 import { ApiKeyPrompt } from './ApiKeyPrompt';
+import { Modal } from './Modal';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { useFxRates } from '../hooks/useFxRates';
 import { decideBuyFxRate } from '../utils/fxHelpers';
@@ -106,14 +107,6 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose, onEditExis
       setCategory(getDefaultCategory(assetType));
     }
   }, [assetType, isEdit]);
-
-  useEffect(() => {
-    function handleEsc(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    document.addEventListener('keydown', handleEsc);
-    return () => document.removeEventListener('keydown', handleEsc);
-  }, [onClose]);
 
   function validate(): boolean {
     const errs: Record<string, string> = {};
@@ -353,22 +346,12 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose, onEditExis
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-surface-card rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto animate-modal-enter">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-semibold text-t-primary">
-            {isEdit ? 'Edit Holding' : 'Add Holding'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-surface-alt rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5 text-t-muted" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <Modal
+      title={isEdit ? 'Edit Holding' : 'Add Holding'}
+      onClose={onClose}
+      size="md"
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
           {/* Asset type selector */}
           {!isEdit && (
             <div>
@@ -667,7 +650,6 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose, onEditExis
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }

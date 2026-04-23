@@ -191,10 +191,11 @@ export function Watchlist() {
                       <td className="px-4 py-3 text-right">
                         <button
                           onClick={() => deleteItem(item.id)}
-                          className="p-1.5 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                          className="p-1.5 hover:bg-loss-bg rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                           title="Remove from watchlist"
+                          aria-label={`Remove ${item.ticker} from watchlist`}
                         >
-                          <Trash2 className="w-4 h-4 text-t-muted hover:text-red-500" />
+                          <Trash2 className="w-4 h-4 text-t-muted hover:text-loss" aria-hidden="true" />
                         </button>
                       </td>
                     </tr>
@@ -223,9 +224,10 @@ export function Watchlist() {
                     </div>
                     <button
                       onClick={() => deleteItem(item.id)}
-                      className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-1.5 hover:bg-loss-bg rounded-lg transition-colors"
+                      aria-label={`Remove ${item.ticker} from watchlist`}
                     >
-                      <Trash2 className="w-4 h-4 text-t-muted" />
+                      <Trash2 className="w-4 h-4 text-t-muted" aria-hidden="true" />
                     </button>
                   </div>
                   <div className="grid grid-cols-2 gap-y-1 text-sm">

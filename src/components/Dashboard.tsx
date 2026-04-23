@@ -126,8 +126,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             onClick={() => setShowShareModal(true)}
             className="p-2 hover:bg-surface-alt rounded-lg transition-colors"
             title="Share as image"
+            aria-label="Share as image"
           >
-            <Share2 className="w-4 h-4 text-t-muted" />
+            <Share2 className="w-4 h-4 text-t-muted" aria-hidden="true" />
           </button>
         </div>
       </div>

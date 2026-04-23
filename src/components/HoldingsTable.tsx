@@ -382,6 +382,7 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
                     showPortfolioBadge={filterMode === 'all'}
                     priceCache={priceCache}
                     isDraggable={isCustomSort}
+                    layout="table"
                     onEdit={() => setEditingHolding(h)}
                     onDelete={() => setDeletingHolding(h)}
                     onToggleFavorite={() => toggleFavorite(h)}
@@ -408,6 +409,7 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
                 categoryLabel={categoryLabelMap[h.category] || h.category}
                 showPortfolioBadge={filterMode === 'all'}
                 isDraggable={isCustomSort}
+                layout="card"
                 onEdit={() => setEditingHolding(h)}
                 onDelete={() => setDeletingHolding(h)}
                 onToggleFavorite={() => toggleFavorite(h)}

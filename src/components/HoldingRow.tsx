@@ -13,6 +13,14 @@ interface HoldingRowProps {
   showPortfolioBadge?: boolean;
   priceCache: PriceCache;
   isDraggable?: boolean;
+  /**
+   * 'table' renders a <tr> for use inside a <tbody>. 'card' renders a
+   * standalone <div> suitable for a mobile list container. Previously the
+   * component rendered BOTH layouts and hid the wrong one with CSS, which
+   * produced <tr>-in-<div> hydration warnings on mobile. Now each caller
+   * explicitly chooses which layout to render.
+   */
+  layout: 'table' | 'card';
   onEdit: () => void;
   onDelete: () => void;
   onToggleFavorite: () => void;
@@ -60,7 +68,7 @@ function getStaleWarning(holding: EnrichedHolding, priceCache: PriceCache): stri
   return null;
 }
 
-export function HoldingRow({ holding, baseCurrency, categoryLabel, showPortfolioBadge, priceCache, isDraggable, onEdit, onDelete, onToggleFavorite, onMove, onTickerClick }: HoldingRowProps) {
+export function HoldingRow({ holding, baseCurrency, categoryLabel, showPortfolioBadge, priceCache, isDraggable, layout, onEdit, onDelete, onToggleFavorite, onMove, onTickerClick }: HoldingRowProps) {
   const gainColor = holding.gainLoss >= 0 ? 'text-gain' : 'text-loss';
   const dailyColor = holding.dailyChange >= 0 ? 'text-gain' : 'text-loss';
   const config = ASSET_TYPE_CONFIG[holding.assetType ?? 'stock'];
@@ -83,18 +91,17 @@ export function HoldingRow({ holding, baseCurrency, categoryLabel, showPortfolio
     zIndex: isDragging ? 50 : undefined,
   };
 
-  return (
-    <>
-      {/* Desktop row */}
+  if (layout === 'table') {
+    return (
       <tr
         ref={setNodeRef}
         style={dragStyle}
-        className="hidden md:table-row hover:bg-surface-alt/50 transition-colors group"
+        className="hover:bg-surface-alt/50 transition-colors group"
       >
         {isDraggable && (
           <td className="px-2 py-3 w-8">
-            <button {...listeners} {...attributes} className="cursor-grab active:cursor-grabbing p-1 text-t-faint hover:text-t-muted">
-              <GripVertical className="w-4 h-4" />
+            <button {...listeners} {...attributes} className="cursor-grab active:cursor-grabbing p-1 text-t-faint hover:text-t-muted" aria-label="Drag to reorder">
+              <GripVertical className="w-4 h-4" aria-hidden="true" />
             </button>
           </td>
         )}
@@ -147,7 +154,7 @@ export function HoldingRow({ holding, baseCurrency, categoryLabel, showPortfolio
             </div>
             {staleWarning && (
               <span title={staleWarning}>
-                <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-500" aria-hidden="true" />
               </span>
             )}
           </div>
@@ -181,44 +188,54 @@ export function HoldingRow({ holding, baseCurrency, categoryLabel, showPortfolio
               onClick={onToggleFavorite}
               className="p-1.5 hover:bg-surface-alt rounded-lg transition-colors"
               title={holding.isFavorite ? 'Unpin' : 'Pin to top'}
+              aria-label={holding.isFavorite ? `Unpin ${holding.ticker}` : `Pin ${holding.ticker} to top`}
+              aria-pressed={!!holding.isFavorite}
             >
-              <Star className={`w-3.5 h-3.5 ${holding.isFavorite ? 'text-amber-400 fill-amber-400' : 'text-t-faint'}`} />
+              <Star className={`w-3.5 h-3.5 ${holding.isFavorite ? 'text-amber-400 fill-amber-400' : 'text-t-faint'}`} aria-hidden="true" />
             </button>
             {onMove && (
               <button
                 onClick={onMove}
                 className="p-1.5 hover:bg-surface-alt rounded-lg transition-colors"
                 title="Move to portfolio"
+                aria-label={`Move ${holding.ticker} to another portfolio`}
               >
-                <FolderInput className="w-3.5 h-3.5 text-t-faint hover:text-t-muted" />
+                <FolderInput className="w-3.5 h-3.5 text-t-faint hover:text-t-muted" aria-hidden="true" />
               </button>
             )}
             <button
               onClick={onEdit}
               className="p-1.5 hover:bg-surface-alt rounded-lg transition-colors"
               title="Edit"
+              aria-label={`Edit ${holding.ticker}`}
             >
-              <Pencil className="w-3.5 h-3.5 text-t-faint hover:text-t-muted" />
+              <Pencil className="w-3.5 h-3.5 text-t-faint hover:text-t-muted" aria-hidden="true" />
             </button>
             <button
               onClick={onDelete}
               className="p-1.5 hover:bg-loss-bg rounded-lg transition-colors"
               title="Delete"
+              aria-label={`Delete ${holding.ticker}`}
             >
-              <Trash2 className="w-3.5 h-3.5 text-t-faint hover:text-loss" />
+              <Trash2 className="w-3.5 h-3.5 text-t-faint hover:text-loss" aria-hidden="true" />
             </button>
           </div>
           {/* Always-visible favorite star */}
           {holding.isFavorite && (
-            <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 group-hover:hidden ml-auto" />
+            <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 group-hover:hidden ml-auto" aria-hidden="true" />
           )}
         </td>
       </tr>
+    );
+  }
 
-      {/* Mobile card — wrapped in <tr><td> for valid table markup */}
-      <tr className="md:hidden">
-        <td colSpan={10} className="p-0 border-none">
-          <div className="bg-surface-card border border-b-default card-radius p-4 mb-3">
+  // layout === 'card' — standalone <div> for mobile lists (no table wrapper)
+  return (
+    <div
+      ref={setNodeRef}
+      style={dragStyle}
+      className="bg-surface-card border border-b-default card-radius p-4 mb-3"
+    >
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-start gap-2">
             {isDraggable && (
@@ -250,19 +267,37 @@ export function HoldingRow({ holding, baseCurrency, categoryLabel, showPortfolio
             </div>
           </div>
           <div className="flex items-center gap-0.5">
-            <button onClick={onToggleFavorite} className="p-1.5 hover:bg-surface-alt rounded-lg">
-              <Star className={`w-4 h-4 ${holding.isFavorite ? 'text-amber-400 fill-amber-400' : 'text-t-faint'}`} />
+            <button
+              onClick={onToggleFavorite}
+              className="p-1.5 hover:bg-surface-alt rounded-lg"
+              aria-label={holding.isFavorite ? `Unpin ${holding.ticker}` : `Pin ${holding.ticker} to top`}
+              aria-pressed={!!holding.isFavorite}
+            >
+              <Star className={`w-4 h-4 ${holding.isFavorite ? 'text-amber-400 fill-amber-400' : 'text-t-faint'}`} aria-hidden="true" />
             </button>
             {onMove && (
-              <button onClick={onMove} className="p-1.5 hover:bg-surface-alt rounded-lg" title="Move to portfolio">
-                <FolderInput className="w-4 h-4 text-t-faint" />
+              <button
+                onClick={onMove}
+                className="p-1.5 hover:bg-surface-alt rounded-lg"
+                title="Move to portfolio"
+                aria-label={`Move ${holding.ticker} to another portfolio`}
+              >
+                <FolderInput className="w-4 h-4 text-t-faint" aria-hidden="true" />
               </button>
             )}
-            <button onClick={onEdit} className="p-1.5 hover:bg-surface-alt rounded-lg">
-              <Pencil className="w-4 h-4 text-t-faint" />
+            <button
+              onClick={onEdit}
+              className="p-1.5 hover:bg-surface-alt rounded-lg"
+              aria-label={`Edit ${holding.ticker}`}
+            >
+              <Pencil className="w-4 h-4 text-t-faint" aria-hidden="true" />
             </button>
-            <button onClick={onDelete} className="p-1.5 hover:bg-loss-bg rounded-lg">
-              <Trash2 className="w-4 h-4 text-t-faint" />
+            <button
+              onClick={onDelete}
+              className="p-1.5 hover:bg-loss-bg rounded-lg"
+              aria-label={`Delete ${holding.ticker}`}
+            >
+              <Trash2 className="w-4 h-4 text-t-faint" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -277,7 +312,7 @@ export function HoldingRow({ holding, baseCurrency, categoryLabel, showPortfolio
               {formatCurrency(holding.currentPrice)}
               {staleWarning && (
                 <span title={staleWarning}>
-                  <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-500" aria-hidden="true" />
                 </span>
               )}
             </p>
@@ -298,9 +333,6 @@ export function HoldingRow({ holding, baseCurrency, categoryLabel, showPortfolio
             </p>
           </div>
         </div>
-          </div>
-        </td>
-      </tr>
-    </>
+    </div>
   );
 }

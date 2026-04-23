@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
-import { X, Trash2, Plus, Key, Tag, Download, Upload, HardDrive, FileSpreadsheet, Sun, Moon, Stars, BarChart3, FolderOpen, Landmark, TerminalSquare } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Trash2, Plus, Key, Tag, Download, Upload, HardDrive, FileSpreadsheet, Sun, Moon, Stars, BarChart3, FolderOpen, Landmark, TerminalSquare } from 'lucide-react';
+import { Modal } from './Modal';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { useAutoBackup } from '../hooks/useAutoBackup';
 import { CsvImportModal } from './CsvImportModal';
@@ -39,14 +40,6 @@ export function SettingsModal({
   const { settings: autoBackupSettings, setEnabled: setAutoEnabled, setFrequency: setAutoFrequency, chooseFolder: chooseAutoFolder } = useAutoBackup();
 
   const isElectron = !!window.electronAPI;
-
-  useEffect(() => {
-    function handleEsc(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    document.addEventListener('keydown', handleEsc);
-    return () => document.removeEventListener('keydown', handleEsc);
-  }, [onClose]);
 
   function handleSaveKey() {
     const trimmed = keyInput.trim();
@@ -196,19 +189,7 @@ export function SettingsModal({
 
   return (
     <>
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-surface-card rounded-2xl animate-modal-enter shadow-xl w-full max-w-xl p-6 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-semibold text-t-primary">Settings</h2>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-surface-alt rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5 text-t-muted" />
-          </button>
-        </div>
-
+      <Modal title="Settings" onClose={onClose} size="xl">
         {/* Appearance Section */}
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-3 pb-2 border-b border-b-subtle">
@@ -580,12 +561,11 @@ export function SettingsModal({
             onClick={() => setShowCsvImport(true)}
             className="inline-flex items-center gap-1.5 px-3 py-2 bg-surface-alt text-t-secondary rounded-lg text-sm font-medium hover:bg-surface-active transition-colors"
           >
-            <Upload className="w-4 h-4" />
+            <Upload className="w-4 h-4" aria-hidden="true" />
             Import CSV
           </button>
         </div>
-      </div>
-    </div>
+      </Modal>
 
     {showCsvImport && <CsvImportModal onClose={() => setShowCsvImport(false)} />}
     {showManagePortfolios && <ManagePortfoliosModal onClose={() => setShowManagePortfolios(false)} />}

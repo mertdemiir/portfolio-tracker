@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { X, Upload, ChevronRight, Check, AlertTriangle } from 'lucide-react';
+import { Upload, ChevronRight, Check, AlertTriangle } from 'lucide-react';
+import { Modal } from './Modal';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { parseCsv, autoDetectMapping, HOLDING_FIELD_ALIASES, TRANSACTION_FIELD_ALIASES } from '../utils/csvParser';
 import { todayDateString } from '../utils/formatters';
@@ -193,16 +194,7 @@ export function CsvImportModal({ onClose }: CsvImportModalProps) {
   const validRows = rows.filter((r) => !validateRow(r));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-surface-card rounded-2xl shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto animate-modal-enter">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-semibold text-t-primary">Import CSV</h2>
-          <button onClick={onClose} className="p-1 hover:bg-surface-alt rounded-lg transition-colors">
-            <X className="w-5 h-5 text-t-muted" />
-          </button>
-        </div>
-
+    <Modal title="Import CSV" onClose={onClose} size="2xl">
         {/* Step indicators */}
         <div className="flex items-center gap-2 mb-6 text-xs text-t-muted">
           {['Upload', 'Map Columns', 'Preview', 'Done'].map((label, i) => {
@@ -384,7 +376,6 @@ export function CsvImportModal({ onClose }: CsvImportModalProps) {
             </button>
           </div>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 }

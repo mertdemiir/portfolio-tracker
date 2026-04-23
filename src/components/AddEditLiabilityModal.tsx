@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { useState } from 'react';
+import { Modal } from './Modal';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { LIABILITY_CATEGORIES, SUPPORTED_CURRENCIES } from '../types';
 import type { Liability, LiabilityCategory } from '../types';
@@ -21,14 +21,6 @@ export function AddEditLiabilityModal({ liability, onClose }: AddEditLiabilityMo
   const [currency, setCurrency] = useState(liability?.currency || baseCurrency);
   const [startDate, setStartDate] = useState(liability?.startDate || '');
   const [notes, setNotes] = useState(liability?.notes || '');
-
-  useEffect(() => {
-    function handleEsc(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    document.addEventListener('keydown', handleEsc);
-    return () => document.removeEventListener('keydown', handleEsc);
-  }, [onClose]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -55,19 +47,12 @@ export function AddEditLiabilityModal({ liability, onClose }: AddEditLiabilityMo
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-surface-card rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto animate-modal-enter">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-semibold text-t-primary">
-            {isEdit ? 'Edit Liability' : 'Add Liability'}
-          </h2>
-          <button onClick={onClose} className="p-1 hover:bg-surface-alt rounded-lg transition-colors">
-            <X className="w-5 h-5 text-t-muted" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <Modal
+      title={isEdit ? 'Edit Liability' : 'Add Liability'}
+      onClose={onClose}
+      size="md"
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
           {/* Name */}
           <div>
             <label className="block text-xs font-medium text-t-muted mb-1">Name</label>
@@ -193,7 +178,6 @@ export function AddEditLiabilityModal({ liability, onClose }: AddEditLiabilityMo
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }

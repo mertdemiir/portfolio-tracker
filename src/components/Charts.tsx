@@ -78,15 +78,18 @@ export function Charts() {
                       : 'text-t-faint hover:text-t-muted hover:bg-surface-alt'
                   }`}
                   title={showAnnotations ? 'Hide annotations' : 'Show annotations'}
+                  aria-label={showAnnotations ? 'Hide annotations' : 'Show annotations'}
+                  aria-pressed={showAnnotations}
                 >
-                  <Bookmark size={15} />
+                  <Bookmark size={15} aria-hidden="true" />
                 </button>
                 <button
                   onClick={() => setShowAddAnnotation(true)}
                   className="p-1.5 text-t-faint hover:text-t-muted hover:bg-surface-alt rounded-lg transition-colors"
                   title="Add annotation"
+                  aria-label="Add annotation"
                 >
-                  <Plus size={15} />
+                  <Plus size={15} aria-hidden="true" />
                 </button>
               </div>
             </div>

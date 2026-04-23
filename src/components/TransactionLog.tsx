@@ -410,8 +410,10 @@ export function TransactionLog({ initialFilter }: TransactionLogProps) {
                           onClick={() => setExpandedRow(expandedRow === t.id ? null : t.id)}
                           className="p-1 text-t-faint hover:text-accent transition-colors"
                           title="View note"
+                          aria-label="View note"
+                          aria-expanded={expandedRow === t.id}
                         >
-                          <MessageSquare size={13} />
+                          <MessageSquare size={13} aria-hidden="true" />
                         </button>
                       )}
                     </td>

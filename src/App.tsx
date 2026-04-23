@@ -113,7 +113,10 @@ function AppContent() {
         </div>
       )}
       {priceError && (
-        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+        <div
+          role="alert"
+          className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm text-amber-700 dark:text-amber-400"
+        >
           {priceError}
         </div>
       )}

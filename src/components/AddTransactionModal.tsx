@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { useState } from 'react';
+import { Modal } from './Modal';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { useFxRates } from '../hooks/useFxRates';
 import { todayDateString, formatCurrency } from '../utils/formatters';
@@ -21,14 +21,6 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
   const [notes, setNotes] = useState('');
   const [suggestions, setSuggestions] = useState<{ ticker: string; name: string }[]>([]);
   const [submitError, setSubmitError] = useState('');
-
-  useEffect(() => {
-    function handleEsc(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    document.addEventListener('keydown', handleEsc);
-    return () => document.removeEventListener('keydown', handleEsc);
-  }, [onClose]);
 
   function handleTickerChange(value: string) {
     setTicker(value);
@@ -143,17 +135,8 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-surface-card rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto animate-modal-enter">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-semibold text-t-primary">Log Transaction</h2>
-          <button onClick={onClose} className="p-1 hover:bg-surface-alt rounded-lg transition-colors">
-            <X className="w-5 h-5 text-t-muted" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <Modal title="Log Transaction" onClose={onClose} size="md">
+      <form onSubmit={handleSubmit} className="space-y-4">
           {/* Type toggle */}
           <div className="flex bg-surface-alt rounded-lg p-0.5">
             <button
@@ -294,7 +277,6 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
             Log Transaction
           </button>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }

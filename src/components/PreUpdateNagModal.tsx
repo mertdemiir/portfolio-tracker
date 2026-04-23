@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Download, Check } from 'lucide-react';
+import { Modal } from './Modal';
 import { gatherBackupData, serializeBackup } from '../data/backup';
 import { updateAppMeta, type AppMeta } from '../data/schema';
 
@@ -26,8 +27,6 @@ export function PreUpdateNagModal({ currentAppVersion, storedAppVersion, onAckno
   useEffect(() => {
     acknowledgeBtnRef.current?.focus();
   }, []);
-
-  // ESC intentionally disabled: user MUST acknowledge before proceeding
 
   async function handleExport() {
     setStatus('saving');
@@ -73,68 +72,63 @@ export function PreUpdateNagModal({ currentAppVersion, storedAppVersion, onAckno
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="preupdate-title"
-      aria-describedby="preupdate-desc"
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-    >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative bg-surface-card rounded-2xl shadow-xl w-full max-w-md p-6 animate-modal-enter">
-        <div className="flex items-center gap-2 mb-3">
+    <Modal
+      title={
+        <span className="flex items-center gap-2">
           <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" aria-hidden="true" />
-          <h2 id="preupdate-title" className="text-lg font-semibold text-t-primary">
-            Back up your data first
-          </h2>
-        </div>
+          Back up your data first
+        </span>
+      }
+      onClose={handleAcknowledge}
+      size="md"
+      hideCloseButton
+      disableDismiss
+    >
+      <p className="text-sm text-t-secondary mb-4 leading-relaxed">
+        We&apos;re upgrading Portfolio Tracker
+        {storedAppVersion ? <> from <span className="font-mono text-xs">{storedAppVersion}</span> to </> : ' to '}
+        <span className="font-mono text-xs">{currentAppVersion}</span>. Please export a backup before we continue. Your
+        data is never sent anywhere — the file stays on your machine.
+      </p>
 
-        <p id="preupdate-desc" className="text-sm text-t-secondary mb-4 leading-relaxed">
-          We&apos;re upgrading Portfolio Tracker
-          {storedAppVersion ? <> from <span className="font-mono text-xs">{storedAppVersion}</span> to </> : ' to '}
-          <span className="font-mono text-xs">{currentAppVersion}</span>. Please export a backup before we continue. Your
-          data is never sent anywhere — the file stays on your machine.
-        </p>
-
-        <div className="space-y-2 mb-4">
-          <button
-            onClick={handleExport}
-            disabled={status === 'saving'}
-            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-accent text-white rounded-lg text-sm font-semibold hover:bg-accent-hover disabled:opacity-60 transition-colors"
-          >
-            {status === 'saving' ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-hidden="true" />
-                Saving backup…
-              </>
-            ) : status === 'saved' ? (
-              <>
-                <Check className="w-4 h-4" aria-hidden="true" />
-                Backup saved
-              </>
-            ) : (
-              <>
-                <Download className="w-4 h-4" aria-hidden="true" />
-                Export backup
-              </>
-            )}
-          </button>
-          {errorMsg && (
-            <p role="alert" className="text-xs text-loss">
-              Export failed: {errorMsg}
-            </p>
-          )}
-        </div>
-
+      <div className="space-y-2 mb-4">
         <button
-          ref={acknowledgeBtnRef}
-          onClick={handleAcknowledge}
-          disabled={status !== 'saved'}
-          className="w-full py-2 text-sm font-medium text-t-secondary hover:text-t-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          onClick={handleExport}
+          disabled={status === 'saving'}
+          className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-accent text-white rounded-lg text-sm font-semibold hover:bg-accent-hover disabled:opacity-60 transition-colors"
         >
-          {status === 'saved' ? 'Continue' : 'Continue (export a backup first)'}
+          {status === 'saving' ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-hidden="true" />
+              Saving backup…
+            </>
+          ) : status === 'saved' ? (
+            <>
+              <Check className="w-4 h-4" aria-hidden="true" />
+              Backup saved
+            </>
+          ) : (
+            <>
+              <Download className="w-4 h-4" aria-hidden="true" />
+              Export backup
+            </>
+          )}
         </button>
+        {errorMsg && (
+          <p role="alert" className="text-xs text-loss">
+            Export failed: {errorMsg}
+          </p>
+        )}
       </div>
-    </div>
+
+      <button
+        ref={acknowledgeBtnRef}
+        onClick={handleAcknowledge}
+        disabled={status !== 'saved'}
+        className="w-full py-2 text-sm font-medium text-t-secondary hover:text-t-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+      >
+        {status === 'saved' ? 'Continue' : 'Continue (export a backup first)'}
+      </button>
+    </Modal>
   );
 }

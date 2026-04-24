@@ -94,6 +94,180 @@ const MIGRATIONS: Record<number, Migration> = {
   },
 
   /**
+   * v2 → v3: Transactions become first-class.
+   *
+   * Two responsibilities:
+   *   (a) For every Holding that has no buy Transaction in the same
+   *       (ticker, portfolioId) scope, synthesize one using the holding's
+   *       current buyPrice/shares/buyDate. Mark it `synthetic: true`.
+   *       This establishes 1:1 parity so a future release can make the
+   *       ledger authoritative without losing positions.
+   *   (b) Backfill `holdingId` on every existing Transaction where
+   *       exactly one holding matches on (ticker, portfolioId). Ambiguous
+   *       matches are left as-is — the app's ticker-match fallback still
+   *       works for them.
+   *
+   * Idempotent: the synthetic backfill skips holdings that already have
+   * any buy Transaction in scope (including a previously-inserted
+   * synthetic one), so re-running the migration is a no-op. The holdingId
+   * backfill only writes when the field is currently absent.
+   *
+   * Non-fatal: malformed data gets skipped rather than thrown. Any
+   * throw here would block the migration runner and leave the user on v2.
+   */
+  3: () => {
+    // Tiny UUID generator (RFC4122 v4-ish, crypto-backed when available).
+    const makeId = (): string => {
+      const c: Crypto | undefined = typeof crypto !== 'undefined' ? crypto : undefined;
+      if (c && typeof c.randomUUID === 'function') return c.randomUUID();
+      // Fallback: timestamp + random (sufficient — we only need local uniqueness).
+      return `syn-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    };
+
+    type RawHolding = {
+      id: string;
+      ticker?: unknown;
+      name?: unknown;
+      shares?: unknown;
+      buyPrice?: unknown;
+      buyDate?: unknown;
+      assetType?: unknown;
+      category?: unknown;
+      currency?: unknown;
+      buyFxRate?: unknown;
+      portfolioId?: unknown;
+    };
+
+    type RawTxn = {
+      id?: string;
+      ticker?: unknown;
+      type?: unknown;
+      portfolioId?: unknown;
+      holdingId?: unknown;
+      synthetic?: unknown;
+    };
+
+    let holdings: RawHolding[] = [];
+    let txns: (RawTxn & Record<string, unknown>)[] = [];
+
+    try {
+      const raw = localStorage.getItem('portfolio-holdings');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) holdings = parsed;
+      }
+    } catch {
+      // malformed — leave alone
+      return;
+    }
+
+    try {
+      const raw = localStorage.getItem('transactions');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) txns = parsed;
+      }
+    } catch {
+      // malformed — leave alone
+      return;
+    }
+
+    // ── (a) Backfill synthetic buys ─────────────────────────────────
+    // Index existing buys by (ticker upper, portfolioId).
+    const buyIndex = new Map<string, RawTxn[]>();
+    const keyFor = (ticker: unknown, portfolioId: unknown): string => {
+      const t = typeof ticker === 'string' ? ticker.toUpperCase() : '';
+      const p = typeof portfolioId === 'string' ? portfolioId : 'default';
+      return `${t}::${p}`;
+    };
+
+    for (const t of txns) {
+      if (t && t.type === 'buy') {
+        const k = keyFor(t.ticker, t.portfolioId);
+        const list = buyIndex.get(k) ?? [];
+        list.push(t);
+        buyIndex.set(k, list);
+      }
+    }
+
+    let addedSynthetic = 0;
+    for (const h of holdings) {
+      if (!h || typeof h !== 'object' || typeof h.id !== 'string') continue;
+      if (typeof h.ticker !== 'string') continue;
+
+      const k = keyFor(h.ticker, h.portfolioId);
+      if (buyIndex.has(k)) continue; // already has a buy — skip
+
+      const shares = typeof h.shares === 'number' ? h.shares : 0;
+      const buyPrice = typeof h.buyPrice === 'number' ? h.buyPrice : 0;
+      const buyDate = typeof h.buyDate === 'string' && h.buyDate
+        ? h.buyDate
+        : new Date().toISOString().slice(0, 10);
+      const portfolioId = typeof h.portfolioId === 'string' && h.portfolioId
+        ? h.portfolioId
+        : 'default';
+
+      const synthetic: Record<string, unknown> = {
+        id: makeId(),
+        date: buyDate,
+        ticker: h.ticker,
+        name: typeof h.name === 'string' ? h.name : h.ticker,
+        type: 'buy',
+        shares,
+        pricePerShare: buyPrice,
+        total: shares * buyPrice,
+        portfolioId,
+        holdingId: h.id,
+        synthetic: true,
+      };
+      if (typeof h.assetType === 'string') synthetic.assetType = h.assetType;
+      if (typeof h.category === 'string') synthetic.category = h.category;
+      if (typeof h.currency === 'string') synthetic.currency = h.currency;
+      if (typeof h.buyFxRate === 'number') synthetic.buyFxRate = h.buyFxRate;
+
+      txns.push(synthetic);
+      // Update the index so duplicate holdings in the same bucket don't
+      // each get their own synthetic buy — the first one wins.
+      buyIndex.set(k, [synthetic as RawTxn]);
+      addedSynthetic++;
+    }
+
+    // ── (b) Backfill holdingId on existing Transactions ────────────
+    // Index holdings by (ticker upper, portfolioId). If >1 holding
+    // shares the key we refuse to backfill that bucket (ambiguous).
+    const holdingIndex = new Map<string, RawHolding[]>();
+    for (const h of holdings) {
+      if (!h || typeof h.id !== 'string' || typeof h.ticker !== 'string') continue;
+      const k = keyFor(h.ticker, h.portfolioId);
+      const list = holdingIndex.get(k) ?? [];
+      list.push(h);
+      holdingIndex.set(k, list);
+    }
+
+    let addedHoldingId = 0;
+    for (const t of txns) {
+      if (!t || typeof t !== 'object') continue;
+      if (typeof t.holdingId === 'string' && t.holdingId) continue; // already backfilled
+      const k = keyFor(t.ticker, t.portfolioId);
+      const matches = holdingIndex.get(k);
+      if (!matches || matches.length !== 1) continue; // 0 or ambiguous
+      t.holdingId = matches[0].id;
+      addedHoldingId++;
+    }
+
+    // Only write back if something actually changed.
+    if (addedSynthetic > 0 || addedHoldingId > 0) {
+      try {
+        localStorage.setItem('transactions', JSON.stringify(txns));
+      } catch {
+        // Storage full or unavailable — surface via throw so the migration
+        // runner records a failure rather than silently advancing.
+        throw new Error('v3: failed to write transactions back to localStorage');
+      }
+    }
+  },
+
+  /**
    * v1 → v2: Unify watchlist-price-cache into price-cache.
    *
    * Before: the watchlist maintained its own separate price cache at

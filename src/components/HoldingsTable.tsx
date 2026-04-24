@@ -17,6 +17,7 @@ import { useHoldingOrder } from '../hooks/useHoldingOrder';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { HoldingRow } from './HoldingRow';
 import { AddEditStockModal } from './AddEditStockModal';
+import { CashLedgerModal } from './CashLedgerModal';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { MoveToPortfolioModal } from './MoveToPortfolioModal';
 import { EmptyState } from './EmptyState';
@@ -48,6 +49,7 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingHolding, setEditingHolding] = useState<Holding | null>(null);
+  const [cashLedgerHolding, setCashLedgerHolding] = useState<Holding | null>(null);
   const [deletingHolding, setDeletingHolding] = useState<Holding | null>(null);
   const [movingHolding, setMovingHolding] = useState<Holding | null>(null);
   const hasMultiplePortfolios = portfolios.length > 1;
@@ -171,6 +173,17 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
         )}
       </>
     );
+  }
+
+  function handleEditHolding(h: Holding) {
+    // Cash holdings have a bespoke deposit/withdrawal/interest/correction
+    // dialog that also logs a matching transaction. Non-cash holdings
+    // use the full AddEditStockModal.
+    if (h.assetType === 'cash') {
+      setCashLedgerHolding(h);
+    } else {
+      setEditingHolding(h);
+    }
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -383,7 +396,7 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
                     priceCache={priceCache}
                     isDraggable={isCustomSort}
                     layout="table"
-                    onEdit={() => setEditingHolding(h)}
+                    onEdit={() => handleEditHolding(h)}
                     onDelete={() => setDeletingHolding(h)}
                     onToggleFavorite={() => toggleFavorite(h)}
                     onMove={hasMultiplePortfolios ? () => setMovingHolding(h) : undefined}
@@ -410,7 +423,7 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
                 showPortfolioBadge={filterMode === 'all'}
                 isDraggable={isCustomSort}
                 layout="card"
-                onEdit={() => setEditingHolding(h)}
+                onEdit={() => handleEditHolding(h)}
                 onDelete={() => setDeletingHolding(h)}
                 onToggleFavorite={() => toggleFavorite(h)}
                 onMove={hasMultiplePortfolios ? () => setMovingHolding(h) : undefined}
@@ -445,6 +458,14 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
             setEditingHolding(null);
           }}
           onClose={() => setEditingHolding(null)}
+        />
+      )}
+
+      {cashLedgerHolding && (
+        <CashLedgerModal
+          holding={cashLedgerHolding}
+          onEditDetails={() => setEditingHolding(cashLedgerHolding)}
+          onClose={() => setCashLedgerHolding(null)}
         />
       )}
 

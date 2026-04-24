@@ -42,7 +42,7 @@ function parseTransactionType(value: string): 'buy' | 'sell' | null {
 }
 
 export function CsvImportModal({ onClose }: CsvImportModalProps) {
-  const { addHolding, addTransaction } = usePortfolioContext();
+  const { addHolding, addTransaction, holdings } = usePortfolioContext();
   const [mode, setMode] = useState<CsvImportMode>('holdings');
   const [step, setStep] = useState<ImportStep>('upload');
   const [headers, setHeaders] = useState<string[]>([]);
@@ -161,7 +161,7 @@ export function CsvImportModal({ onClose }: CsvImportModalProps) {
             default: return 'other';
           }
         })();
-        addHolding({
+        const newHoldingId = addHolding({
           ticker,
           name,
           shares,
@@ -171,6 +171,24 @@ export function CsvImportModal({ onClose }: CsvImportModalProps) {
           inPortfolio: true,
           category: mappedCategory,
           portfolioId: DEFAULT_PORTFOLIO_ID,
+        });
+        // Auto-log the matching buy transaction so the ledger stays
+        // 1:1 with holdings (see Phase 3 / migration 3 invariant).
+        // For zero-price rows (e.g. pre-existing positions with no
+        // cost basis recorded) we still log the txn — the price is
+        // just 0 and cost-basis comes out as 0.
+        addTransaction({
+          date: buyDate,
+          ticker,
+          name,
+          type: 'buy',
+          shares,
+          pricePerShare: buyPrice,
+          total: shares * buyPrice,
+          portfolioId: DEFAULT_PORTFOLIO_ID,
+          holdingId: newHoldingId,
+          assetType: mappedAssetType,
+          category: mappedCategory,
         });
         imported++;
       } else {
@@ -183,7 +201,24 @@ export function CsvImportModal({ onClose }: CsvImportModalProps) {
         const totalRaw = parseFloat(getRowValue(row, 'total'));
         const total = isNaN(totalRaw) ? shares * pricePerShare : totalRaw;
         const notes = getRowValue(row, 'notes').trim() || undefined;
-        addTransaction({ date, ticker, name, type, shares, pricePerShare, total, notes, portfolioId: DEFAULT_PORTFOLIO_ID });
+        // Backfill holdingId if we can find a unique matching holding
+        // in the default portfolio. Keeps the ledger linked where possible.
+        const ambiguous = holdings.filter(
+          (h) => h.ticker.toUpperCase() === ticker && h.portfolioId === DEFAULT_PORTFOLIO_ID,
+        );
+        const holdingId = ambiguous.length === 1 ? ambiguous[0].id : undefined;
+        addTransaction({
+          date,
+          ticker,
+          name,
+          type,
+          shares,
+          pricePerShare,
+          total,
+          notes,
+          portfolioId: DEFAULT_PORTFOLIO_ID,
+          ...(holdingId ? { holdingId } : {}),
+        });
         imported++;
       }
     }

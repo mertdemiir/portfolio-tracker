@@ -80,7 +80,7 @@ describe('migration 2 — unify price cache', () => {
 
     const pc = JSON.parse(localStorage.getItem('price-cache')!);
     expect(pc['stock:AAPL'].currentPrice).toBe(180);
-    expect(readAppMeta().schemaVersion).toBe(2);
+    expect(readAppMeta().schemaVersion).toBeGreaterThanOrEqual(2);
   });
 
   it('handles a missing price-cache gracefully (migrates watchlist as-is)', async () => {
@@ -106,7 +106,7 @@ describe('migration 2 — unify price cache', () => {
     // The migration catches parse errors internally so the runner still
     // completes. Key may or may not be deleted depending on where parse
     // fails — this test just verifies we don't crash.
-    expect(readAppMeta().schemaVersion).toBe(2);
+    expect(readAppMeta().schemaVersion).toBeGreaterThanOrEqual(2);
   });
 
   it('advances schemaVersion to 2 and records the migration', async () => {
@@ -114,7 +114,9 @@ describe('migration 2 — unify price cache', () => {
     await runMigrations();
 
     const meta = readAppMeta();
-    expect(meta.schemaVersion).toBe(2);
+    // Runner carries through every pending migration; finalVersion is
+    // the latest, not specifically 2.
+    expect(meta.schemaVersion).toBeGreaterThanOrEqual(2);
     const mig2 = meta.history.find((h) => h.toVersion === 2);
     expect(mig2).toBeDefined();
     expect(mig2?.success).toBe(true);

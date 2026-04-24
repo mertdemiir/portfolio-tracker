@@ -1,10 +1,14 @@
 /**
- * Vitest global setup. Provides a spec-compliant localStorage polyfill for
- * jsdom (the bundled jsdom's Storage is missing `clear()` in current
- * versions) and resets it between tests. Also registers jest-dom matchers.
+ * Vitest global setup:
+ *  - Polyfills localStorage (jsdom's Storage is missing `clear()` in
+ *    current versions).
+ *  - Polyfills IndexedDB via fake-indexeddb so the IndexedDbAdapter can
+ *    be exercised in unit tests without a real browser.
+ *  - Registers @testing-library/jest-dom matchers globally.
  */
 
 import '@testing-library/jest-dom/vitest';
+import 'fake-indexeddb/auto';
 
 class MemoryStorage implements Storage {
   private data = new Map<string, string>();

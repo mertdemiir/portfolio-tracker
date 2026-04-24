@@ -25,3 +25,10 @@ release
 *.njsproj
 *.sln
 *.sw?
+
+# User data exports (never commit — may contain API keys etc.)
+portfolio-backup*.json
+portfolio tracker*backup*.json
+auto-backup-*.json
+portfolio-report-*.pdf
+portfolio-snapshot-*.png

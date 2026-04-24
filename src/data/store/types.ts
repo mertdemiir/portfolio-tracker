@@ -57,8 +57,10 @@ export const MANAGED_STORE_KEYS = [
   'portfolio-holdings',
   'portfolio-snapshots',
   'transactions',
+  // Unified price cache as of schema v2 — shared between portfolio and
+  // watchlist. Pre-v2 installs had a separate `watchlist-price-cache`
+  // key; migration 2 merges it in and removes the old key.
   'price-cache',
-  'watchlist-price-cache',
   'watchlist-items',
   'benchmark-data-spx',
   'benchmark-data-btc',

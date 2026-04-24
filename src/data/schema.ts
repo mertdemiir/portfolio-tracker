@@ -62,8 +62,12 @@ export const APP_META_KEY = 'app-meta';
  *       to DEFAULT_PORTFOLIO_ID when previously undefined. After this,
  *       portfolioId is always a string — the `|| DEFAULT_PORTFOLIO_ID`
  *       fallbacks sprinkled across the app become unnecessary.
+ *   2 — v1.2.0. Unifies watchlist-price-cache into price-cache. The
+ *       watchlist now shares the same price-cache table as the portfolio,
+ *       so if the same ticker is in both, only one fetch is needed.
+ *       The old watchlist-price-cache key is deleted after merge.
  */
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 
 const EMPTY_META: AppMeta = {
   schemaVersion: 0,

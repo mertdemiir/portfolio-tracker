@@ -1,72 +1,75 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { PlusCircle, Trash2, RefreshCw, ArrowUpDown } from 'lucide-react';
 import { useWatchlist } from '../hooks/useWatchlist';
 import { useSettings } from '../context/SettingsContext';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import { usePricesFx } from '../context/PricesFxContext';
 import { AddWatchlistModal } from './AddWatchlistModal';
-import { fetchPriceForHolding, delay } from '../utils/api';
 import { formatCurrency, formatSignedCurrency, formatPercent, formatDate } from '../utils/formatters';
 import { ASSET_TYPE_CONFIG } from '../types';
-import type { PriceCache, Holding } from '../types';
+import type { Holding } from '../types';
 
 type SortKey = 'ticker' | 'price' | 'change' | 'changePercent' | 'addedDate';
 
 export function Watchlist() {
   const { apiKey } = useSettings();
   const { items, addItem, deleteItem } = useWatchlist();
-  const [priceCache, setPriceCache] = useLocalStorage<PriceCache>('watchlist-price-cache', {});
+  // Share the unified price cache with the portfolio. If both portfolio
+  // and watchlist contain AAPL, we fetch it once and display the same
+  // price everywhere. Portfolio's 5-min interval covers the refresh; we
+  // expose a manual refresh button for the watchlist.
+  const { priceCache, fetchPrices } = usePricesFx();
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>('addedDate');
   const [sortAsc, setSortAsc] = useState(false);
-  const abortRef = useRef(false);
 
-  const fetchPrices = useCallback(async () => {
+  const refresh = useCallback(async () => {
     if (items.length === 0) return;
     setLoading(true);
-    abortRef.current = false;
-
-    for (const item of items) {
-      if (abortRef.current) break;
-      // Skip stock/etf if no API key
-      if ((item.assetType === 'stock' || item.assetType === 'etf') && !apiKey) continue;
-
-      try {
-        const fakeHolding: Holding = {
-          id: item.id,
-          ticker: item.ticker,
-          name: item.name,
-          shares: 0,
-          buyPrice: 0,
-          buyDate: item.addedDate,
-          assetType: item.assetType,
-          coinGeckoId: item.coinGeckoId,
-          inPortfolio: false,
-          category: 'other',
-          portfolioId: 'default',
-        };
-        const key = `${item.assetType}:${item.ticker}`;
-        const quote = await fetchPriceForHolding(fakeHolding, apiKey);
-        setPriceCache((prev) => ({ ...prev, [key]: quote }));
-      } catch {
-        // skip individual errors
-      }
-      await delay(200);
-    }
+    // Translate watchlist items into Holding shape so fetchPrices can
+    // consume them. Zero-share "fake holdings" work because fetchPrices
+    // only reads ticker + assetType + coinGeckoId for dispatch.
+    const fakeHoldings: Holding[] = items.map((item) => ({
+      id: item.id,
+      ticker: item.ticker,
+      name: item.name,
+      shares: 0,
+      buyPrice: 0,
+      buyDate: item.addedDate,
+      assetType: item.assetType,
+      coinGeckoId: item.coinGeckoId,
+      inPortfolio: false,
+      category: 'other',
+      portfolioId: 'default',
+    }));
+    await fetchPrices(fakeHoldings, true);
     setLoading(false);
-  }, [items, apiKey, setPriceCache]);
+  }, [items, fetchPrices]);
 
-  // Fetch on mount and every 5 min
+  // Fetch any items missing from the unified cache on mount. Items already
+  // covered by the portfolio's fetch loop (same ticker + assetType) are
+  // automatically deduped by the adapter's staleness check.
   useEffect(() => {
-    fetchPrices();
-    const interval = setInterval(() => {
-      if (!document.hidden) fetchPrices();
-    }, 5 * 60 * 1000);
-    return () => {
-      clearInterval(interval);
-      abortRef.current = true;
-    };
-  }, [fetchPrices]);
+    const missing = items.filter((it) => !priceCache[`${it.assetType}:${it.ticker}`]);
+    if (missing.length === 0) return;
+    if (missing.some((it) => (it.assetType === 'stock' || it.assetType === 'etf') && !apiKey)) {
+      // Some items need the API key but we don't have it — let the rest fetch.
+    }
+    const fakeHoldings: Holding[] = missing.map((item) => ({
+      id: item.id,
+      ticker: item.ticker,
+      name: item.name,
+      shares: 0,
+      buyPrice: 0,
+      buyDate: item.addedDate,
+      assetType: item.assetType,
+      coinGeckoId: item.coinGeckoId,
+      inPortfolio: false,
+      category: 'other',
+      portfolioId: 'default',
+    }));
+    fetchPrices(fakeHoldings);
+  }, [items, priceCache, fetchPrices, apiKey]);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -117,7 +120,7 @@ export function Watchlist() {
         <h2 className="text-lg font-semibold text-t-primary tracking-tight">Watchlist</h2>
         <div className="flex items-center gap-2">
           <button
-            onClick={fetchPrices}
+            onClick={refresh}
             disabled={loading}
             className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-t-muted hover:bg-surface-alt rounded-lg transition-colors disabled:opacity-50"
           >

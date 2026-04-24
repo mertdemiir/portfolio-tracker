@@ -39,7 +39,9 @@ describe('migration 1 — portfolioId normalization', () => {
 
     const result = await runMigrations();
     expect(result.failed).toBeNull();
-    expect(result.finalVersion).toBe(1);
+    // Runner carries through every pending migration; finalVersion is
+    // the latest, not specifically 1.
+    expect(result.finalVersion).toBeGreaterThanOrEqual(1);
 
     const after = JSON.parse(localStorage.getItem('portfolio-holdings')!);
     expect(after[0].portfolioId).toBe('default');
@@ -60,7 +62,9 @@ describe('migration 1 — portfolioId normalization', () => {
 
     const result = await runMigrations();
     expect(result.failed).toBeNull();
-    expect(result.finalVersion).toBe(1);
+    // Runner carries through every pending migration; finalVersion is
+    // the latest, not specifically 1.
+    expect(result.finalVersion).toBeGreaterThanOrEqual(1);
 
     const after = JSON.parse(localStorage.getItem('transactions')!);
     expect(after[0].portfolioId).toBe('default');
@@ -74,12 +78,13 @@ describe('migration 1 — portfolioId normalization', () => {
     await runMigrations();
 
     const meta = readAppMeta();
-    expect(meta.schemaVersion).toBe(1);
+    expect(meta.schemaVersion).toBeGreaterThanOrEqual(1);
     expect(meta.history.length).toBeGreaterThan(0);
-    const lastRun = meta.history[meta.history.length - 1];
-    expect(lastRun.toVersion).toBe(1);
-    expect(lastRun.success).toBe(true);
-    expect(lastRun.backupKey).toMatch(/^__pre_migration_0_to_1_/);
+    // Look for the specific v1 migration entry (there may be others for v2+)
+    const v1Record = meta.history.find((h) => h.toVersion === 1);
+    expect(v1Record).toBeDefined();
+    expect(v1Record?.success).toBe(true);
+    expect(v1Record?.backupKey).toMatch(/^__pre_migration_0_to_1_/);
   });
 
   it('is idempotent: running again after completion is a no-op', async () => {
@@ -87,11 +92,12 @@ describe('migration 1 — portfolioId normalization', () => {
     localStorage.setItem('portfolio-holdings', JSON.stringify([{ id: 'h1', ticker: 'AAPL' }]));
 
     const r1 = await runMigrations();
-    expect(r1.finalVersion).toBe(1);
+    const versionAfter1 = readAppMeta().schemaVersion;
     const historyLen1 = readAppMeta().history.length;
+    expect(r1.finalVersion).toBe(versionAfter1);
 
     const r2 = await runMigrations();
-    expect(r2.finalVersion).toBe(1);
+    expect(r2.finalVersion).toBe(versionAfter1);
     expect(r2.ran).toHaveLength(0); // nothing new to run
     expect(readAppMeta().history).toHaveLength(historyLen1); // no new entries
   });
@@ -103,7 +109,9 @@ describe('migration 1 — portfolioId normalization', () => {
 
     const result = await runMigrations();
     // Migration 1 catches errors internally; schema still advances
-    expect(result.finalVersion).toBe(1);
+    // Runner carries through every pending migration; finalVersion is
+    // the latest, not specifically 1.
+    expect(result.finalVersion).toBeGreaterThanOrEqual(1);
     expect(result.failed).toBeNull();
   });
 

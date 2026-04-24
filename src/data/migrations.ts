@@ -92,6 +92,48 @@ const MIGRATIONS: Record<number, Migration> = {
       // Non-fatal
     }
   },
+
+  /**
+   * v1 → v2: Unify watchlist-price-cache into price-cache.
+   *
+   * Before: the watchlist maintained its own separate price cache at
+   * localStorage['watchlist-price-cache']. If the same ticker was in
+   * both portfolio and watchlist, we'd fetch the price twice.
+   *
+   * After: the watchlist shares the portfolio's `price-cache`. This
+   * migration copies every entry from watchlist-price-cache into
+   * price-cache (portfolio's cache wins on conflict because its data
+   * is typically fresher — portfolio holdings drive the 5-min refresh
+   * loop), then deletes the watchlist cache key.
+   *
+   * Idempotent: if watchlist-price-cache is missing or empty, it's a
+   * no-op. Running twice after migration leaves the unified cache
+   * unchanged (second run finds no watchlist key to merge).
+   */
+  2: () => {
+    try {
+      const rawWatchlist = localStorage.getItem('watchlist-price-cache');
+      if (!rawWatchlist) return;
+      const watchlistCache = JSON.parse(rawWatchlist);
+      if (!watchlistCache || typeof watchlistCache !== 'object') {
+        // Corrupted — just delete the key.
+        localStorage.removeItem('watchlist-price-cache');
+        return;
+      }
+
+      const rawPortfolio = localStorage.getItem('price-cache');
+      const portfolioCache = rawPortfolio ? JSON.parse(rawPortfolio) || {} : {};
+
+      // Portfolio wins on conflict — its prices are driven by the 5-min
+      // refresh loop and tend to be fresher.
+      const merged: Record<string, unknown> = { ...watchlistCache, ...portfolioCache };
+
+      localStorage.setItem('price-cache', JSON.stringify(merged));
+      localStorage.removeItem('watchlist-price-cache');
+    } catch {
+      // Non-fatal
+    }
+  },
 };
 
 /**

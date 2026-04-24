@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { RotateCcw, Plus, Trash2, Zap, AlertTriangle, Scale, TrendingUp } from 'lucide-react';
 import { usePortfolioContext } from '../context/PortfolioContext';
+import { useSettings } from '../context/SettingsContext';
 import { getChartColors, getChartPalette } from '../hooks/useTheme';
 import { formatCurrency, formatSignedCurrency, formatPercent } from '../utils/formatters';
 
@@ -45,7 +46,8 @@ const SHOCK_PRESETS = [
 ];
 
 export function Simulator() {
-  const { filteredEnrichedHoldings, theme } = usePortfolioContext();
+  const { filteredEnrichedHoldings } = usePortfolioContext();
+  const { theme } = useSettings();
   const cc = getChartColors(theme);
   const PIE_COLORS = getChartPalette(theme);
 

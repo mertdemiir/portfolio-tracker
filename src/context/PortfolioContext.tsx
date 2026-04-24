@@ -1,94 +1,84 @@
-import { createContext, useContext, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useApiKey } from '../hooks/useApiKey';
+/**
+ * PortfolioContext — the user's portfolio state (holdings, transactions,
+ * snapshots, liabilities, portfolios) + every derived summary.
+ *
+ * Scope (after the 2C split):
+ *   - Owns: holdings, transactions, snapshots, liabilities, portfolios,
+ *     activePortfolioId, realizedPnl
+ *   - Derives: allEnrichedHoldings, portfolioEnrichedHoldings,
+ *     filteredEnrichedHoldings, netWorthSummary, portfolioSummary,
+ *     filteredPortfolioSummary
+ *
+ * Depends on: SettingsContext (baseCurrency, customCategories),
+ *             PricesFxContext (priceCache, convertToBase, fxRates)
+ *
+ * This provider is the heaviest — enrichHoldings runs on every price
+ * tick or holdings change. Consumers that only need theme/currency are
+ * now on SettingsContext instead, and won't re-render when a single
+ * price updates.
+ */
+
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+  type ReactNode,
+} from 'react';
+import { useSettings } from './SettingsContext';
+import { usePricesFx, usePricesFxInternals } from './PricesFxContext';
 import { usePortfolio } from '../hooks/usePortfolio';
-import { useStockPrices } from '../hooks/useStockPrices';
-import { useBenchmarks } from '../hooks/useBenchmarks';
-import { useTheme } from '../hooks/useTheme';
-import { useFxRates } from '../hooks/useFxRates';
 import { usePortfolios } from '../hooks/usePortfolios';
 import { useLiabilities } from '../hooks/useLiabilities';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useTransactions } from '../hooks/useTransactions';
 import { enrichHoldings, calculateSummary, calculateNetWorthSummary } from '../utils/calculations';
 import { LIVE_METAL_TICKERS } from '../utils/api';
-import { setGlobalBaseCurrency } from '../utils/formatters';
-import { DEFAULT_CATEGORIES, DEFAULT_PORTFOLIO_ID } from '../types';
-import { useTargetAllocations } from '../hooks/useTargetAllocations';
-import { useTransactions } from '../hooks/useTransactions';
+import { DEFAULT_PORTFOLIO_ID } from '../types';
 import type {
   Holding,
   EnrichedHolding,
   PortfolioSummary,
   PortfolioSnapshot,
-  PriceCache,
   NetWorthSummary,
-  CustomCategory,
-  TargetAllocation,
   Transaction,
   Portfolio,
   Liability,
-  BenchmarkDataPoint,
-  BenchmarkEnabled,
-  BenchmarkId,
-  ThemeId,
-  ThemePreference,
 } from '../types';
 
 interface PortfolioContextValue {
-  apiKey: string;
-  setApiKey: (key: string) => void;
-  hasApiKey: boolean;
+  // Holdings
   holdings: Holding[];
   addHolding: (data: Omit<Holding, 'id'>) => void;
   updateHolding: (id: string, data: Omit<Holding, 'id'>) => void;
   deleteHolding: (id: string) => void;
   restoreHolding: (holding: Holding) => void;
+
   // All holdings (net worth)
   allEnrichedHoldings: EnrichedHolding[];
   netWorthSummary: NetWorthSummary;
-  // Portfolio-only holdings
+
+  // Portfolio-only holdings (inPortfolio === true)
   portfolioEnrichedHoldings: EnrichedHolding[];
   portfolioSummary: PortfolioSummary;
-  // Backward compat aliases
+
+  // Backward-compat aliases (still used by some older call sites)
   enrichedHoldings: EnrichedHolding[];
   summary: PortfolioSummary;
+
+  // Snapshots
   snapshots: PortfolioSnapshot[];
   addManualSnapshot: (date: string, netWorthValue: number, portfolioValue?: number, name?: string) => void;
   deleteSnapshot: (date: string) => void;
-  priceCache: PriceCache;
-  pricesLoading: boolean;
-  priceError: string | null;
-  refreshPrices: () => void;
-  // Categories
-  customCategories: CustomCategory[];
-  allCategories: { key: string; label: string }[];
-  addCustomCategory: (label: string) => void;
-  deleteCustomCategory: (key: string) => void;
-  // Target allocations
-  targetAllocations: TargetAllocation[];
-  setTargetAllocation: (categoryKey: string, targetPercent: number) => void;
-  removeTargetAllocation: (categoryKey: string) => void;
+
   // Transactions
   transactions: Transaction[];
   addTransaction: (data: Omit<Transaction, 'id'>) => void;
   deleteTransaction: (id: string) => void;
   restoreTransaction: (txn: Transaction) => void;
   realizedPnl: number;
-  // Benchmarks
-  benchmarkData: { spx: BenchmarkDataPoint[]; btc: BenchmarkDataPoint[]; gold: BenchmarkDataPoint[] };
-  benchmarkEnabled: BenchmarkEnabled;
-  toggleBenchmark: (key: BenchmarkId) => void;
-  importBenchmarkCsv: (key: BenchmarkId, csvText: string) => { success: boolean; count: number; error?: string };
-  clearBenchmark: (key: BenchmarkId) => void;
-  getBenchmarkDateRange: (key: BenchmarkId) => { from: string; to: string; count: number } | null;
-  // Theme
-  theme: ThemeId;
-  themePreference: ThemePreference;
-  setTheme: (t: ThemePreference) => void;
-  accentColor: string;
-  setAccentColor: (c: string) => void;
-  // Currency
-  baseCurrency: string;
-  setBaseCurrency: (c: string) => void;
+
   // Portfolios
   portfolios: Portfolio[];
   activePortfolioId: string | 'all';
@@ -96,11 +86,13 @@ interface PortfolioContextValue {
   createPortfolio: (name: string) => string;
   renamePortfolio: (id: string, name: string) => void;
   deletePortfolio: (id: string) => void;
+
   // Liabilities
   liabilities: Liability[];
   addLiability: (data: Omit<Liability, 'id'>) => void;
   updateLiability: (id: string, data: Omit<Liability, 'id'>) => void;
   deleteLiability: (id: string) => void;
+
   // Filtered by active portfolio (for holdings-level views)
   filteredEnrichedHoldings: EnrichedHolding[];
   filteredPortfolioSummary: PortfolioSummary;
@@ -108,8 +100,11 @@ interface PortfolioContextValue {
 
 const PortfolioCtx = createContext<PortfolioContextValue | null>(null);
 
-export function PortfolioProvider({ children }: { children: React.ReactNode }) {
-  const { apiKey, setApiKey, hasApiKey } = useApiKey();
+export function PortfolioProvider({ children }: { children: ReactNode }) {
+  const { customCategories } = useSettings();
+  const { priceCache, pricesLoading, convertToBase, fetchPrices } = usePricesFx();
+  const { registerRefresh } = usePricesFxInternals();
+
   const {
     holdings,
     snapshots,
@@ -120,40 +115,26 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     saveSnapshot,
     addManualSnapshot,
     deleteSnapshot,
-    customCategories,
-    addCustomCategory,
-    deleteCustomCategory,
   } = usePortfolio();
-  const { priceCache, loading: pricesLoading, error: priceError, fetchPrices } =
-    useStockPrices(apiKey);
-  const { targetAllocations, setTargetAllocation, removeTargetAllocation } =
-    useTargetAllocations();
+
   const { transactions, addTransaction, deleteTransaction, restoreTransaction } = useTransactions();
-  const { benchmarkData, benchmarkEnabled, toggleBenchmark, importBenchmarkCsv, clearBenchmark, getBenchmarkDateRange } =
-    useBenchmarks();
-  const { theme, themePreference, setTheme, accentColor, setAccentColor } = useTheme();
-  const [baseCurrency, setBaseCurrency] = useLocalStorage<string>('base-currency', 'USD');
-  const { convertToBase } = useFxRates(baseCurrency);
-  const {
-    portfolios, activePortfolioId, setActivePortfolioId,
-    createPortfolio, renamePortfolio, deletePortfolio: deletePortfolioRaw,
-  } = usePortfolios();
-  const {
-    liabilities, addLiability, updateLiability, deleteLiability,
-  } = useLiabilities();
+  const { portfolios, activePortfolioId, setActivePortfolioId, createPortfolio, renamePortfolio, deletePortfolio: deletePortfolioRaw } = usePortfolios();
+  const { liabilities, addLiability, updateLiability, deleteLiability } = useLiabilities();
 
-  // Keep global formatter in sync with base currency
-  useEffect(() => {
-    setGlobalBaseCurrency(baseCurrency);
-  }, [baseCurrency]);
-
+  // Refresh-every-price implementation — registered with PricesFxContext
+  // so that context's refreshPrices can drive it. This is the one place
+  // that has both the holdings list AND the fetchPrices callback.
   const refreshPrices = useCallback(() => {
     if (holdings.length > 0) {
       fetchPrices(holdings, true);
     }
   }, [holdings, fetchPrices]);
 
-  // Fetch prices when holdings change
+  useEffect(() => {
+    registerRefresh(refreshPrices);
+  }, [refreshPrices, registerRefresh]);
+
+  // Fetch prices when the set of holdings (by ticker) changes
   const prevHoldingsKeyRef = useRef<string>('');
   useEffect(() => {
     const key = holdings.map((h) => `${h.assetType}:${h.ticker}`).join(',');
@@ -166,70 +147,54 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   // Auto-refresh every 5 minutes (pause when tab hidden)
   useEffect(() => {
     if (holdings.length === 0) return;
-
     const interval = setInterval(() => {
-      if (!document.hidden) {
-        fetchPrices(holdings);
-      }
+      if (!document.hidden) fetchPrices(holdings);
     }, 5 * 60 * 1000);
-
     return () => clearInterval(interval);
   }, [holdings, fetchPrices]);
 
   // All enriched holdings (net worth allocation)
   const allEnrichedHoldings = useMemo(
     () => enrichHoldings(holdings, priceCache, convertToBase),
-    [holdings, priceCache, convertToBase]
+    [holdings, priceCache, convertToBase],
   );
 
-  // Portfolio-only enriched holdings (portfolio allocation — always global)
+  // Portfolio-only enriched holdings
   const portfolioEnrichedHoldings = useMemo(
     () => enrichHoldings(holdings.filter((h) => h.inPortfolio), priceCache, convertToBase),
-    [holdings, priceCache, convertToBase]
+    [holdings, priceCache, convertToBase],
   );
 
   const portfolioSummary = useMemo(
     () => calculateSummary(portfolioEnrichedHoldings),
-    [portfolioEnrichedHoldings]
+    [portfolioEnrichedHoldings],
   );
 
-  // Filtered by active portfolio — ALWAYS restricted to inPortfolio holdings.
-  //
-  // Consumers of this accessor (Dashboard metrics, allocation pies, P&L cards,
-  // simulator) want the set of holdings a user tracks as *investments*, not
-  // net-worth-only assets like a house or car. Previously the "all" branch
-  // filtered to inPortfolio but the specific-bucket branch did not, causing
-  // "Portfolio Value" on a specific bucket to include NW-only items. Fix:
-  // filter by inPortfolio uniformly across scopes.
-  //
-  // The HoldingsTable has its own filter UI (All / Portfolio / Other Assets)
-  // and reads allEnrichedHoldings directly — it is unaffected by this change.
+  // Filtered by active portfolio — uniformly inPortfolio=true across scopes.
+  // See Phase 1C (#20) for the reasoning.
   const filteredEnrichedHoldings = useMemo(() => {
     if (activePortfolioId === 'all') return portfolioEnrichedHoldings;
     const filtered = holdings.filter(
-      (h) => h.portfolioId === activePortfolioId && h.inPortfolio
+      (h) => h.portfolioId === activePortfolioId && h.inPortfolio,
     );
     return enrichHoldings(filtered, priceCache, convertToBase);
   }, [activePortfolioId, holdings, priceCache, convertToBase, portfolioEnrichedHoldings]);
 
   const filteredPortfolioSummary = useMemo(
     () => calculateSummary(filteredEnrichedHoldings),
-    [filteredEnrichedHoldings]
+    [filteredEnrichedHoldings],
   );
 
   // Delete portfolio: move orphaned holdings AND transactions to default
   const deletePortfolio = useCallback(
     (id: string) => {
       if (id === DEFAULT_PORTFOLIO_ID) return;
-      // Move orphaned holdings to default portfolio
       holdings.forEach((h) => {
         if (h.portfolioId === id) {
           const { id: _hid, ...data } = h;
           updateHolding(h.id, { ...data, portfolioId: DEFAULT_PORTFOLIO_ID });
         }
       });
-      // Re-assign orphaned transactions to default portfolio
-      // (so realized P&L doesn't disappear when a portfolio is deleted)
       transactions.forEach((t) => {
         if (t.portfolioId === id) {
           const { id: _txnId, ...txnData } = t;
@@ -239,22 +204,17 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
       });
       deletePortfolioRaw(id);
     },
-    [holdings, updateHolding, deletePortfolioRaw, transactions, deleteTransaction, addTransaction]
+    [holdings, updateHolding, deletePortfolioRaw, transactions, deleteTransaction, addTransaction],
   );
 
   const netWorthSummary = useMemo(
     () => calculateNetWorthSummary(allEnrichedHoldings, customCategories, liabilities, convertToBase),
-    [allEnrichedHoldings, customCategories, liabilities, convertToBase]
+    [allEnrichedHoldings, customCategories, liabilities, convertToBase],
   );
 
-  const allCategories = useMemo(
-    () => [...DEFAULT_CATEGORIES, ...customCategories],
-    [customCategories]
-  );
-
-  // Realized P&L: sum of (sellPrice - costBasis) * shares for sell transactions,
-  // converted to base currency. Filtered by active portfolio using the transaction's
-  // own portfolioId metadata, falling back to matching against current holdings.
+  // Realized P&L — sum of (sellPrice - costBasis) * shares for sell
+  // transactions, converted to base currency. Filtered by active portfolio
+  // using the transaction's own portfolioId (schema v1 makes this required).
   const realizedPnl = useMemo(() => {
     const sellTxns = transactions.filter((t) => t.type === 'sell' && t.costBasisPerShare !== undefined);
 
@@ -268,48 +228,22 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
       return sellTxns.reduce((sum, t) => sum + computeGain(t), 0);
     }
 
-    // For specific portfolio: use transaction's stored portfolioId if available,
-    // otherwise fall back to matching against current holdings
-    const filteredSells = sellTxns.filter((t) => {
-      if (t.portfolioId) {
-        return t.portfolioId === activePortfolioId;
-      }
-      // Pre-schema-v1 fallback kept for transactions that were never
-      // rewritten (should be rare — migration 1 touches every transaction
-      // with a missing portfolioId).
-      return holdings.some(
-        (h) =>
-          h.ticker.toUpperCase() === t.ticker.toUpperCase() &&
-          h.portfolioId === activePortfolioId
-      );
-    });
-
+    const filteredSells = sellTxns.filter((t) => t.portfolioId === activePortfolioId);
     return filteredSells.reduce((sum, t) => sum + computeGain(t), 0);
-  }, [transactions, activePortfolioId, holdings, convertToBase]);
+  }, [transactions, activePortfolioId, convertToBase]);
 
   // Save daily snapshot with NW, portfolio, and liabilities values.
-  //
-  // We must never write a snapshot while prices are unknown for any
-  // API-backed holding — otherwise fresh installs or first-launch-after-reset
-  // scenarios would persist zeroed / buy-price-fallback values and permanently
-  // corrupt the net-worth history line.
-  //
-  // The rule:
-  //   - Every API-backed holding (stock, ETF, crypto, live metals) must have
-  //     a priceCache entry (any age — we just need to know at least one fetch
-  //     has succeeded for it since the user added it).
-  //   - If the portfolio contains zero API-backed holdings, there's nothing
-  //     to wait for; save immediately.
+  // See Phase 1A (#8) for the "wait for successful fetches" logic.
   const apiBackedHoldings = useMemo(
     () => holdings.filter((h) =>
       h.assetType === 'stock' || h.assetType === 'etf' || h.assetType === 'crypto' ||
       (h.assetType === 'metal' && (LIVE_METAL_TICKERS as readonly string[]).includes(h.ticker))
     ),
-    [holdings]
+    [holdings],
   );
   const allApiHoldingsFetched = useMemo(
     () => apiBackedHoldings.every((h) => priceCache[`${h.assetType}:${h.ticker}`] !== undefined),
-    [apiBackedHoldings, priceCache]
+    [apiBackedHoldings, priceCache],
   );
   const pricesReady = apiBackedHoldings.length === 0 || (allApiHoldingsFetched && !pricesLoading);
 
@@ -319,82 +253,35 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     }
   }, [pricesReady, allEnrichedHoldings.length, liabilities.length, netWorthSummary.totalNetWorth, netWorthSummary.totalPortfolioValue, netWorthSummary.totalLiabilities, saveSnapshot]);
 
-  const value: PortfolioContextValue = useMemo(() => ({
-    apiKey,
-    setApiKey,
-    hasApiKey,
-    holdings,
-    addHolding,
-    updateHolding,
-    deleteHolding,
-    restoreHolding,
-    allEnrichedHoldings,
-    netWorthSummary,
-    portfolioEnrichedHoldings,
-    portfolioSummary,
-    enrichedHoldings: allEnrichedHoldings,
-    summary: portfolioSummary,
-    snapshots,
-    addManualSnapshot,
-    deleteSnapshot,
-    priceCache,
-    pricesLoading,
-    priceError,
-    refreshPrices,
-    customCategories,
-    allCategories,
-    addCustomCategory,
-    deleteCustomCategory,
-    targetAllocations,
-    setTargetAllocation,
-    removeTargetAllocation,
-    transactions,
-    addTransaction,
-    deleteTransaction,
-    restoreTransaction,
-    realizedPnl,
-    benchmarkData,
-    benchmarkEnabled,
-    toggleBenchmark,
-    importBenchmarkCsv,
-    clearBenchmark,
-    getBenchmarkDateRange,
-    theme,
-    themePreference,
-    setTheme,
-    accentColor,
-    setAccentColor,
-    baseCurrency,
-    setBaseCurrency,
-    portfolios,
-    activePortfolioId,
-    setActivePortfolioId,
-    createPortfolio,
-    renamePortfolio,
-    deletePortfolio,
-    liabilities,
-    addLiability,
-    updateLiability,
-    deleteLiability,
-    filteredEnrichedHoldings,
-    filteredPortfolioSummary,
-  }), [
-    apiKey, setApiKey, hasApiKey, holdings, addHolding, updateHolding, deleteHolding, restoreHolding,
-    allEnrichedHoldings, netWorthSummary, portfolioEnrichedHoldings, portfolioSummary,
-    snapshots, addManualSnapshot, deleteSnapshot, priceCache, pricesLoading, priceError,
-    refreshPrices, customCategories, allCategories, addCustomCategory, deleteCustomCategory,
-    targetAllocations, setTargetAllocation, removeTargetAllocation, transactions, addTransaction,
-    deleteTransaction, restoreTransaction, realizedPnl, benchmarkData, benchmarkEnabled, toggleBenchmark,
-    importBenchmarkCsv, clearBenchmark, getBenchmarkDateRange, theme, themePreference, setTheme, accentColor,
-    setAccentColor, baseCurrency, setBaseCurrency, portfolios, activePortfolioId,
-    setActivePortfolioId, createPortfolio, renamePortfolio, deletePortfolio, liabilities,
-    addLiability, updateLiability, deleteLiability, filteredEnrichedHoldings, filteredPortfolioSummary,
-  ]);
+  const value: PortfolioContextValue = useMemo(
+    () => ({
+      holdings, addHolding, updateHolding, deleteHolding, restoreHolding,
+      allEnrichedHoldings, netWorthSummary,
+      portfolioEnrichedHoldings, portfolioSummary,
+      enrichedHoldings: allEnrichedHoldings,
+      summary: portfolioSummary,
+      snapshots, addManualSnapshot, deleteSnapshot,
+      transactions, addTransaction, deleteTransaction, restoreTransaction, realizedPnl,
+      portfolios, activePortfolioId, setActivePortfolioId, createPortfolio, renamePortfolio, deletePortfolio,
+      liabilities, addLiability, updateLiability, deleteLiability,
+      filteredEnrichedHoldings, filteredPortfolioSummary,
+    }),
+    [
+      holdings, addHolding, updateHolding, deleteHolding, restoreHolding,
+      allEnrichedHoldings, netWorthSummary,
+      portfolioEnrichedHoldings, portfolioSummary,
+      snapshots, addManualSnapshot, deleteSnapshot,
+      transactions, addTransaction, deleteTransaction, restoreTransaction, realizedPnl,
+      portfolios, activePortfolioId, setActivePortfolioId, createPortfolio, renamePortfolio, deletePortfolio,
+      liabilities, addLiability, updateLiability, deleteLiability,
+      filteredEnrichedHoldings, filteredPortfolioSummary,
+    ],
+  );
 
   return <PortfolioCtx.Provider value={value}>{children}</PortfolioCtx.Provider>;
 }
 
-export function usePortfolioContext() {
+export function usePortfolioContext(): PortfolioContextValue {
   const ctx = useContext(PortfolioCtx);
   if (!ctx) throw new Error('usePortfolioContext must be inside PortfolioProvider');
   return ctx;

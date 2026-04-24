@@ -3,7 +3,7 @@ import { Download, EyeOff, Eye } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { Modal } from './Modal';
 import { ShareCard } from './ShareCard';
-import { usePortfolioContext } from '../context/PortfolioContext';
+import { useSettings } from '../context/SettingsContext';
 import type { EnrichedHolding, NetWorthSummary, PortfolioSummary } from '../types';
 
 interface ShareImageModalProps {
@@ -14,7 +14,7 @@ interface ShareImageModalProps {
 }
 
 export function ShareImageModal({ netWorthSummary, portfolioSummary, topHoldings, onClose }: ShareImageModalProps) {
-  const { theme } = usePortfolioContext();
+  const { theme } = useSettings();
   const cardRef = useRef<HTMLDivElement>(null);
   const [anonymize, setAnonymize] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);

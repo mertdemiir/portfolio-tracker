@@ -2,6 +2,8 @@ import { useState, useRef } from 'react';
 import { Trash2, Plus, Key, Tag, Download, Upload, HardDrive, FileSpreadsheet, Sun, Moon, Stars, BarChart3, FolderOpen, Landmark, TerminalSquare, Database } from 'lucide-react';
 import { Modal } from './Modal';
 import { usePortfolioContext } from '../context/PortfolioContext';
+import { useSettings } from '../context/SettingsContext';
+import { usePricesFx } from '../context/PricesFxContext';
 import { useAutoBackup } from '../hooks/useAutoBackup';
 import { CsvImportModal } from './CsvImportModal';
 import { ManagePortfoliosModal } from './ManagePortfoliosModal';
@@ -30,7 +32,9 @@ export function SettingsModal({
   onDeleteCategory,
   onClose,
 }: SettingsModalProps) {
-  const { holdings, snapshots, theme, themePreference, setTheme, accentColor, setAccentColor, baseCurrency, setBaseCurrency, importBenchmarkCsv, clearBenchmark, getBenchmarkDateRange } = usePortfolioContext();
+  const { holdings, snapshots } = usePortfolioContext();
+  const { theme, themePreference, setTheme, accentColor, setAccentColor, baseCurrency, setBaseCurrency } = useSettings();
+  const { importBenchmarkCsv, clearBenchmark, getBenchmarkDateRange } = usePricesFx();
   const [keyInput, setKeyInput] = useState(apiKey);
   const [newCategoryLabel, setNewCategoryLabel] = useState('');
   const [keySaved, setKeySaved] = useState(false);

@@ -1,5 +1,5 @@
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { usePortfolioContext } from '../context/PortfolioContext';
+import { useSettings } from '../context/SettingsContext';
 import { getChartColors, getChartPalette } from '../hooks/useTheme';
 import type { EnrichedHolding } from '../types';
 import { formatCurrency } from '../utils/formatters';
@@ -9,7 +9,7 @@ interface AllocationPieChartProps {
 }
 
 export function AllocationPieChart({ holdings }: AllocationPieChartProps) {
-  const { theme } = usePortfolioContext();
+  const { theme } = useSettings();
   const cc = getChartColors(theme);
   const COLORS = getChartPalette(theme);
   const data = holdings.map((h) => ({

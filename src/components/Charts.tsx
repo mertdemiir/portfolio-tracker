@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { ChevronDown, ChevronRight, FileText, Bookmark, Plus } from 'lucide-react';
 import { usePortfolioContext } from '../context/PortfolioContext';
+import { usePricesFx } from '../context/PricesFxContext';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useAnnotations } from '../hooks/useAnnotations';
 import { PdfReportModal } from './PdfReportModal';
@@ -31,10 +32,8 @@ export function Charts() {
     filteredEnrichedHoldings,
     netWorthSummary,
     snapshots,
-    benchmarkData,
-    benchmarkEnabled,
-    toggleBenchmark,
   } = usePortfolioContext();
+  const { benchmarkData, benchmarkEnabled, toggleBenchmark } = usePricesFx();
 
   const [showHistory, setShowHistory] = useState(false);
   const [showPdfModal, setShowPdfModal] = useState(false);

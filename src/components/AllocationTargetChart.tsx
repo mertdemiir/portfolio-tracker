@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Settings2 } from 'lucide-react';
 import { usePortfolioContext } from '../context/PortfolioContext';
+import { useSettings } from '../context/SettingsContext';
 import { getChartColors } from '../hooks/useTheme';
 import { AllocationTargetEditor } from './AllocationTargetEditor';
 
 export function AllocationTargetChart() {
-  const { netWorthSummary, targetAllocations, allCategories, theme } = usePortfolioContext();
+  const { netWorthSummary } = usePortfolioContext();
+  const { targetAllocations, allCategories, theme } = useSettings();
   const cc = getChartColors(theme);
   const [showEditor, setShowEditor] = useState(false);
 

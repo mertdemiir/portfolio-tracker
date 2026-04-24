@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { WifiOff } from 'lucide-react';
-import { PortfolioProvider, usePortfolioContext } from './context/PortfolioContext';
+import { SettingsProvider, useSettings } from './context/SettingsContext';
+import { PricesFxProvider, usePricesFx } from './context/PricesFxContext';
+import { PortfolioProvider } from './context/PortfolioContext';
 import { Layout } from './components/Layout';
 import { SettingsModal } from './components/SettingsModal';
 import { Dashboard } from './components/Dashboard';
@@ -24,15 +26,8 @@ export interface NavFilter {
 }
 
 function AppContent() {
-  const {
-    apiKey,
-    setApiKey,
-    priceError,
-    customCategories,
-    addCustomCategory,
-    deleteCustomCategory,
-    priceCache,
-  } = usePortfolioContext();
+  const { apiKey, setApiKey, customCategories, addCustomCategory, deleteCustomCategory } = useSettings();
+  const { priceError, priceCache } = usePricesFx();
   const [activeTab, setActiveTab] = useState<TabId>('holdings');
   const [showSettings, setShowSettings] = useState(false);
   const [welcomeDismissed, setWelcomeDismissed] = useLocalStorage('welcome-dismissed', false);
@@ -143,8 +138,12 @@ function AppContent() {
 
 export default function App() {
   return (
-    <PortfolioProvider>
-      <AppContent />
-    </PortfolioProvider>
+    <SettingsProvider>
+      <PricesFxProvider>
+        <PortfolioProvider>
+          <AppContent />
+        </PortfolioProvider>
+      </PricesFxProvider>
+    </SettingsProvider>
   );
 }

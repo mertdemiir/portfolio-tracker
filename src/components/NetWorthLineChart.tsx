@@ -1,5 +1,5 @@
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Legend } from 'recharts';
-import { usePortfolioContext } from '../context/PortfolioContext';
+import { useSettings } from '../context/SettingsContext';
 import { getChartColors } from '../hooks/useTheme';
 import { formatMonthDay, formatLongDate } from '../utils/dateHelpers';
 import type { PortfolioSnapshot, NWMilestone, BenchmarkDataPoint, BenchmarkEnabled, BenchmarkId, TimeRange, TimelineAnnotation } from '../types';
@@ -73,7 +73,7 @@ export function NetWorthLineChart({
   annotations = [],
   showAnnotations = false,
 }: NetWorthLineChartProps) {
-  const { theme } = usePortfolioContext();
+  const { theme } = useSettings();
   const cc = getChartColors(theme);
   const showBenchmarks = benchmarkEnabled.spx || benchmarkEnabled.btc || benchmarkEnabled.gold;
 

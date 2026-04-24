@@ -1,5 +1,5 @@
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { usePortfolioContext } from '../context/PortfolioContext';
+import { useSettings } from '../context/SettingsContext';
 import { getChartColors } from '../hooks/useTheme';
 import { formatMonthDay, formatLongDate } from '../utils/dateHelpers';
 import type { PortfolioSnapshot } from '../types';
@@ -10,7 +10,7 @@ interface PortfolioLineChartProps {
 }
 
 export function PortfolioLineChart({ snapshots }: PortfolioLineChartProps) {
-  const { theme, baseCurrency } = usePortfolioContext();
+  const { theme, baseCurrency } = useSettings();
   const cc = getChartColors(theme);
   const withPortfolio = snapshots.filter((s) => s.portfolioValue != null);
 

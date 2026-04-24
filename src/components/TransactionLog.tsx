@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Plus, Trash2, X, Check, ArrowUpDown, MessageSquare } from 'lucide-react';
 import { BarChart, Bar, ResponsiveContainer, XAxis, Tooltip } from 'recharts';
 import { usePortfolioContext } from '../context/PortfolioContext';
-import { useFxRates } from '../hooks/useFxRates';
+import { usePricesFx } from '../context/PricesFxContext';
 import { formatCurrency, formatSignedCurrency, formatDate } from '../utils/formatters';
 import { formatMonthShortYear } from '../utils/dateHelpers';
 import { AddTransactionModal } from './AddTransactionModal';
@@ -25,8 +25,8 @@ interface TransactionLogProps {
 }
 
 export function TransactionLog({ initialFilter }: TransactionLogProps) {
-  const { transactions, deleteTransaction, restoreTransaction, holdings, updateHolding, deleteHolding, restoreHolding, realizedPnl, baseCurrency } = usePortfolioContext();
-  const { convertToBase } = useFxRates(baseCurrency);
+  const { transactions, deleteTransaction, restoreTransaction, holdings, updateHolding, deleteHolding, restoreHolding, realizedPnl } = usePortfolioContext();
+  const { convertToBase } = usePricesFx();
   const [showModal, setShowModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);

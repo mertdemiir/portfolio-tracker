@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
-import { usePortfolioContext } from '../context/PortfolioContext';
+import { useSettings } from '../context/SettingsContext';
 import { getChartColors, getChartPalette } from '../hooks/useTheme';
 import { formatCurrency } from '../utils/formatters';
 import type { EnrichedHolding } from '../types';
@@ -10,7 +10,7 @@ interface Props {
 }
 
 export function CurrencyExposureChart({ holdings }: Props) {
-  const { theme } = usePortfolioContext();
+  const { theme } = useSettings();
   const colors = getChartColors(theme);
   const CURRENCY_COLORS = getChartPalette(theme);
 

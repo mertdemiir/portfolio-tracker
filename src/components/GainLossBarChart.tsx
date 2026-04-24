@@ -1,5 +1,5 @@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
-import { usePortfolioContext } from '../context/PortfolioContext';
+import { useSettings } from '../context/SettingsContext';
 import { getChartColors } from '../hooks/useTheme';
 import type { EnrichedHolding } from '../types';
 import { formatCurrency } from '../utils/formatters';
@@ -9,7 +9,7 @@ interface GainLossBarChartProps {
 }
 
 export function GainLossBarChart({ holdings }: GainLossBarChartProps) {
-  const { theme } = usePortfolioContext();
+  const { theme } = useSettings();
   const cc = getChartColors(theme);
   const data = [...holdings]
     .sort((a, b) => b.gainLoss - a.gainLoss)

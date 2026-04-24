@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { DollarSign, TrendingUp, TrendingDown, Clock, Target, Plus, Trash2, Check, X, Share2, ChevronDown } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { usePortfolioContext } from '../context/PortfolioContext';
+import { useSettings } from '../context/SettingsContext';
+import { usePricesFx } from '../context/PricesFxContext';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useExchangeRate } from '../hooks/useExchangeRate';
 import { formatCurrency, formatSignedCurrency, formatPercent } from '../utils/formatters';
@@ -29,15 +31,14 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     filteredEnrichedHoldings,
     netWorthSummary,
     allEnrichedHoldings,
-    pricesLoading,
-    baseCurrency,
     activePortfolioId,
     portfolios,
     realizedPnl,
     snapshots,
     addHolding,
-    apiKey,
   } = usePortfolioContext();
+  const { baseCurrency, apiKey } = useSettings();
+  const { pricesLoading } = usePricesFx();
 
   const [milestones, setMilestones] = useLocalStorage<NWMilestone[]>('nw-milestones', []);
   const [addingMilestone, setAddingMilestone] = useState(false);

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { usePortfolioContext } from '../context/PortfolioContext';
+import { useSettings } from '../context/SettingsContext';
 import { getChartColors } from '../hooks/useTheme';
 import { formatMonthDay, formatLongDate } from '../utils/dateHelpers';
 import type { PortfolioSnapshot, TimeRange } from '../types';
@@ -12,7 +12,7 @@ interface Props {
 }
 
 export function DrawdownChart({ snapshots, timeRange }: Props) {
-  const { theme } = usePortfolioContext();
+  const { theme } = useSettings();
   const colors = getChartColors(theme);
 
   const data = useMemo(() => {

@@ -5,7 +5,8 @@ import { CryptoSearch } from './CryptoSearch';
 import { ApiKeyPrompt } from './ApiKeyPrompt';
 import { Modal } from './Modal';
 import { usePortfolioContext } from '../context/PortfolioContext';
-import { useFxRates } from '../hooks/useFxRates';
+import { useSettings } from '../context/SettingsContext';
+import { usePricesFx } from '../context/PricesFxContext';
 import { decideBuyFxRate } from '../utils/fxHelpers';
 import { formatCurrency } from '../utils/formatters';
 import { ASSET_TYPE_CONFIG, getDefaultCategory, DEFAULT_PORTFOLIO_ID, SUPPORTED_CURRENCIES } from '../types';
@@ -52,8 +53,9 @@ interface AddEditStockModalProps {
 }
 
 export function AddEditStockModal({ apiKey, holding, onSave, onClose, onEditExisting }: AddEditStockModalProps) {
-  const { allCategories, addCustomCategory, setApiKey, hasApiKey, addTransaction, portfolios, activePortfolioId, baseCurrency, holdings } = usePortfolioContext();
-  const { fxRates, convertToBase } = useFxRates(baseCurrency);
+  const { allCategories, addCustomCategory, setApiKey, hasApiKey, baseCurrency } = useSettings();
+  const { fxRates, convertToBase } = usePricesFx();
+  const { addTransaction, portfolios, activePortfolioId, holdings } = usePortfolioContext();
 
   const [assetType, setAssetType] = useState<AssetType>(holding?.assetType ?? 'stock');
   const [ticker, setTicker] = useState(holding?.ticker ?? '');

@@ -1,5 +1,5 @@
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { usePortfolioContext } from '../context/PortfolioContext';
+import { useSettings } from '../context/SettingsContext';
 import { getChartColors, getChartPalette } from '../hooks/useTheme';
 import type { CategoryBreakdown } from '../types';
 import { formatCurrency } from '../utils/formatters';
@@ -9,7 +9,7 @@ interface CategoryPieChartProps {
 }
 
 export function CategoryPieChart({ categoryBreakdown }: CategoryPieChartProps) {
-  const { theme } = usePortfolioContext();
+  const { theme } = useSettings();
   const cc = getChartColors(theme);
   const COLORS = getChartPalette(theme);
   const data = categoryBreakdown.map((cat) => ({

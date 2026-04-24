@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Modal } from './Modal';
 import { usePortfolioContext } from '../context/PortfolioContext';
-import { useFxRates } from '../hooks/useFxRates';
+import { useSettings } from '../context/SettingsContext';
+import { usePricesFx } from '../context/PricesFxContext';
 import { todayDateString, formatCurrency } from '../utils/formatters';
 import { DEFAULT_PORTFOLIO_ID } from '../types';
 
@@ -10,8 +11,9 @@ interface AddTransactionModalProps {
 }
 
 export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
-  const { holdings, addTransaction, updateHolding, deleteHolding, activePortfolioId, baseCurrency } = usePortfolioContext();
-  const { convertToBase, fxRates } = useFxRates(baseCurrency);
+  const { holdings, addTransaction, updateHolding, deleteHolding, activePortfolioId } = usePortfolioContext();
+  const { baseCurrency } = useSettings();
+  const { convertToBase, fxRates } = usePricesFx();
   const [date, setDate] = useState(todayDateString());
   const [ticker, setTicker] = useState('');
   const [name, setName] = useState('');

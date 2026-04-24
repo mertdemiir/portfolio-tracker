@@ -11,6 +11,8 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { usePortfolioContext } from '../context/PortfolioContext';
+import { useSettings } from '../context/SettingsContext';
+import { usePricesFx } from '../context/PricesFxContext';
 import { useHoldingOrder } from '../hooks/useHoldingOrder';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { HoldingRow } from './HoldingRow';
@@ -32,19 +34,15 @@ interface HoldingsTableProps {
 
 export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps) {
   const {
-    apiKey,
     allEnrichedHoldings,
     addHolding,
     updateHolding,
     deleteHolding,
-    pricesLoading,
-    refreshPrices,
-    allCategories,
-    priceCache,
     activePortfolioId,
     portfolios,
-    baseCurrency,
   } = usePortfolioContext();
+  const { apiKey, allCategories, baseCurrency } = useSettings();
+  const { pricesLoading, refreshPrices, priceCache } = usePricesFx();
 
   const { order: holdingOrder, syncOrder, reorder } = useHoldingOrder();
 

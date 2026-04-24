@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Modal } from './Modal';
 import { usePortfolioContext } from '../context/PortfolioContext';
+import { useSettings } from '../context/SettingsContext';
 import { LIABILITY_CATEGORIES, SUPPORTED_CURRENCIES } from '../types';
 import type { Liability, LiabilityCategory } from '../types';
 
@@ -10,7 +11,8 @@ interface AddEditLiabilityModalProps {
 }
 
 export function AddEditLiabilityModal({ liability, onClose }: AddEditLiabilityModalProps) {
-  const { addLiability, updateLiability, baseCurrency } = usePortfolioContext();
+  const { addLiability, updateLiability } = usePortfolioContext();
+  const { baseCurrency } = useSettings();
   const isEdit = !!liability;
 
   const [name, setName] = useState(liability?.name || '');

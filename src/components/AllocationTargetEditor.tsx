@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Check } from 'lucide-react';
 import { Modal } from './Modal';
-import { usePortfolioContext } from '../context/PortfolioContext';
+import { useSettings } from '../context/SettingsContext';
 
 interface AllocationTargetEditorProps {
   onClose: () => void;
@@ -9,7 +9,7 @@ interface AllocationTargetEditorProps {
 
 export function AllocationTargetEditor({ onClose }: AllocationTargetEditorProps) {
   const { allCategories, targetAllocations, setTargetAllocation, removeTargetAllocation } =
-    usePortfolioContext();
+    useSettings();
 
   const [values, setValues] = useState<Record<string, string>>(() => {
     const map: Record<string, string> = {};

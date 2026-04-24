@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { PlusCircle, Trash2, RefreshCw, ArrowUpDown } from 'lucide-react';
 import { useWatchlist } from '../hooks/useWatchlist';
-import { usePortfolioContext } from '../context/PortfolioContext';
+import { useSettings } from '../context/SettingsContext';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { AddWatchlistModal } from './AddWatchlistModal';
 import { fetchPriceForHolding, delay } from '../utils/api';
@@ -12,7 +12,7 @@ import type { PriceCache, Holding } from '../types';
 type SortKey = 'ticker' | 'price' | 'change' | 'changePercent' | 'addedDate';
 
 export function Watchlist() {
-  const { apiKey } = usePortfolioContext();
+  const { apiKey } = useSettings();
   const { items, addItem, deleteItem } = useWatchlist();
   const [priceCache, setPriceCache] = useLocalStorage<PriceCache>('watchlist-price-cache', {});
   const [loading, setLoading] = useState(false);

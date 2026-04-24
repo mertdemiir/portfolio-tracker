@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { ChevronDown, ChevronUp, Flame, TrendingUp, Shield, Zap } from 'lucide-react';
 import { usePortfolioContext } from '../context/PortfolioContext';
+import { useSettings } from '../context/SettingsContext';
 import { useFireSettings } from '../hooks/useFireSettings';
 import { getChartColors, getChartPalette } from '../hooks/useTheme';
 import { formatCurrency, formatCompactCurrency, formatPercent } from '../utils/formatters';
@@ -235,7 +236,8 @@ function MonteCarloTooltip({ active, payload, label, cc }: any) {
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 export function FirePage() {
-  const { netWorthSummary, theme } = usePortfolioContext();
+  const { netWorthSummary } = usePortfolioContext();
+  const { theme } = useSettings();
   const [settings, updateSettings] = useFireSettings();
   const [showSettings, setShowSettings] = useState(true);
 

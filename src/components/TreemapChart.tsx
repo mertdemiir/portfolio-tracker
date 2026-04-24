@@ -1,5 +1,5 @@
 import { Treemap, ResponsiveContainer, Tooltip } from 'recharts';
-import { usePortfolioContext } from '../context/PortfolioContext';
+import { useSettings } from '../context/SettingsContext';
 import { getChartColors } from '../hooks/useTheme';
 import { formatCurrency, formatPercent } from '../utils/formatters';
 import type { EnrichedHolding } from '../types';
@@ -49,7 +49,7 @@ function CustomContent(props: TreemapNodeProps) {
 }
 
 export function TreemapChart({ holdings }: Props) {
-  const { theme } = usePortfolioContext();
+  const { theme } = useSettings();
   const colors = getChartColors(theme);
 
   const data = holdings

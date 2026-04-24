@@ -50,7 +50,7 @@ import type {
 interface PortfolioContextValue {
   // Holdings
   holdings: Holding[];
-  addHolding: (data: Omit<Holding, 'id'>) => void;
+  addHolding: (data: Omit<Holding, 'id'>) => string;
   updateHolding: (id: string, data: Omit<Holding, 'id'>) => void;
   deleteHolding: (id: string) => void;
   restoreHolding: (holding: Holding) => void;

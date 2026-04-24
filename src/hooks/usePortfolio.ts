@@ -54,8 +54,10 @@ export function usePortfolio() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const addHolding = useCallback(
-    (data: Omit<Holding, 'id'>) => {
-      setHoldings((prev) => [...prev, { ...data, id: uuidv4() }]);
+    (data: Omit<Holding, 'id'>): string => {
+      const id = uuidv4();
+      setHoldings((prev) => [...prev, { ...data, id }]);
+      return id;
     },
     [setHoldings]
   );

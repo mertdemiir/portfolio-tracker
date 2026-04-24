@@ -111,13 +111,15 @@ export function removeCached(key: string): void {
 }
 
 /**
- * Test-only: clears the cache and the hydration flag so a fresh
- * hydrateStore() can run. Does NOT touch the underlying adapter storage
- * — tests that want a clean backing store should clear it themselves.
+ * Test-only: clears the cache and rebinds to a fresh LocalStorage adapter.
+ * Leaves the `hydrated` flag set to true with an empty cache so tests
+ * that read managed keys via hooks don't trip the pre-hydration warning.
+ * Tests that want to simulate a hydration-from-storage cycle can call
+ * resetCacheForTests({ hydrated: false }) and then await hydrateStore().
  */
-export function resetCacheForTests(): void {
+export function resetCacheForTests(opts: { hydrated?: boolean } = {}): void {
   cache.clear();
   warnedKeys.clear();
-  hydrated = false;
+  hydrated = opts.hydrated ?? true;
   activeAdapter = new LocalStorageAdapter();
 }

@@ -15,7 +15,9 @@ import type { StorageAdapter } from '../types';
 describe('hydration layer', () => {
   beforeEach(() => {
     localStorage.clear();
-    resetCacheForTests();
+    // This suite specifically exercises the pre-hydration → post-hydration
+    // lifecycle. Reset to unhydrated state to verify each transition.
+    resetCacheForTests({ hydrated: false });
   });
 
   it('defaults to LocalStorageAdapter', () => {

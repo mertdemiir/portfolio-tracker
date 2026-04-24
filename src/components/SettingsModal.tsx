@@ -1,12 +1,14 @@
 import { useState, useRef } from 'react';
-import { Trash2, Plus, Key, Tag, Download, Upload, HardDrive, FileSpreadsheet, Sun, Moon, Stars, BarChart3, FolderOpen, Landmark, TerminalSquare } from 'lucide-react';
+import { Trash2, Plus, Key, Tag, Download, Upload, HardDrive, FileSpreadsheet, Sun, Moon, Stars, BarChart3, FolderOpen, Landmark, TerminalSquare, Database } from 'lucide-react';
 import { Modal } from './Modal';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { useAutoBackup } from '../hooks/useAutoBackup';
 import { CsvImportModal } from './CsvImportModal';
 import { ManagePortfoliosModal } from './ManagePortfoliosModal';
 import { gatherBackupData, parseBackup, serializeBackup } from '../data/backup';
-import { updateAppMeta } from '../data/schema';
+import { updateAppMeta, readAppMeta } from '../data/schema';
+import { switchBackend } from '../data/store/backendSwitch';
+import { getAdapter } from '../data/store/hydration';
 import { formatMonthYear } from '../utils/dateHelpers';
 import type { CustomCategory, ThemeId, BenchmarkId } from '../types';
 import { BENCHMARK_CONFIG, ACCENT_PRESETS, SUPPORTED_CURRENCIES } from '../types';
@@ -38,6 +40,41 @@ export function SettingsModal({
   const [benchmarkStatus, setBenchmarkStatus] = useState<Record<string, string>>({});
   const benchmarkFileRefs = useRef<Record<string, HTMLInputElement | null>>({ spx: null, btc: null, gold: null });
   const { settings: autoBackupSettings, setEnabled: setAutoEnabled, setFrequency: setAutoFrequency, chooseFolder: chooseAutoFolder } = useAutoBackup();
+
+  // Storage backend switch state
+  const [currentBackend, setCurrentBackend] = useState(() => readAppMeta().dataBackend);
+  const [switching, setSwitching] = useState(false);
+  const [switchStatus, setSwitchStatus] = useState<{ kind: 'success' | 'error'; message: string } | null>(null);
+
+  async function handleSwitchBackend(target: 'localStorage' | 'indexedDB') {
+    if (target === currentBackend) return;
+    const confirmMsg =
+      `This will copy your portfolio data from ${currentBackend} to ${target}. ` +
+      `A backup file will be saved first. After the copy succeeds, the app will reload.` +
+      `\n\nYour original data in ${currentBackend} is left intact so you can roll back anytime.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setSwitching(true);
+    setSwitchStatus(null);
+    try {
+      const result = await switchBackend(target, { backup: 'required', source: getAdapter() });
+      if (result.ok) {
+        setSwitchStatus({ kind: 'success', message: result.message });
+        // Give the user a moment to read the message, then reload
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        setSwitchStatus({ kind: 'error', message: result.message });
+      }
+    } catch (err) {
+      setSwitchStatus({
+        kind: 'error',
+        message: `Unexpected error: ${err instanceof Error ? err.message : String(err)}`,
+      });
+    } finally {
+      setSwitching(false);
+      setCurrentBackend(readAppMeta().dataBackend);
+    }
+  }
 
   const isElectron = !!window.electronAPI;
 
@@ -529,6 +566,59 @@ export function SettingsModal({
             )}
           </div>
         )}
+
+        {/* Storage Backend (Advanced) */}
+        <div className="mt-6">
+          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-b-subtle">
+            <Database className="w-4 h-4 text-t-muted" aria-hidden="true" />
+            <h3 className="text-sm font-semibold text-t-primary">Storage Backend <span className="text-xs font-normal text-t-faint ml-1">Advanced</span></h3>
+          </div>
+          <p className="text-xs text-t-faint mb-3">
+            Currently storing data in <span className="font-semibold text-t-secondary">{currentBackend === 'indexedDB' ? 'IndexedDB' : 'localStorage'}</span>.
+            IndexedDB has a larger capacity and doesn't block the main thread on writes.
+            Switching saves a backup first and leaves the previous backend untouched so you can roll back.
+          </p>
+          <div className="flex items-center gap-2 mb-2">
+            <button
+              type="button"
+              disabled={switching || currentBackend === 'localStorage'}
+              onClick={() => handleSwitchBackend('localStorage')}
+              className={`px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                currentBackend === 'localStorage'
+                  ? 'bg-accent/15 text-accent cursor-default'
+                  : 'bg-surface-alt text-t-secondary hover:bg-surface-active disabled:opacity-50'
+              }`}
+            >
+              localStorage{currentBackend === 'localStorage' && ' (current)'}
+            </button>
+            <button
+              type="button"
+              disabled={switching || currentBackend === 'indexedDB'}
+              onClick={() => handleSwitchBackend('indexedDB')}
+              className={`px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                currentBackend === 'indexedDB'
+                  ? 'bg-accent/15 text-accent cursor-default'
+                  : 'bg-surface-alt text-t-secondary hover:bg-surface-active disabled:opacity-50'
+              }`}
+            >
+              IndexedDB{currentBackend === 'indexedDB' && ' (current)'}
+            </button>
+            {switching && (
+              <span className="text-xs text-t-muted flex items-center gap-1.5">
+                <div className="w-3 h-3 border-2 border-b-input border-t-accent rounded-full animate-spin" aria-hidden="true" />
+                Migrating…
+              </span>
+            )}
+          </div>
+          {switchStatus && (
+            <p
+              role="alert"
+              className={`text-xs mt-2 ${switchStatus.kind === 'success' ? 'text-gain' : 'text-loss'}`}
+            >
+              {switchStatus.message}
+            </p>
+          )}
+        </div>
 
         {/* Portfolios Section */}
         <div className="mt-6">

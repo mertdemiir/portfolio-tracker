@@ -39,6 +39,7 @@ describe('schema', () => {
       lastBackupAt: '2026-01-01T00:00:00Z',
       history: [{ toVersion: 1, ranAt: 'now', success: true }],
       preUpdateAckVersion: '1.2.3',
+      dataBackend: 'localStorage',
     });
     const meta = readAppMeta();
     expect(meta.schemaVersion).toBe(3);
@@ -53,6 +54,7 @@ describe('schema', () => {
       lastBackupAt: null,
       history: [],
       preUpdateAckVersion: null,
+      dataBackend: 'localStorage',
     });
     updateAppMeta({ lastBackupAt: '2026-01-02T00:00:00Z' });
     const meta = readAppMeta();

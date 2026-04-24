@@ -22,6 +22,18 @@ export interface MigrationRecord {
   backupKey?: string;
 }
 
+/**
+ * Which storage backend the managed big-store keys live on.
+ *   'localStorage' — the default; sync reads, ~5 MB cap.
+ *   'indexedDB'    — opt-in via Settings > Advanced. Larger cap, non-blocking.
+ *
+ * Switching is user-driven via switchBackend(), which runs a backup +
+ * copy + verify cycle before updating this flag. If the flag disagrees
+ * with reality at boot (e.g. IDB disabled by browser), main.tsx falls
+ * back to localStorage and corrects the flag.
+ */
+export type DataBackend = 'localStorage' | 'indexedDB';
+
 export interface AppMeta {
   /** Current schema version the stored data conforms to */
   schemaVersion: number;
@@ -33,6 +45,8 @@ export interface AppMeta {
   history: MigrationRecord[];
   /** Whether the user has acknowledged the pre-update backup prompt for `lastAppVersion` */
   preUpdateAckVersion: string | null;
+  /** Which storage backend the big-store keys live on. */
+  dataBackend: DataBackend;
 }
 
 export const APP_META_KEY = 'app-meta';
@@ -49,6 +63,7 @@ const EMPTY_META: AppMeta = {
   lastBackupAt: null,
   history: [],
   preUpdateAckVersion: null,
+  dataBackend: 'localStorage',
 };
 
 /**
@@ -67,6 +82,7 @@ export function readAppMeta(): AppMeta {
       lastBackupAt: typeof parsed.lastBackupAt === 'string' ? parsed.lastBackupAt : null,
       history: Array.isArray(parsed.history) ? parsed.history : [],
       preUpdateAckVersion: typeof parsed.preUpdateAckVersion === 'string' ? parsed.preUpdateAckVersion : null,
+      dataBackend: parsed.dataBackend === 'indexedDB' ? 'indexedDB' : 'localStorage',
     };
   } catch {
     return { ...EMPTY_META };

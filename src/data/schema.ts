@@ -66,8 +66,17 @@ export const APP_META_KEY = 'app-meta';
  *       watchlist now shares the same price-cache table as the portfolio,
  *       so if the same ticker is in both, only one fetch is needed.
  *       The old watchlist-price-cache key is deleted after merge.
+ *   3 — v1.3.0. Transactions become a first-class ledger. For every
+ *       existing Holding that has no matching buy Transaction, synthesize
+ *       one from the holding's buyPrice/shares/buyDate so the
+ *       Holding ↔ buy-Transaction parity is 1:1 from now on. Also
+ *       backfills `holdingId` on existing Transactions when a unique
+ *       holding match exists for (ticker, portfolioId). Holdings remain
+ *       authoritative for cost basis in v1.3.0 — this migration only
+ *       establishes the ledger so a future release can flip the source
+ *       of truth without data loss.
  */
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 3;
 
 const EMPTY_META: AppMeta = {
   schemaVersion: 0,

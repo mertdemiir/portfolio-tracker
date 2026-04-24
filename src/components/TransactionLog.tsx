@@ -8,8 +8,29 @@ import { formatMonthShortYear } from '../utils/dateHelpers';
 import { AddTransactionModal } from './AddTransactionModal';
 import { UndoToast } from './UndoToast';
 import { v4 as uuidv4 } from 'uuid';
-import type { Transaction, Holding } from '../types';
+import type { Transaction, Holding, TransactionType } from '../types';
 import type { NavFilter } from '../App';
+
+type FilterType = 'all' | TransactionType;
+
+const FILTER_OPTIONS: { id: FilterType; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'buy', label: 'Buy' },
+  { id: 'sell', label: 'Sell' },
+  { id: 'deposit', label: 'Deposit' },
+  { id: 'withdrawal', label: 'Withdrawal' },
+  { id: 'interest', label: 'Interest' },
+  { id: 'correction', label: 'Correction' },
+];
+
+const TYPE_BADGE_CLASSES: Record<TransactionType, string> = {
+  buy: 'bg-emerald-500/10 text-emerald-600',
+  sell: 'bg-red-500/10 text-red-600',
+  deposit: 'bg-emerald-500/10 text-emerald-700',
+  withdrawal: 'bg-amber-500/10 text-amber-700',
+  interest: 'bg-blue-500/10 text-blue-600',
+  correction: 'bg-slate-500/10 text-slate-700',
+};
 
 type SortKey = 'date' | 'ticker' | 'type' | 'total';
 
@@ -31,7 +52,7 @@ export function TransactionLog({ initialFilter }: TransactionLogProps) {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const [filterType, setFilterType] = useState<'all' | 'buy' | 'sell'>('all');
+  const [filterType, setFilterType] = useState<FilterType>('all');
   const [filterTicker, setFilterTicker] = useState(initialFilter?.ticker || '');
   const [sortKey, setSortKey] = useState<SortKey>('date');
   const [sortAsc, setSortAsc] = useState(false);
@@ -327,20 +348,27 @@ export function TransactionLog({ initialFilter }: TransactionLogProps) {
       {/* Filters & Table */}
       <div className="bg-surface-card card-radius border border-b-default overflow-hidden">
         <div className="flex flex-wrap items-center gap-3 p-5 pb-4">
-          <div className="flex bg-surface-alt rounded-lg p-0.5">
-            {(['all', 'buy', 'sell'] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setFilterType(t)}
-                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors capitalize ${
-                  filterType === t
-                    ? 'bg-surface-card text-t-primary shadow-sm'
-                    : 'text-t-muted hover:text-t-secondary'
-                }`}
-              >
-                {t}
-              </button>
-            ))}
+          <div className="flex flex-wrap bg-surface-alt rounded-lg p-0.5 gap-0.5">
+            {FILTER_OPTIONS.map((opt) => {
+              // Hide a filter chip if no transactions of that type exist yet.
+              // Always show 'all', 'buy', 'sell' so the core set is visible.
+              const coreTypes: FilterType[] = ['all', 'buy', 'sell'];
+              const hasAny = opt.id === 'all' || transactions.some((t) => t.type === opt.id);
+              if (!coreTypes.includes(opt.id) && !hasAny) return null;
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => setFilterType(opt.id)}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                    filterType === opt.id
+                      ? 'bg-surface-card text-t-primary shadow-sm'
+                      : 'text-t-muted hover:text-t-secondary'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
           </div>
           <input
             type="text"
@@ -382,9 +410,7 @@ export function TransactionLog({ initialFilter }: TransactionLogProps) {
                     <td className="py-2">
                       <span
                         className={`inline-block px-2 py-0.5 rounded-md text-[11px] font-semibold ${
-                          t.type === 'buy'
-                            ? 'bg-emerald-500/10 text-emerald-600'
-                            : 'bg-red-500/10 text-red-600'
+                          TYPE_BADGE_CLASSES[t.type]
                         }`}
                       >
                         {t.type.toUpperCase()}

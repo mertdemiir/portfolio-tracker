@@ -51,7 +51,7 @@ export function ManagePortfoliosModal({ onClose }: ManagePortfoliosModalProps) {
     <Modal title="Manage Portfolios" onClose={onClose} size="sm">
       <div className="space-y-2 mb-4">
           {portfolios.map((p) => {
-            const count = holdings.filter((h) => (h.portfolioId || DEFAULT_PORTFOLIO_ID) === p.id).length;
+            const count = holdings.filter((h) => h.portfolioId === p.id).length;
             const isDefault = p.id === DEFAULT_PORTFOLIO_ID;
             const isEditing = editingId === p.id;
 

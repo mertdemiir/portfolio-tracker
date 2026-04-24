@@ -87,9 +87,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose, onEditExis
     const tickerNorm = ticker.trim().toUpperCase();
     if (!tickerNorm) return null;
     const match = holdings.find(
-      (h) =>
-        h.ticker.toUpperCase() === tickerNorm &&
-        (h.portfolioId || DEFAULT_PORTFOLIO_ID) === portfolioId
+      (h) => h.ticker.toUpperCase() === tickerNorm && h.portfolioId === portfolioId
     );
     return match ?? null;
   }, [holdings, ticker, portfolioId, isEdit]);
@@ -174,7 +172,7 @@ export function AddEditStockModal({ apiKey, holding, onSave, onClose, onEditExis
         currency: currency || 'USD',
         assetType,
         category,
-        portfolioId: portfolioId || DEFAULT_PORTFOLIO_ID,
+        portfolioId,
       });
     }
   }

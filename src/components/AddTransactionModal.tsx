@@ -57,7 +57,7 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
     const allMatches = holdings.filter((h) => h.ticker.toUpperCase() === tickerNorm);
     const match = activePortfolioId === 'all'
       ? allMatches[0] || null
-      : allMatches.find((h) => (h.portfolioId || DEFAULT_PORTFOLIO_ID) === activePortfolioId) || null;
+      : allMatches.find((h) => h.portfolioId === activePortfolioId) || null;
 
     // Sell validation: must have a matching holding with enough shares
     if (type === 'sell') {
@@ -71,6 +71,13 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
       }
     }
 
+    // Transactions are required to have a portfolioId (schema v1). If
+    // the user is in the "all" scope and there's no matched holding, we
+    // attribute the transaction to the default portfolio so the data
+    // shape stays valid.
+    const txnPortfolioId = match?.portfolioId
+      ?? (activePortfolioId !== 'all' ? activePortfolioId : DEFAULT_PORTFOLIO_ID);
+
     addTransaction({
       date,
       ticker: tickerNorm,
@@ -79,13 +86,13 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
       shares: s,
       pricePerShare: p,
       total: s * p,
+      portfolioId: txnPortfolioId,
       ...(notes.trim() && { notes: notes.trim() }),
       ...(type === 'sell' && match ? {
         costBasisPerShare: match.buyPrice,
         assetType: match.assetType,
         category: match.category,
         currency: match.currency,
-        portfolioId: match.portfolioId,
       } : {}),
     });
     if (match) {

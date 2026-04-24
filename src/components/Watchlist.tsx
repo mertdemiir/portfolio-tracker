@@ -43,6 +43,7 @@ export function Watchlist() {
           coinGeckoId: item.coinGeckoId,
           inPortfolio: false,
           category: 'other',
+          portfolioId: 'default',
         };
         const key = `${item.assetType}:${item.ticker}`;
         const quote = await fetchPriceForHolding(fakeHolding, apiKey);

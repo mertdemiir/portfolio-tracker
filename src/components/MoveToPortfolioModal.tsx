@@ -12,7 +12,7 @@ interface MoveToPortfolioModalProps {
 export function MoveToPortfolioModal({ holding, onClose }: MoveToPortfolioModalProps) {
   const { portfolios, holdings, updateHolding } = usePortfolioContext();
 
-  const currentPortfolioId = holding.portfolioId || DEFAULT_PORTFOLIO_ID;
+  const currentPortfolioId = holding.portfolioId;
 
   function handleMove(targetPortfolioId: string) {
     // Look up the original (non-enriched) holding from context

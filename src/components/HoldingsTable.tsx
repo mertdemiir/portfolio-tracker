@@ -19,7 +19,7 @@ import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { MoveToPortfolioModal } from './MoveToPortfolioModal';
 import { EmptyState } from './EmptyState';
 import type { Holding, EnrichedHolding, AssetType, TabId } from '../types';
-import { ASSET_TYPE_CONFIG, DEFAULT_PORTFOLIO_ID } from '../types';
+import { ASSET_TYPE_CONFIG } from '../types';
 import type { NavFilter } from '../App';
 
 type SortKey = 'ticker' | 'marketValue' | 'gainLoss' | 'gainLossPercent' | 'allocation' | 'dailyChange' | 'custom';
@@ -92,7 +92,7 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
     let list = allEnrichedHoldings;
     // Filter by active portfolio
     if (activePortfolioId !== 'all') {
-      list = list.filter((h) => (h.portfolioId || DEFAULT_PORTFOLIO_ID) === activePortfolioId);
+      list = list.filter((h) => h.portfolioId === activePortfolioId);
     }
     if (filterMode === 'portfolio') list = list.filter((h) => h.inPortfolio);
     if (filterMode === 'other') list = list.filter((h) => !h.inPortfolio);

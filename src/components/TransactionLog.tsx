@@ -8,7 +8,6 @@ import { formatMonthShortYear } from '../utils/dateHelpers';
 import { AddTransactionModal } from './AddTransactionModal';
 import { UndoToast } from './UndoToast';
 import { v4 as uuidv4 } from 'uuid';
-import { DEFAULT_PORTFOLIO_ID } from '../types';
 import type { Transaction, Holding } from '../types';
 import type { NavFilter } from '../App';
 
@@ -66,8 +65,8 @@ export function TransactionLog({ initialFilter }: TransactionLogProps) {
 
     // Find matching holding (same logic as before)
     const allMatches = holdings.filter((h) => h.ticker.toUpperCase() === t.ticker.toUpperCase());
-    const txnPortfolioId = t.portfolioId || DEFAULT_PORTFOLIO_ID;
-    const match = allMatches.find((h) => (h.portfolioId || DEFAULT_PORTFOLIO_ID) === txnPortfolioId)
+    const txnPortfolioId = t.portfolioId;
+    const match = allMatches.find((h) => h.portfolioId === txnPortfolioId)
       || allMatches[0]
       || null;
 
@@ -116,8 +115,8 @@ export function TransactionLog({ initialFilter }: TransactionLogProps) {
         assetType: t.assetType ?? 'stock',
         inPortfolio: true,
         category: t.category ?? 'investments',
+        portfolioId: t.portfolioId,
         ...(t.currency ? { currency: t.currency } : {}),
-        ...(t.portfolioId ? { portfolioId: t.portfolioId } : {}),
       });
       holdingAction = 'created';
     }

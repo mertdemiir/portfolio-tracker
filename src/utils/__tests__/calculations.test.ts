@@ -13,6 +13,7 @@ describe('calculations smoke tests', () => {
     assetType: 'stock',
     inPortfolio: true,
     category: 'investments',
+    portfolioId: 'default',
   };
 
   const prices: PriceCache = {

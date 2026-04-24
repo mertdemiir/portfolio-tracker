@@ -16,7 +16,13 @@ export interface Holding {
   skipStaleCheck?: boolean;
   isFavorite?: boolean;
   currency?: string; // ISO 4217, default 'USD'
-  portfolioId?: string; // undefined = default portfolio
+  /**
+   * Portfolio bucket this holding belongs to. Required post-schema-v1
+   * (see migrations.ts) — the v1 migration backfills DEFAULT_PORTFOLIO_ID
+   * where it was previously undefined, so `|| DEFAULT_PORTFOLIO_ID`
+   * fallbacks across the app are no longer necessary.
+   */
+  portfolioId: string;
   buyFxRate?: number; // conversion factor at purchase time: 1 unit of holding currency = buyFxRate units of base currency
 }
 
@@ -79,7 +85,12 @@ export interface Transaction {
   assetType?: AssetType;
   category?: string;
   currency?: string;
-  portfolioId?: string;
+  /**
+   * Portfolio bucket this transaction belongs to. Required post-
+   * schema-v1 migration (backfilled to DEFAULT_PORTFOLIO_ID for legacy
+   * transactions that had it undefined).
+   */
+  portfolioId: string;
 }
 
 export interface FinnhubSearchResult {

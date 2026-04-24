@@ -4,6 +4,7 @@ import { Modal } from './Modal';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { parseCsv, autoDetectMapping, HOLDING_FIELD_ALIASES, TRANSACTION_FIELD_ALIASES } from '../utils/csvParser';
 import { todayDateString } from '../utils/formatters';
+import { DEFAULT_PORTFOLIO_ID } from '../types';
 import type { CsvImportMode } from '../types';
 
 interface CsvImportModalProps {
@@ -169,6 +170,7 @@ export function CsvImportModal({ onClose }: CsvImportModalProps) {
           assetType: mappedAssetType,
           inPortfolio: true,
           category: mappedCategory,
+          portfolioId: DEFAULT_PORTFOLIO_ID,
         });
         imported++;
       } else {
@@ -181,7 +183,7 @@ export function CsvImportModal({ onClose }: CsvImportModalProps) {
         const totalRaw = parseFloat(getRowValue(row, 'total'));
         const total = isNaN(totalRaw) ? shares * pricePerShare : totalRaw;
         const notes = getRowValue(row, 'notes').trim() || undefined;
-        addTransaction({ date, ticker, name, type, shares, pricePerShare, total, notes });
+        addTransaction({ date, ticker, name, type, shares, pricePerShare, total, notes, portfolioId: DEFAULT_PORTFOLIO_ID });
         imported++;
       }
     }

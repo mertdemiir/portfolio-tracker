@@ -54,8 +54,16 @@ export const APP_META_KEY = 'app-meta';
 /**
  * The schema version this build of the app expects.
  * Bump this whenever you add a migration.
+ *
+ * History:
+ *   0 — v1.0.0–v1.1.0. Pre-migration-runner. Data shapes as originally
+ *       shipped.
+ *   1 — v1.2.0. Normalizes portfolioId on every Holding + Transaction
+ *       to DEFAULT_PORTFOLIO_ID when previously undefined. After this,
+ *       portfolioId is always a string — the `|| DEFAULT_PORTFOLIO_ID`
+ *       fallbacks sprinkled across the app become unnecessary.
  */
-export const CURRENT_SCHEMA_VERSION = 0;
+export const CURRENT_SCHEMA_VERSION = 1;
 
 const EMPTY_META: AppMeta = {
   schemaVersion: 0,

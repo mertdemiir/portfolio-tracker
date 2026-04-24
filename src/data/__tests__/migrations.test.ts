@@ -7,11 +7,14 @@ describe('migrations runner', () => {
     localStorage.clear();
   });
 
-  it('initializes app-meta on first run when no data exists', async () => {
+  it('initializes app-meta on first run to CURRENT_SCHEMA_VERSION when no data exists', async () => {
     const result = await runMigrations();
     expect(result.failed).toBeNull();
     const meta = readAppMeta();
-    expect(meta.schemaVersion).toBe(0);
+    // Fresh installs skip straight to the latest schema — no need to run
+    // data migrations on an empty store. CURRENT_SCHEMA_VERSION bumps
+    // with each release that adds a migration.
+    expect(meta.schemaVersion).toBeGreaterThanOrEqual(1);
   });
 
   it('does not re-initialize app-meta if already present', async () => {

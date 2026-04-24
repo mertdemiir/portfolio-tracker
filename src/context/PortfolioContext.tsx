@@ -207,9 +207,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const filteredEnrichedHoldings = useMemo(() => {
     if (activePortfolioId === 'all') return portfolioEnrichedHoldings;
     const filtered = holdings.filter(
-      (h) =>
-        (h.portfolioId || DEFAULT_PORTFOLIO_ID) === activePortfolioId &&
-        h.inPortfolio
+      (h) => h.portfolioId === activePortfolioId && h.inPortfolio
     );
     return enrichHoldings(filtered, priceCache, convertToBase);
   }, [activePortfolioId, holdings, priceCache, convertToBase, portfolioEnrichedHoldings]);
@@ -225,7 +223,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
       if (id === DEFAULT_PORTFOLIO_ID) return;
       // Move orphaned holdings to default portfolio
       holdings.forEach((h) => {
-        if ((h.portfolioId || DEFAULT_PORTFOLIO_ID) === id) {
+        if (h.portfolioId === id) {
           const { id: _hid, ...data } = h;
           updateHolding(h.id, { ...data, portfolioId: DEFAULT_PORTFOLIO_ID });
         }
@@ -276,11 +274,13 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
       if (t.portfolioId) {
         return t.portfolioId === activePortfolioId;
       }
-      // Fallback for older transactions without portfolioId metadata
+      // Pre-schema-v1 fallback kept for transactions that were never
+      // rewritten (should be rare — migration 1 touches every transaction
+      // with a missing portfolioId).
       return holdings.some(
         (h) =>
           h.ticker.toUpperCase() === t.ticker.toUpperCase() &&
-          (h.portfolioId || DEFAULT_PORTFOLIO_ID) === activePortfolioId
+          h.portfolioId === activePortfolioId
       );
     });
 

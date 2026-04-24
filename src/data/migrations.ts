@@ -32,8 +32,66 @@ export type Migration = () => void | Promise<void>;
  * E.g. MIGRATIONS[1] advances the schema from version 0 to version 1.
  */
 const MIGRATIONS: Record<number, Migration> = {
-  // Migrations are added in later phases. Phase 0 has no data migrations —
-  // it only introduces the app-meta record itself.
+  /**
+   * v0 → v1: Normalize portfolioId.
+   *
+   * Every Holding and Transaction previously allowed portfolioId to be
+   * undefined, with `|| DEFAULT_PORTFOLIO_ID` fallbacks smeared across
+   * hooks, context, and modals. This migration fills in the default so
+   * the type can be tightened to `portfolioId: string` (non-optional)
+   * post-migration.
+   *
+   * Idempotent: re-running it on already-normalized data is a no-op.
+   * Touches only the portfolioId field; no other data is modified.
+   */
+  1: () => {
+    const DEFAULT_PORTFOLIO_ID = 'default';
+
+    // Holdings
+    try {
+      const raw = localStorage.getItem('portfolio-holdings');
+      if (raw) {
+        const holdings = JSON.parse(raw);
+        if (Array.isArray(holdings)) {
+          let changed = false;
+          for (const h of holdings) {
+            if (h && typeof h === 'object' && (h.portfolioId === undefined || h.portfolioId === null || h.portfolioId === '')) {
+              h.portfolioId = DEFAULT_PORTFOLIO_ID;
+              changed = true;
+            }
+          }
+          if (changed) {
+            localStorage.setItem('portfolio-holdings', JSON.stringify(holdings));
+          }
+        }
+      }
+    } catch {
+      // Non-fatal: malformed data gets left alone. The app's own defensive
+      // reads handle whatever shape it's in.
+    }
+
+    // Transactions
+    try {
+      const raw = localStorage.getItem('transactions');
+      if (raw) {
+        const txns = JSON.parse(raw);
+        if (Array.isArray(txns)) {
+          let changed = false;
+          for (const t of txns) {
+            if (t && typeof t === 'object' && (t.portfolioId === undefined || t.portfolioId === null || t.portfolioId === '')) {
+              t.portfolioId = DEFAULT_PORTFOLIO_ID;
+              changed = true;
+            }
+          }
+          if (changed) {
+            localStorage.setItem('transactions', JSON.stringify(txns));
+          }
+        }
+      }
+    } catch {
+      // Non-fatal
+    }
+  },
 };
 
 /**

@@ -244,7 +244,9 @@ export function FirePage() {
   const cc = getChartColors(theme);
   const palette = getChartPalette(theme);
 
-  const currentNetWorth = netWorthSummary.totalNetWorth;
+  // Extract the raw number once — every FIRE calc below is arithmetic
+  // over base-currency amounts; Money wrapper isn't useful here.
+  const currentNetWorth = netWorthSummary.totalNetWorth.amount;
 
   // ─── FIRE Calculations ──────────────────────────────────────────────────
 

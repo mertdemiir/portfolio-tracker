@@ -111,10 +111,10 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
 
   // Recompute allocation % for filtered set
   const filteredWithAllocation = useMemo(() => {
-    const total = filtered.reduce((sum, h) => sum + h.marketValue, 0);
+    const total = filtered.reduce((sum, h) => sum + h.marketValue.amount, 0);
     return filtered.map((h) => ({
       ...h,
-      allocation: total > 0 ? (h.marketValue / total) * 100 : 0,
+      allocation: total > 0 ? (h.marketValue.amount / total) * 100 : 0,
     }));
   }, [filtered]);
 
@@ -133,6 +133,8 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
       let cmp: number;
       if (sortKey === 'ticker') {
         cmp = a.ticker.localeCompare(b.ticker);
+      } else if (sortKey === 'marketValue' || sortKey === 'gainLoss' || sortKey === 'dailyChange') {
+        cmp = a[sortKey].amount - b[sortKey].amount;
       } else {
         cmp = (a[sortKey] as number) - (b[sortKey] as number);
       }
@@ -247,20 +249,20 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
           </span>
           <span className="text-b-subtle">|</span>
           <span className="text-t-muted">
-            Total <span className="font-semibold text-t-primary">{formatCurrency(filtered.reduce((s, h) => s + h.marketValue, 0))}</span>
+            Total <span className="font-semibold text-t-primary">{formatCurrency(filtered.reduce((s, h) => s + h.marketValue.amount, 0))}</span>
           </span>
           <span className="text-b-subtle">|</span>
           <span className="text-t-muted">
-            Gain/Loss <span className={`font-semibold ${filtered.reduce((s, h) => s + h.gainLoss, 0) >= 0 ? 'text-gain' : 'text-loss'}`}>
-              {formatSignedCurrency(filtered.reduce((s, h) => s + h.gainLoss, 0))}
+            Gain/Loss <span className={`font-semibold ${filtered.reduce((s, h) => s + h.gainLoss.amount, 0) >= 0 ? 'text-gain' : 'text-loss'}`}>
+              {formatSignedCurrency(filtered.reduce((s, h) => s + h.gainLoss.amount, 0))}
             </span>
           </span>
           <span className="text-b-subtle">|</span>
           <span className="text-t-muted">
-            Return <span className={`font-semibold ${filtered.reduce((s, h) => s + h.gainLoss, 0) >= 0 ? 'text-gain' : 'text-loss'}`}>
+            Return <span className={`font-semibold ${filtered.reduce((s, h) => s + h.gainLoss.amount, 0) >= 0 ? 'text-gain' : 'text-loss'}`}>
               {(() => {
-                const totalCost = filtered.reduce((s, h) => s + h.costBasis, 0);
-                const totalGain = filtered.reduce((s, h) => s + h.gainLoss, 0);
+                const totalCost = filtered.reduce((s, h) => s + h.costBasis.amount, 0);
+                const totalGain = filtered.reduce((s, h) => s + h.gainLoss.amount, 0);
                 return totalCost > 0 ? formatPercent((totalGain / totalCost) * 100) : '0%';
               })()}
             </span>

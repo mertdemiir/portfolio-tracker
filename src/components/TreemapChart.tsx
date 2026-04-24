@@ -53,10 +53,10 @@ export function TreemapChart({ holdings }: Props) {
   const colors = getChartColors(theme);
 
   const data = holdings
-    .filter((h) => h.marketValue > 0)
+    .filter((h) => h.marketValue.amount > 0)
     .map((h) => ({
       name: h.ticker,
-      size: h.marketValue,
+      size: h.marketValue.amount,
       change: h.dailyChangePercent,
     }))
     .sort((a, b) => b.size - a.size);

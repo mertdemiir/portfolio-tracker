@@ -101,7 +101,7 @@ interface PortfolioContextValue {
 const PortfolioCtx = createContext<PortfolioContextValue | null>(null);
 
 export function PortfolioProvider({ children }: { children: ReactNode }) {
-  const { customCategories } = useSettings();
+  const { customCategories, baseCurrency } = useSettings();
   const { priceCache, pricesLoading, convertToBase, fetchPrices } = usePricesFx();
   const { registerRefresh } = usePricesFxInternals();
 
@@ -155,18 +155,18 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
 
   // All enriched holdings (net worth allocation)
   const allEnrichedHoldings = useMemo(
-    () => enrichHoldings(holdings, priceCache, convertToBase),
+    () => enrichHoldings(holdings, priceCache, convertToBase, baseCurrency),
     [holdings, priceCache, convertToBase],
   );
 
   // Portfolio-only enriched holdings
   const portfolioEnrichedHoldings = useMemo(
-    () => enrichHoldings(holdings.filter((h) => h.inPortfolio), priceCache, convertToBase),
+    () => enrichHoldings(holdings.filter((h) => h.inPortfolio), priceCache, convertToBase, baseCurrency),
     [holdings, priceCache, convertToBase],
   );
 
   const portfolioSummary = useMemo(
-    () => calculateSummary(portfolioEnrichedHoldings),
+    () => calculateSummary(portfolioEnrichedHoldings, baseCurrency),
     [portfolioEnrichedHoldings],
   );
 
@@ -177,11 +177,11 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     const filtered = holdings.filter(
       (h) => h.portfolioId === activePortfolioId && h.inPortfolio,
     );
-    return enrichHoldings(filtered, priceCache, convertToBase);
+    return enrichHoldings(filtered, priceCache, convertToBase, baseCurrency);
   }, [activePortfolioId, holdings, priceCache, convertToBase, portfolioEnrichedHoldings]);
 
   const filteredPortfolioSummary = useMemo(
-    () => calculateSummary(filteredEnrichedHoldings),
+    () => calculateSummary(filteredEnrichedHoldings, baseCurrency),
     [filteredEnrichedHoldings],
   );
 
@@ -208,7 +208,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
   );
 
   const netWorthSummary = useMemo(
-    () => calculateNetWorthSummary(allEnrichedHoldings, customCategories, liabilities, convertToBase),
+    () => calculateNetWorthSummary(allEnrichedHoldings, customCategories, liabilities, convertToBase, baseCurrency),
     [allEnrichedHoldings, customCategories, liabilities, convertToBase],
   );
 
@@ -249,9 +249,13 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (pricesReady && (allEnrichedHoldings.length > 0 || liabilities.length > 0)) {
-      saveSnapshot(netWorthSummary.totalNetWorth, netWorthSummary.totalPortfolioValue, netWorthSummary.totalLiabilities);
+      saveSnapshot(
+        netWorthSummary.totalNetWorth.amount,
+        netWorthSummary.totalPortfolioValue.amount,
+        netWorthSummary.totalLiabilities.amount,
+      );
     }
-  }, [pricesReady, allEnrichedHoldings.length, liabilities.length, netWorthSummary.totalNetWorth, netWorthSummary.totalPortfolioValue, netWorthSummary.totalLiabilities, saveSnapshot]);
+  }, [pricesReady, allEnrichedHoldings.length, liabilities.length, netWorthSummary.totalNetWorth.amount, netWorthSummary.totalPortfolioValue.amount, netWorthSummary.totalLiabilities.amount, saveSnapshot]);
 
   const value: PortfolioContextValue = useMemo(
     () => ({

@@ -49,9 +49,9 @@ describe('portfolio scope filtering (regression: #20)', () => {
     const enriched = enrichHoldings(filteredForBucket1, prices);
     const summary = calculateSummary(enriched);
     // Only AAPL counted: 10 * 150 = 1500
-    expect(summary.totalValue).toBe(1500);
+    expect(summary.totalValue.amount).toBe(1500);
     // House (500,000) not included
-    expect(summary.totalValue).not.toBe(501500);
+    expect(summary.totalValue.amount).not.toBe(501500);
   });
 
   it('specific bucket with only NW-only items yields zero portfolio value', () => {
@@ -60,7 +60,7 @@ describe('portfolio scope filtering (regression: #20)', () => {
     );
     const enriched = enrichHoldings(filtered, prices);
     const summary = calculateSummary(enriched);
-    expect(summary.totalValue).toBe(0);
+    expect(summary.totalValue.amount).toBe(0);
     expect(summary.holdingCount).toBe(0);
   });
 });

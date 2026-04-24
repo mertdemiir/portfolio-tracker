@@ -20,7 +20,7 @@ export function CurrencyExposureChart({ holdings }: Props) {
     const currencyMap = new Map<string, number>();
     for (const h of holdings) {
       const cur = h.currency || 'USD';
-      currencyMap.set(cur, (currencyMap.get(cur) || 0) + h.marketValue);
+      currencyMap.set(cur, (currencyMap.get(cur) || 0) + h.marketValue.amount);
     }
 
     const total = Array.from(currencyMap.values()).reduce((a, b) => a + b, 0);

@@ -57,10 +57,14 @@ export function Simulator() {
       ticker: h.ticker,
       name: h.name,
       shares: h.shares,
-      currentPrice: h.currentPrice,
-      simPrice: h.currentPrice,
+      // SimHolding is an internal number-based type; the simulator does
+      // heavy arithmetic on these values and doesn't round-trip back to
+      // persisted storage. Unwrap Money here to a plain base-currency
+      // number.
+      currentPrice: h.currentPrice.amount,
+      simPrice: h.currentPrice.amount,
       simShares: h.shares,
-      costBasis: h.costBasis,
+      costBasis: h.costBasis.amount,
       isHypothetical: false,
     })),
     [filteredEnrichedHoldings],
@@ -105,7 +109,7 @@ export function Simulator() {
   const [newPrice, setNewPrice] = useState('');
   const [newShares, setNewShares] = useState('');
 
-  const currentTotalValue = filteredEnrichedHoldings.reduce((sum, h) => sum + h.marketValue, 0);
+  const currentTotalValue = filteredEnrichedHoldings.reduce((sum, h) => sum + h.marketValue.amount, 0);
 
   const simTotalValue = holdings.reduce((sum, h) => sum + h.simPrice * h.simShares, 0);
   const simTotalCost = holdings.reduce((sum, h) => sum + h.costBasis, 0);

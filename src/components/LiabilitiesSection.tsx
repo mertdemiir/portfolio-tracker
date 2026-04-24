@@ -50,9 +50,9 @@ export function LiabilitiesSection({ showTRY, tryRate }: LiabilitiesSectionProps
           )}
           <CreditCard className="w-4 h-4 text-loss" />
           <span className="text-sm font-medium text-t-secondary">Liabilities</span>
-          {netWorthSummary.totalLiabilities > 0 && (
+          {netWorthSummary.totalLiabilities.amount > 0 && (
             <span className="text-xs font-medium text-loss ml-1">
-              {formatValue(netWorthSummary.totalLiabilities)}
+              {formatValue(netWorthSummary.totalLiabilities.amount)}
             </span>
           )}
         </button>

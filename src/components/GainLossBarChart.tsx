@@ -12,10 +12,10 @@ export function GainLossBarChart({ holdings }: GainLossBarChartProps) {
   const { theme } = useSettings();
   const cc = getChartColors(theme);
   const data = [...holdings]
-    .sort((a, b) => b.gainLoss - a.gainLoss)
+    .sort((a, b) => b.gainLoss.amount - a.gainLoss.amount)
     .map((h) => ({
       name: h.ticker,
-      gainLoss: Math.round(h.gainLoss * 100) / 100,
+      gainLoss: Math.round(h.gainLoss.amount * 100) / 100,
       percent: h.gainLossPercent,
     }));
 

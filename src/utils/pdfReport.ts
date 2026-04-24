@@ -113,7 +113,7 @@ export async function generatePdfReport({
   y += 4;
 
   // Sort holdings by value
-  const sortedHoldings = [...holdings].sort((a, b) => b.marketValue - a.marketValue);
+  const sortedHoldings = [...holdings].sort((a, b) => b.marketValue.amount - a.marketValue.amount);
 
   pdf.setFontSize(8);
   for (const h of sortedHoldings) {

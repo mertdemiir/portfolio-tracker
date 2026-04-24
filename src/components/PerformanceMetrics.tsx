@@ -64,13 +64,13 @@ export function PerformanceMetrics() {
   if (filteredEnrichedHoldings.length === 0) return null;
 
   const portfolioCagr = useMemo(
-    () => computeCAGR(snapshots, filteredPortfolioSummary.totalValue, 'portfolioValue'),
-    [snapshots, filteredPortfolioSummary.totalValue],
+    () => computeCAGR(snapshots, filteredPortfolioSummary.totalValue.amount, 'portfolioValue'),
+    [snapshots, filteredPortfolioSummary.totalValue.amount],
   );
 
   const nwCagr = useMemo(
-    () => computeCAGR(snapshots, netWorthSummary.totalNetWorth, 'netWorth'),
-    [snapshots, netWorthSummary.totalNetWorth],
+    () => computeCAGR(snapshots, netWorthSummary.totalNetWorth.amount, 'netWorth'),
+    [snapshots, netWorthSummary.totalNetWorth.amount],
   );
 
   const displayCagr = portfolioCagr ?? nwCagr;
@@ -91,7 +91,7 @@ export function PerformanceMetrics() {
             {formatPercent(filteredPortfolioSummary.totalGainLossPercent)}
           </p>
           <p className="text-xs text-t-faint tabular-nums">
-            {filteredPortfolioSummary.totalGainLoss >= 0 ? '+' : ''}
+            {filteredPortfolioSummary.totalGainLoss.amount >= 0 ? '+' : ''}
             {formatCurrency(filteredPortfolioSummary.totalGainLoss)}
           </p>
         </div>

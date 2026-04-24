@@ -17,10 +17,12 @@ export function DailyDigest() {
   const today = todayDateString();
   if (portfolioEnrichedHoldings.length === 0) return null;
 
-  // Daily change
+  // Daily change — Money values are compared via .amount. Snapshots
+  // still store raw numbers (they predate the Money migration), so
+  // delta math pulls .amount from the current summary side.
   const dailyChange = portfolioSummary.totalDailyChange;
   const dailyPct = portfolioSummary.totalDailyChangePercent;
-  const gained = dailyChange >= 0;
+  const gained = dailyChange.amount >= 0;
 
   // Top mover
   const topMover = [...portfolioEnrichedHoldings]
@@ -32,7 +34,7 @@ export function DailyDigest() {
   yesterdayDate.setDate(yesterdayDate.getDate() - 1);
   const yesterdayStr = `${yesterdayDate.getFullYear()}-${String(yesterdayDate.getMonth() + 1).padStart(2, '0')}-${String(yesterdayDate.getDate()).padStart(2, '0')}`;
   const yesterdaySnap = snapshots.find((s) => s.date === yesterdayStr);
-  const nwDelta = yesterdaySnap ? netWorthSummary.totalNetWorth - yesterdaySnap.netWorthValue : null;
+  const nwDelta = yesterdaySnap ? netWorthSummary.totalNetWorth.amount - yesterdaySnap.netWorthValue : null;
 
   // Weekly comparison — find closest snapshot on or before 7 days ago
   const weekAgoDate = new Date(todayParts[0], todayParts[1] - 1, todayParts[2]);
@@ -41,7 +43,7 @@ export function DailyDigest() {
   const weekAgoSnap = snapshots
     .filter((s) => s.date <= weekAgoStr)
     .sort((a, b) => b.date.localeCompare(a.date))[0] ?? null;
-  const nwWeekDelta = weekAgoSnap ? netWorthSummary.totalNetWorth - weekAgoSnap.netWorthValue : null;
+  const nwWeekDelta = weekAgoSnap ? netWorthSummary.totalNetWorth.amount - weekAgoSnap.netWorthValue : null;
 
   // ATH detection — compare against all snapshots excluding today
   const pastSnapshots = snapshots.filter((s) => s.date !== today);
@@ -49,18 +51,18 @@ export function DailyDigest() {
   const athNW = pastSnapshots.length > 0
     ? pastSnapshots.reduce((max, s) => Math.max(max, s.netWorthValue ?? s.totalValue), 0)
     : null;
-  const isNWATH = athNW !== null && athNW > 0 && netWorthSummary.totalNetWorth > athNW;
+  const isNWATH = athNW !== null && athNW > 0 && netWorthSummary.totalNetWorth.amount > athNW;
 
   const pastWithPortfolio = pastSnapshots.filter((s) => s.portfolioValue != null);
   const athPortfolio = pastWithPortfolio.length > 0
     ? pastWithPortfolio.reduce((max, s) => Math.max(max, s.portfolioValue!), 0)
     : null;
   const isPortfolioATH = athPortfolio !== null && athPortfolio > 0
-    && portfolioSummary.totalValue > athPortfolio;
+    && portfolioSummary.totalValue.amount > athPortfolio;
 
   // Next milestone
-  const nextMilestone = milestones.find((m) => netWorthSummary.totalNetWorth < m.value);
-  const milestoneDistance = nextMilestone ? nextMilestone.value - netWorthSummary.totalNetWorth : null;
+  const nextMilestone = milestones.find((m) => netWorthSummary.totalNetWorth.amount < m.value);
+  const milestoneDistance = nextMilestone ? nextMilestone.value - netWorthSummary.totalNetWorth.amount : null;
 
   const lines: { icon: typeof Sparkles; text: string; color: string }[] = [];
 

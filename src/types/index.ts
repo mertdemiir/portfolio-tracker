@@ -33,25 +33,37 @@ export interface StockQuote {
   lastUpdated: number;
 }
 
+import type { Money } from './money';
+export type { Money };
+
 export interface EnrichedHolding extends Holding {
-  currentPrice: number;
+  /** Current price converted to base currency, as a Money value. */
+  currentPrice: Money;
+  /** Native-currency price (what the holding is denominated in). */
   nativeCurrentPrice: number;
   nativeCurrency: string;
-  marketValue: number;
-  costBasis: number;
-  gainLoss: number;
+  /** shares * currentPrice, in base currency. */
+  marketValue: Money;
+  /** shares * buyPrice (FX-adjusted via buyFxRate), in base currency. */
+  costBasis: Money;
+  /** marketValue − costBasis, in base currency. */
+  gainLoss: Money;
+  /** gainLoss / costBasis * 100. */
   gainLossPercent: number;
-  dailyChange: number;
+  /** today's change in base currency (approximate; only accurate for
+   *  stocks/ETFs/crypto that expose a change field on the live quote). */
+  dailyChange: Money;
   dailyChangePercent: number;
+  /** Percentage of total market value in the set this holding belongs to. */
   allocation: number;
 }
 
 export interface PortfolioSummary {
-  totalValue: number;
-  totalCostBasis: number;
-  totalGainLoss: number;
+  totalValue: Money;
+  totalCostBasis: Money;
+  totalGainLoss: Money;
   totalGainLossPercent: number;
-  totalDailyChange: number;
+  totalDailyChange: Money;
   totalDailyChangePercent: number;
   holdingCount: number;
 }
@@ -235,17 +247,17 @@ export interface CustomCategory {
 export interface CategoryBreakdown {
   key: string;
   label: string;
-  value: number;
+  value: Money;
   percentage: number;
   holdingCount: number;
 }
 
 export interface NetWorthSummary {
-  totalNetWorth: number;
-  totalAssets: number;
-  totalLiabilities: number;
-  totalPortfolioValue: number;
-  totalNonPortfolioValue: number;
+  totalNetWorth: Money;
+  totalAssets: Money;
+  totalLiabilities: Money;
+  totalPortfolioValue: Money;
+  totalNonPortfolioValue: Money;
   categoryBreakdown: CategoryBreakdown[];
   holdingCount: number;
   portfolioHoldingCount: number;

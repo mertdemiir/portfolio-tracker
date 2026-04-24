@@ -64,7 +64,7 @@ const THEME_STYLES: Record<ThemeId, {
 export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
   ({ netWorthSummary, portfolioSummary, topHoldings, anonymize, theme = 'dark' }, ref) => {
     const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-    const gained = portfolioSummary.totalDailyChange >= 0;
+    const gained = portfolioSummary.totalDailyChange.amount >= 0;
     const s = THEME_STYLES[theme];
 
     return (
@@ -108,7 +108,7 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
             </div>
             <div>
               <div style={{ fontSize: 11, color: s.faint, textTransform: 'uppercase', letterSpacing: 1 }}>Unrealized Return</div>
-              <div style={{ fontSize: 16, fontWeight: 600, color: portfolioSummary.totalGainLoss >= 0 ? '#34d399' : '#f87171', marginTop: 2 }}>
+              <div style={{ fontSize: 16, fontWeight: 600, color: portfolioSummary.totalGainLoss.amount >= 0 ? '#34d399' : '#f87171', marginTop: 2 }}>
                 {anonymize ? formatPercent(portfolioSummary.totalGainLossPercent) : `${formatSignedCurrency(portfolioSummary.totalGainLoss)} (${formatPercent(portfolioSummary.totalGainLossPercent)})`}
               </div>
             </div>

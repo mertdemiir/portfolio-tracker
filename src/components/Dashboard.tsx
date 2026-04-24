@@ -110,7 +110,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     : portfolios.find((p) => p.id === activePortfolioId)?.name;
 
   const ps = filteredPortfolioSummary;
-  const totalPnl = ps.totalGainLoss + realizedPnl;
+  // Total P&L combines unrealized (Money) + realized (number, already in
+  // base currency from context). We pull .amount for the arithmetic.
+  const totalPnlAmount = ps.totalGainLoss.amount + realizedPnl;
 
   return (
     <div>
@@ -155,20 +157,20 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             </div>
             <p className="text-4xl font-bold text-t-primary tabular-nums tracking-tight">
               {showTRY && tryRate
-                ? `₺${(netWorthSummary.totalNetWorth * tryRate).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+                ? `₺${(netWorthSummary.totalNetWorth.amount * tryRate).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
                 : formatCurrency(netWorthSummary.totalNetWorth)}
             </p>
           </div>
         </div>
 
         {/* Assets / Liabilities breakdown */}
-        {netWorthSummary.totalLiabilities > 0 && (
+        {netWorthSummary.totalLiabilities.amount > 0 && (
           <div className="flex gap-6 text-sm mb-4">
             <div>
               <span className="text-t-muted text-xs">Total Assets</span>
               <p className="font-semibold text-gain tabular-nums">
                 {showTRY && tryRate
-                  ? `₺${(netWorthSummary.totalAssets * tryRate).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+                  ? `₺${(netWorthSummary.totalAssets.amount * tryRate).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
                   : formatCurrency(netWorthSummary.totalAssets)}
               </p>
             </div>
@@ -176,7 +178,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
               <span className="text-t-muted text-xs">Liabilities</span>
               <p className="font-semibold text-loss tabular-nums">
                 {showTRY && tryRate
-                  ? `-₺${(netWorthSummary.totalLiabilities * tryRate).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+                  ? `-₺${(netWorthSummary.totalLiabilities.amount * tryRate).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
                   : `-${formatCurrency(netWorthSummary.totalLiabilities)}`}
               </p>
             </div>
@@ -188,7 +190,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             <span className="text-t-muted text-xs">Portfolio</span>
             <p className="font-semibold text-t-primary tabular-nums">
               {showTRY && tryRate
-                ? `₺${(netWorthSummary.totalPortfolioValue * tryRate).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+                ? `₺${(netWorthSummary.totalPortfolioValue.amount * tryRate).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
                 : formatCurrency(netWorthSummary.totalPortfolioValue)}
             </p>
           </div>
@@ -196,7 +198,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             <span className="text-t-muted text-xs">Other Assets</span>
             <p className="font-semibold text-t-primary tabular-nums">
               {showTRY && tryRate
-                ? `₺${(netWorthSummary.totalNonPortfolioValue * tryRate).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+                ? `₺${(netWorthSummary.totalNonPortfolioValue.amount * tryRate).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
                 : formatCurrency(netWorthSummary.totalNonPortfolioValue)}
             </p>
           </div>
@@ -250,8 +252,8 @@ export function Dashboard({ onNavigate }: DashboardProps) {
               {milestones.length > 0 && (
                 <div className="space-y-3 mb-3">
                   {milestones.map((m) => {
-                    const reached = netWorthSummary.totalNetWorth >= m.value;
-                    const pct = m.value > 0 ? (netWorthSummary.totalNetWorth / m.value) * 100 : 0;
+                    const reached = netWorthSummary.totalNetWorth.amount >= m.value;
+                    const pct = m.value > 0 ? (netWorthSummary.totalNetWorth.amount / m.value) * 100 : 0;
                     return (
                       <div key={m.id}>
                         <div className="flex items-center justify-between mb-1.5">
@@ -280,7 +282,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                           />
                         </div>
                         <p className="text-[10px] text-t-faint mt-1">
-                          {reached ? '✓ Reached!' : `${formatCurrency(m.value - netWorthSummary.totalNetWorth)} to go`}
+                          {reached ? '✓ Reached!' : `${formatCurrency(m.value - netWorthSummary.totalNetWorth.amount)} to go`}
                         </p>
                       </div>
                     );
@@ -349,13 +351,13 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           {/* Unrealized P&L */}
           <div className="p-4">
             <span className="text-xs font-medium text-t-muted flex items-center gap-1.5">
-              {ps.totalGainLoss >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+              {ps.totalGainLoss.amount >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
               Unrealized
             </span>
-            <p className={`text-lg font-bold tabular-nums mt-1 ${ps.totalGainLoss >= 0 ? 'text-gain' : 'text-loss'}`}>
+            <p className={`text-lg font-bold tabular-nums mt-1 ${ps.totalGainLoss.amount >= 0 ? 'text-gain' : 'text-loss'}`}>
               {formatSignedCurrency(ps.totalGainLoss)}
             </p>
-            <p className={`text-[11px] tabular-nums ${ps.totalGainLoss >= 0 ? 'text-gain/60' : 'text-loss/60'}`}>
+            <p className={`text-[11px] tabular-nums ${ps.totalGainLoss.amount >= 0 ? 'text-gain/60' : 'text-loss/60'}`}>
               {formatPercent(ps.totalGainLossPercent)}
             </p>
           </div>
@@ -374,11 +376,11 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           {/* Total P&L */}
           <div className="p-4">
             <span className="text-xs font-medium text-t-muted flex items-center gap-1.5">
-              {totalPnl >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+              {totalPnlAmount >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
               Total P&L
             </span>
-            <p className={`text-lg font-bold tabular-nums mt-1 ${totalPnl >= 0 ? 'text-gain' : 'text-loss'}`}>
-              {formatSignedCurrency(totalPnl)}
+            <p className={`text-lg font-bold tabular-nums mt-1 ${totalPnlAmount >= 0 ? 'text-gain' : 'text-loss'}`}>
+              {formatSignedCurrency(totalPnlAmount)}
             </p>
             <p className="text-[10px] text-t-faint tabular-nums">
               Cost basis: {formatCurrency(ps.totalCostBasis)}
@@ -386,15 +388,15 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           </div>
 
           {/* Today's Change — with tinted background */}
-          <div className={`p-4 col-span-2 lg:col-span-1 ${ps.totalDailyChange >= 0 ? 'bg-gain/[0.03]' : 'bg-loss/[0.03]'}`}>
+          <div className={`p-4 col-span-2 lg:col-span-1 ${ps.totalDailyChange.amount >= 0 ? 'bg-gain/[0.03]' : 'bg-loss/[0.03]'}`}>
             <span className="text-xs font-medium text-t-muted flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5" />
               Today
             </span>
-            <p className={`text-lg font-bold tabular-nums mt-1 ${ps.totalDailyChange >= 0 ? 'text-gain' : 'text-loss'}`}>
+            <p className={`text-lg font-bold tabular-nums mt-1 ${ps.totalDailyChange.amount >= 0 ? 'text-gain' : 'text-loss'}`}>
               {formatSignedCurrency(ps.totalDailyChange)}
             </p>
-            <p className={`text-[11px] tabular-nums ${ps.totalDailyChange >= 0 ? 'text-gain/60' : 'text-loss/60'}`}>
+            <p className={`text-[11px] tabular-nums ${ps.totalDailyChange.amount >= 0 ? 'text-gain/60' : 'text-loss/60'}`}>
               {formatPercent(ps.totalDailyChangePercent)}
             </p>
           </div>
@@ -441,7 +443,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           <div className="flex flex-wrap gap-2">
             {[...filteredEnrichedHoldings]
               .sort((a, b) => Math.abs(b.dailyChangePercent) - Math.abs(a.dailyChangePercent))
-              .filter(h => h.dailyChange !== 0)
+              .filter(h => h.dailyChange.amount !== 0)
               .slice(0, 8)
               .map((h) => (
                 <button
@@ -460,7 +462,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                   </span>
                 </button>
               ))}
-            {filteredEnrichedHoldings.every(h => h.dailyChange === 0) && (
+            {filteredEnrichedHoldings.every(h => h.dailyChange.amount === 0) && (
               <p className="text-xs text-t-faint">No movers today</p>
             )}
           </div>
@@ -470,7 +472,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         <ShareImageModal
           netWorthSummary={netWorthSummary}
           portfolioSummary={filteredPortfolioSummary}
-          topHoldings={[...filteredEnrichedHoldings].sort((a, b) => b.marketValue - a.marketValue).slice(0, 5)}
+          topHoldings={[...filteredEnrichedHoldings].sort((a, b) => b.marketValue.amount - a.marketValue.amount).slice(0, 5)}
           onClose={() => setShowShareModal(false)}
         />
       )}

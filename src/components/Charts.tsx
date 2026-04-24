@@ -50,7 +50,7 @@ export function Charts() {
     if (snapshots.length === 0) return null;
     const currentNW = netWorthSummary.totalNetWorth;
     const ath = snapshots.reduce((max, s) => Math.max(max, s.netWorthValue ?? s.totalValue), -Infinity);
-    const drawdownPct = ath > 0 ? ((currentNW - ath) / ath) * 100 : 0;
+    const drawdownPct = ath > 0 ? ((currentNW.amount - ath) / ath) * 100 : 0;
     const filtered = filterByTimeRange(snapshots, timeRange);
     if (filtered.length < 2) return { currentNW, ath, drawdownPct, periodReturn: null };
     const sorted = [...filtered].sort((a, b) => a.date.localeCompare(b.date));
@@ -58,7 +58,7 @@ export function Charts() {
     const lastVal = sorted[sorted.length - 1].netWorthValue ?? sorted[sorted.length - 1].totalValue;
     const periodReturn = firstVal > 0 ? ((lastVal - firstVal) / firstVal) * 100 : 0;
     return { currentNW, ath, drawdownPct, periodReturn };
-  }, [snapshots, netWorthSummary.totalNetWorth, timeRange]);
+  }, [snapshots, netWorthSummary.totalNetWorth.amount, timeRange]);
 
   return (
     <div>

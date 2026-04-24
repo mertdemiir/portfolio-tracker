@@ -69,8 +69,8 @@ function getStaleWarning(holding: EnrichedHolding, priceCache: PriceCache): stri
 }
 
 export function HoldingRow({ holding, baseCurrency, categoryLabel, showPortfolioBadge, priceCache, isDraggable, layout, onEdit, onDelete, onToggleFavorite, onMove, onTickerClick }: HoldingRowProps) {
-  const gainColor = holding.gainLoss >= 0 ? 'text-gain' : 'text-loss';
-  const dailyColor = holding.dailyChange >= 0 ? 'text-gain' : 'text-loss';
+  const gainColor = holding.gainLoss.amount >= 0 ? 'text-gain' : 'text-loss';
+  const dailyColor = holding.dailyChange.amount >= 0 ? 'text-gain' : 'text-loss';
   const config = ASSET_TYPE_CONFIG[holding.assetType ?? 'stock'];
   const staleWarning = getStaleWarning(holding, priceCache);
   const showNativeCurrency = holding.nativeCurrency !== baseCurrency;
@@ -134,7 +134,7 @@ export function HoldingRow({ holding, baseCurrency, categoryLabel, showPortfolio
         <td className="px-4 py-3 text-right text-sm text-t-secondary tabular-nums">{holding.shares}</td>
         <td className="px-4 py-3 text-right text-sm text-t-secondary tabular-nums">
           <div>
-            {formatCurrency(holding.shares > 0 ? holding.costBasis / holding.shares : holding.buyPrice)}
+            {formatCurrency(holding.shares > 0 ? holding.costBasis.amount / holding.shares : holding.buyPrice)}
             {showNativeCurrency && (
               <div className="text-[11px] text-t-faint">
                 ({formatCurrency(holding.buyPrice, holding.currency || 'USD')})
@@ -171,7 +171,7 @@ export function HoldingRow({ holding, baseCurrency, categoryLabel, showPortfolio
             const isLiveMetal = holding.assetType === 'metal' && (LIVE_METAL_TICKERS as readonly string[]).includes(holding.ticker);
             const hasLiveDailyChange = holding.assetType === 'stock' || holding.assetType === 'etf' || holding.assetType === 'crypto';
             // Live metals have no reliable daily change data (API returns 0), so always show dash
-            const showDash = (holding.dailyChange === 0 && !hasLiveDailyChange) || isLiveMetal;
+            const showDash = (holding.dailyChange.amount === 0 && !hasLiveDailyChange) || isLiveMetal;
             return showDash ? (
               <span className="text-t-faint">&mdash;</span>
             ) : (

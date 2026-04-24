@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Plus, Trash2, X, Check, ArrowUpDown, MessageSquare } from 'lucide-react';
+import { Plus, Trash2, X, Check, ArrowUpDown, MessageSquare, Pencil } from 'lucide-react';
 import { BarChart, Bar, ResponsiveContainer, XAxis, Tooltip } from 'recharts';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { usePricesFx } from '../context/PricesFxContext';
@@ -28,6 +28,7 @@ export function TransactionLog({ initialFilter }: TransactionLogProps) {
   const { transactions, deleteTransaction, restoreTransaction, holdings, updateHolding, deleteHolding, restoreHolding, realizedPnl } = usePortfolioContext();
   const { convertToBase } = usePricesFx();
   const [showModal, setShowModal] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'buy' | 'sell'>('all');
@@ -433,12 +434,24 @@ export function TransactionLog({ initialFilter }: TransactionLogProps) {
                           </button>
                         </div>
                       ) : (
-                        <button
-                          onClick={() => setConfirmDelete(t.id)}
-                          className="text-t-faint hover:text-loss transition-colors p-0.5"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => setEditingTransaction(t)}
+                            className="text-t-faint hover:text-accent transition-colors p-0.5"
+                            title="Edit transaction"
+                            aria-label="Edit transaction"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={() => setConfirmDelete(t.id)}
+                            className="text-t-faint hover:text-loss transition-colors p-0.5"
+                            title="Delete transaction"
+                            aria-label="Delete transaction"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -468,6 +481,13 @@ export function TransactionLog({ initialFilter }: TransactionLogProps) {
       )}
 
       {showModal && <AddTransactionModal onClose={() => setShowModal(false)} />}
+
+      {editingTransaction && (
+        <AddTransactionModal
+          editingTransaction={editingTransaction}
+          onClose={() => setEditingTransaction(null)}
+        />
+      )}
     </div>
   );
 }

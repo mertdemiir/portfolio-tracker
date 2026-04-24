@@ -4,23 +4,52 @@ import { usePortfolioContext } from '../context/PortfolioContext';
 import { useSettings } from '../context/SettingsContext';
 import { usePricesFx } from '../context/PricesFxContext';
 import { todayDateString, formatCurrency } from '../utils/formatters';
+import { recomputeHoldingFromLedger } from '../utils/transactionLedger';
 import { DEFAULT_PORTFOLIO_ID } from '../types';
+import type { Transaction } from '../types';
 
 interface AddTransactionModalProps {
   onClose: () => void;
+  /**
+   * When present, the modal switches to edit mode:
+   *   - ticker is read-only (changing it would need to delete the old
+   *     holding and create a new one — out of scope for 3.2)
+   *   - submit recomputes holding.shares and holding.buyPrice from the
+   *     transaction ledger with this transaction swapped out. Relies
+   *     on migration 3 backfilling the ledger so the recomputation
+   *     is consistent with the pre-edit position.
+   */
+  editingTransaction?: Transaction;
 }
 
-export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
-  const { holdings, addTransaction, updateHolding, deleteHolding, activePortfolioId } = usePortfolioContext();
+export function AddTransactionModal({ onClose, editingTransaction }: AddTransactionModalProps) {
+  const {
+    holdings,
+    transactions,
+    addTransaction,
+    deleteTransaction,
+    updateHolding,
+    deleteHolding,
+    activePortfolioId,
+  } = usePortfolioContext();
   const { baseCurrency } = useSettings();
   const { convertToBase, fxRates } = usePricesFx();
-  const [date, setDate] = useState(todayDateString());
-  const [ticker, setTicker] = useState('');
-  const [name, setName] = useState('');
-  const [type, setType] = useState<'buy' | 'sell'>('buy');
-  const [shares, setShares] = useState('');
-  const [pricePerShare, setPricePerShare] = useState('');
-  const [notes, setNotes] = useState('');
+
+  const isEditing = !!editingTransaction;
+
+  const [date, setDate] = useState(editingTransaction?.date ?? todayDateString());
+  const [ticker, setTicker] = useState(editingTransaction?.ticker ?? '');
+  const [name, setName] = useState(editingTransaction?.name ?? '');
+  const [type, setType] = useState<'buy' | 'sell'>(
+    editingTransaction && (editingTransaction.type === 'buy' || editingTransaction.type === 'sell')
+      ? editingTransaction.type
+      : 'buy'
+  );
+  const [shares, setShares] = useState(editingTransaction ? String(editingTransaction.shares) : '');
+  const [pricePerShare, setPricePerShare] = useState(
+    editingTransaction ? String(editingTransaction.pricePerShare) : ''
+  );
+  const [notes, setNotes] = useState(editingTransaction?.notes ?? '');
   const [suggestions, setSuggestions] = useState<{ ticker: string; name: string }[]>([]);
   const [submitError, setSubmitError] = useState('');
 
@@ -55,6 +84,12 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
     if (!date || !ticker.trim() || isNaN(s) || s <= 0 || isNaN(p) || p <= 0) return;
 
     const tickerNorm = ticker.trim().toUpperCase();
+
+    if (isEditing && editingTransaction) {
+      handleEditSubmit(s, p, tickerNorm);
+      return;
+    }
+
     // Find matching holding — scoped to active portfolio (Bug 1: don't cross-pollinate portfolios)
     const allMatches = holdings.filter((h) => h.ticker.toUpperCase() === tickerNorm);
     const match = activePortfolioId === 'all'
@@ -89,6 +124,7 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
       pricePerShare: p,
       total: s * p,
       portfolioId: txnPortfolioId,
+      ...(match?.id ? { holdingId: match.id } : {}),
       ...(notes.trim() && { notes: notes.trim() }),
       ...(type === 'sell' && match ? {
         costBasisPerShare: match.buyPrice,
@@ -143,8 +179,113 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
     onClose();
   }
 
+  /**
+   * Edit-save handler: recomputes the holding's shares + weighted-avg buyPrice
+   * from the transaction ledger with the old transaction swapped out for the
+   * new one. Relies on migration 3 having backfilled synthetic buys so the
+   * ledger is the complete picture.
+   *
+   * Scope for 3.2:
+   *   - Ticker is read-only (changing ticker requires re-homing to a
+   *     different holding — a more complex workflow).
+   *   - Only buy/sell types are supported here; cash-ledger types
+   *     (deposit/withdrawal/interest/correction) will arrive in 3.4.
+   */
+  function handleEditSubmit(s: number, p: number, tickerNorm: string) {
+    if (!editingTransaction) return;
+    const oldTxn = editingTransaction;
+
+    // Holding lookup: prefer explicit holdingId, fall back to
+    // (ticker, portfolioId) match.
+    let matchedHolding = oldTxn.holdingId
+      ? holdings.find((h) => h.id === oldTxn.holdingId) ?? null
+      : null;
+    if (!matchedHolding) {
+      const scopeMatches = holdings.filter(
+        (h) => h.ticker.toUpperCase() === tickerNorm && h.portfolioId === oldTxn.portfolioId,
+      );
+      matchedHolding = scopeMatches[0] ?? null;
+    }
+
+    // Build the ledger for this holding with oldTxn replaced by newTxn.
+    // Only buy/sell affect holding.shares + buyPrice, so filter to those.
+    const holdingId = matchedHolding?.id ?? oldTxn.holdingId;
+    const newTxnShape: Pick<Transaction, 'type' | 'shares' | 'pricePerShare' | 'date'> = {
+      type,
+      shares: s,
+      pricePerShare: p,
+      date,
+    };
+
+    // Pick the transactions that contribute to this holding. Prefer holdingId
+    // (accurate, migration-backfilled) but fall back to (ticker, portfolioId)
+    // scope to handle edge cases where holdingId is missing on some txns.
+    const ledger = transactions
+      .filter((t) => t.id !== oldTxn.id)
+      .filter((t) => {
+        if (holdingId && t.holdingId) return t.holdingId === holdingId;
+        return t.ticker.toUpperCase() === tickerNorm && t.portfolioId === oldTxn.portfolioId;
+      })
+      .filter((t) => t.type === 'buy' || t.type === 'sell');
+
+    // Project the new transaction into the ledger for the recompute.
+    const { netShares, buyPrice: newBuyPrice } = recomputeHoldingFromLedger([
+      ...ledger,
+      newTxnShape,
+    ]);
+
+    // Sell validation against the *projected* position (not the current one),
+    // so the user can increase an earlier buy to make a later sell valid.
+    if (netShares < 0) {
+      setSubmitError(
+        `This change would leave a negative position in ${tickerNorm} (${netShares.toFixed(4)} shares). ` +
+          `Adjust shares or edit other transactions first.`,
+      );
+      return;
+    }
+
+    // Commit holding mutation.
+    if (matchedHolding) {
+      if (netShares === 0) {
+        deleteHolding(matchedHolding.id);
+      } else {
+        const { id, ...data } = matchedHolding;
+        updateHolding(id, { ...data, shares: netShares, buyPrice: newBuyPrice });
+      }
+    }
+    // If no matched holding and net position is positive, we *could* create
+    // one here — but that implies the original transaction was orphaned,
+    // which shouldn't happen post-migration-3. Skip silently.
+
+    // Commit transaction swap.
+    deleteTransaction(oldTxn.id);
+    addTransaction({
+      date,
+      ticker: tickerNorm,
+      name: name.trim() || tickerNorm,
+      type,
+      shares: s,
+      pricePerShare: p,
+      total: s * p,
+      portfolioId: oldTxn.portfolioId,
+      ...(holdingId ? { holdingId } : {}),
+      ...(notes.trim() && { notes: notes.trim() }),
+      // Preserve cost-basis metadata on sell so realized-P&L still works.
+      ...(type === 'sell' && matchedHolding
+        ? {
+            costBasisPerShare: matchedHolding.buyPrice,
+            assetType: matchedHolding.assetType,
+            category: matchedHolding.category,
+            currency: matchedHolding.currency,
+          }
+        : {}),
+    });
+
+    onClose();
+  }
+
   return (
-    <Modal title="Log Transaction" onClose={onClose} size="md">
+    <Modal title={isEditing ? 'Edit Transaction' : 'Log Transaction'} onClose={onClose} size="md">
       <form onSubmit={handleSubmit} className="space-y-4">
           {/* Type toggle */}
           <div className="flex bg-surface-alt rounded-lg p-0.5">
@@ -183,16 +324,23 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
 
           {/* Ticker with autocomplete */}
           <div className="relative">
-            <label className="block text-xs font-medium text-t-muted mb-1">Ticker / Symbol</label>
+            <label className="block text-xs font-medium text-t-muted mb-1">
+              Ticker / Symbol
+              {isEditing && <span className="ml-2 text-t-faint">(locked on edit)</span>}
+            </label>
             <input
               type="text"
               value={ticker}
               onChange={(e) => handleTickerChange(e.target.value)}
               placeholder="e.g. AAPL, BTC"
-              className="w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+              readOnly={isEditing}
+              disabled={isEditing}
+              className={`w-full px-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent ${
+                isEditing ? 'bg-surface-alt text-t-muted cursor-not-allowed' : ''
+              }`}
               required
             />
-            {suggestions.length > 0 && (
+            {!isEditing && suggestions.length > 0 && (
               <div className="absolute z-10 mt-1 w-full bg-surface-card border border-b-default rounded-lg shadow-lg max-h-40 overflow-y-auto">
                 {suggestions.map((s) => (
                   <button
@@ -283,7 +431,7 @@ export function AddTransactionModal({ onClose }: AddTransactionModalProps) {
             type="submit"
             className="w-full py-2.5 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors"
           >
-            Log Transaction
+            {isEditing ? 'Save Changes' : 'Log Transaction'}
           </button>
         </form>
     </Modal>

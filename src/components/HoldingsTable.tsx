@@ -232,17 +232,23 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-t-primary tracking-tight">Holdings</h2>
+      <div className="m-page-head">
+        <div>
+          <div className="m-h1">Holdings</div>
+          {filtered.length > 0 && (
+            <div className="m-sub">
+              {filtered.length} positions ·{' '}
+              {formatCurrency(filtered.reduce((s, h) => s + h.marketValue.amount, 0))} total
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
               if (!isCustomSort) {
-                // Capture current visual order before entering reorder mode
                 syncOrder(sorted.map((h) => h.id));
                 setSortKey('custom');
               } else {
-                // Exit reorder mode → fall back to default sort
                 setSortKey('marketValue');
                 setSortAsc(false);
               }
@@ -259,6 +265,8 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
             onClick={refreshPrices}
             disabled={pricesLoading}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-t-muted hover:bg-surface-alt rounded-lg transition-colors disabled:opacity-50"
+            title="Refresh prices"
+            aria-label="Refresh prices"
           >
             <RefreshCw className={`w-4 h-4 ${pricesLoading ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">Refresh</span>
@@ -279,7 +287,7 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
           </button>
           <button
             onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors shadow-sm"
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-surface-emph text-t-on-emph rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
           >
             <PlusCircle className="w-4 h-4" />
             Add Holding
@@ -378,63 +386,60 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
         </div>
       )}
 
-      {/* Filter tabs */}
-      <div className="flex gap-0.5 mb-4 bg-surface-alt rounded-lg p-1 w-fit">
-        {filterButtons.map((btn) => (
-          <button
-            key={btn.mode}
-            onClick={() => setFilterMode(btn.mode)}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-              filterMode === btn.mode
-                ? 'bg-surface-card text-t-primary shadow-sm'
-                : 'text-t-muted hover:text-t-primary'
-            }`}
-          >
-            {btn.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Unified filter bar */}
-      <div className="mb-4 space-y-2">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-t-faint" />
+      {/* Mercury m-toolbar (M4): search + filter pills + sort pills + select */}
+      <div className="m-toolbar">
+        <div className="m-search">
+          <Search className="w-[15px] h-[15px]" aria-hidden="true" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Filter by name, ticker, or type..."
-            className="w-full pl-9 pr-3 py-2 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
+            placeholder="Search by name, ticker, or type..."
+            aria-label="Search holdings"
           />
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="px-2.5 py-1 border border-b-input rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent bg-transparent"
-          >
-            <option value="all">All Categories</option>
-            {allCategories.map((cat) => (
-              <option key={cat.key} value={cat.key}>{cat.label}</option>
-            ))}
-          </select>
-          <div className="flex bg-surface-alt rounded-lg p-0.5">
+        <div className="m-pill-group">
+          {filterButtons.map((btn) => (
             <button
-              onClick={() => setAssetTypeFilter('all')}
-              className={`px-2 py-0.5 text-[11px] font-medium rounded-md transition-all ${
-                assetTypeFilter === 'all' ? 'bg-surface-card text-t-primary shadow-sm' : 'text-t-muted hover:text-t-secondary'
-              }`}
-            >All</button>
-            {(Object.keys(ASSET_TYPE_CONFIG) as AssetType[]).map((type) => (
-              <button
-                key={type}
-                onClick={() => setAssetTypeFilter(type)}
-                className={`px-2 py-0.5 text-[11px] font-medium rounded-md transition-all ${
-                  assetTypeFilter === type ? 'bg-surface-card text-t-primary shadow-sm' : 'text-t-muted hover:text-t-secondary'
-                }`}
-              >{ASSET_TYPE_CONFIG[type].label}</button>
-            ))}
-          </div>
+              key={btn.mode}
+              onClick={() => setFilterMode(btn.mode)}
+              className={'m-pill' + (filterMode === btn.mode ? ' active' : '')}
+            >
+              {btn.label}
+            </button>
+          ))}
+        </div>
+        <select
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          className="m-select"
+          aria-label="Filter by category"
+        >
+          <option value="all">All Categories</option>
+          {allCategories.map((cat) => (
+            <option key={cat.key} value={cat.key}>{cat.label}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Asset type sort pills (sub-row) */}
+      <div className="mb-4">
+        <div className="mv2-sort-pills">
+          <button
+            onClick={() => setAssetTypeFilter('all')}
+            className={assetTypeFilter === 'all' ? 'active' : ''}
+          >
+            All
+          </button>
+          {(Object.keys(ASSET_TYPE_CONFIG) as AssetType[]).map((type) => (
+            <button
+              key={type}
+              onClick={() => setAssetTypeFilter(type)}
+              className={assetTypeFilter === type ? 'active' : ''}
+            >
+              {ASSET_TYPE_CONFIG[type].label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -461,23 +466,23 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
         ) : null;
       })()}
 
-      {/* Desktop table */}
+      {/* Desktop table — Mercury m-table (M4) */}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={sorted.map((h) => h.id)} strategy={verticalListSortingStrategy}>
-          <div className="hidden md:block bg-surface-card card-radius border border-b-default overflow-hidden">
-            <table className="w-full">
+          <div className="hidden md:block">
+            <table className="m-table">
               <thead>
-                <tr className="text-[11px] font-semibold text-t-muted uppercase tracking-wider border-b border-b-default">
-                  {isCustomSort && <th className="px-2 py-3 w-8" />}
-                  <th className="px-4 py-3 text-left"><SortButton label="Symbol" field="ticker" /></th>
-                  <th className="px-4 py-3 text-right">Qty</th>
-                  <th className="px-4 py-3 text-right">Avg Cost</th>
-                  <th className="px-4 py-3 text-right">Price</th>
-                  <th className="px-4 py-3 text-right"><SortButton label="Value" field="marketValue" /></th>
-                  <th className="px-4 py-3 text-right"><SortButton label="Gain/Loss" field="gainLoss" /></th>
-                  <th className="px-4 py-3 text-right"><SortButton label="Today" field="dailyChange" /></th>
-                  <th className="px-4 py-3 text-right"><SortButton label="Weight" field="allocation" /></th>
-                  <th className="px-4 py-3 text-right w-20">Actions</th>
+                <tr>
+                  {isCustomSort && <th style={{ width: 32, padding: '10px 8px' }} aria-label="Drag handle" />}
+                  <th><SortButton label="Symbol" field="ticker" /></th>
+                  <th className="num">Qty</th>
+                  <th className="num">Avg Cost</th>
+                  <th className="num">Price</th>
+                  <th className="num"><SortButton label="Value" field="marketValue" /></th>
+                  <th className="num"><SortButton label="Gain/Loss" field="gainLoss" /></th>
+                  <th className="num"><SortButton label="Today" field="dailyChange" /></th>
+                  <th className="num"><SortButton label="Weight" field="allocation" /></th>
+                  <th style={{ width: 80, textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>

@@ -1,7 +1,7 @@
 {
   "name": "portfolio-tracker",
   "private": true,
-  "version": "1.4.4",
+  "version": "1.4.5",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {

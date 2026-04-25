@@ -239,7 +239,13 @@ export const BENCHMARK_CONFIG: Record<BenchmarkId, { label: string; color: strin
   gold: { label: 'Gold (XAUUSD)',   color: '#eab308', shortLabel: 'Gold' },
 };
 
-export type ThemeId = 'light' | 'dark' | 'midnight' | 'heritage' | 'terminal';
+/**
+ * Mercury supports two themes only: light + dark. Legacy themes
+ * ('midnight', 'heritage', 'terminal') were removed as part of the
+ * Mercury layout migration — useTheme normalizes any old saved value
+ * to its closest Mercury equivalent on read.
+ */
+export type ThemeId = 'light' | 'dark';
 export type ThemePreference = ThemeId | 'auto';
 
 export const ACCENT_PRESETS: { name: string; color: string }[] = [

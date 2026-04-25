@@ -1,210 +1,127 @@
 @import "tailwindcss";
 
-/* ═══ Theme Variables ═══ */
+/* ════════════════════════════════════════════════════════════════════
+   Mercury Design System
+   Two themes only — light + dark. No more midnight/heritage/terminal.
+   See useTheme.ts for the auto resolution + the one-time normalization
+   that maps any saved legacy theme value to its closest Mercury equivalent.
+   ════════════════════════════════════════════════════════════════════ */
+
 :root,
 [data-theme="light"] {
-  --surface: #f9fafb;
+  /* ── Surfaces ── */
+  --surface: #fafaf9;
   --surface-card: #ffffff;
-  --surface-alt: #f3f4f6;
-  --surface-hover: #f3f4f6;
-  --surface-active: #e5e7eb;
-  --text-primary: #111827;
-  --text-secondary: #374151;
-  --text-muted: #6b7280;
-  --text-faint: #9ca3af;
-  --border-default: #e5e7eb;
-  --border-subtle: #f3f4f6;
-  --border-input: #d1d5db;
+  --surface-alt: #f4f4f3;
+  --surface-hover: #f0f0ef;
+  --surface-active: #e8e8e6;
+  --surface-emph: #1a1a1a;
+
+  /* ── Typography colors ── */
+  --text-primary: #0a0a0a;
+  --text-secondary: #2d2d2d;
+  --text-muted: #6b6b6b;
+  --text-faint: #a3a3a3;
+  --text-on-emph: #fafafa;
+
+  /* ── Borders ── */
+  --border-default: #e8e8e6;
+  --border-subtle: #f0f0ef;
+  --border-input: #d4d4d2;
+  --border-strong: #2d2d2d;
   --input-bg: #ffffff;
-  --overlay: rgba(0, 0, 0, 0.4);
-  --chart-grid: #f3f4f6;
-  --chart-axis: #9ca3af;
-  --accent: #3b82f6;
-  --accent-hover: #2563eb;
-  --accent-light: #eff6ff;
-  --gain: #16a34a;
-  --loss: #dc2626;
-  --gain-bg: #f0fdf4;
-  --loss-bg: #fef2f2;
+  --overlay: rgba(15, 15, 15, 0.4);
+
+  /* ── Charts ── */
+  --chart-grid: #f0f0ef;
+  --chart-axis: #a3a3a3;
+
+  /* ── Accent (default — overridden at runtime by useTheme) ── */
+  --accent: #3b5bdb;
+  --accent-hover: #2c45b0;
+  --accent-light: rgba(59, 91, 219, 0.10);
+
+  /* ── Gain / loss ── */
+  --gain: #0f7a3f;
+  --loss: #c2261b;
+  --gain-bg: rgba(15, 122, 63, 0.08);
+  --loss-bg: rgba(194, 38, 27, 0.08);
+
+  /* ── Typography ── */
   --font-body: "Inter", system-ui, -apple-system, sans-serif;
   --font-heading: "Inter", system-ui, -apple-system, sans-serif;
-  --radius-card: 0.75rem;
-  --radius-badge: 0.375rem;
-  --radius-button: 0.5rem;
-  --shadow-card: 0 1px 3px rgba(0,0,0,0.08);
-  --letter-spacing-body: normal;
-  --letter-spacing-heading: normal;
+  --font-display: "Fraunces", "Source Serif 4", Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --letter-spacing-body: -0.005em;
+  --letter-spacing-heading: -0.022em;
   --text-transform-badge: none;
+
+  /* ── Radii / shadows ── */
+  --radius-card: 12px;
+  --radius-badge: 4px;
+  --radius-button: 8px;
+  --shadow-card: 0 1px 2px rgba(15, 15, 15, 0.04), 0 1px 1px rgba(15, 15, 15, 0.02);
+  --shadow-hero: 0 1px 2px rgba(15, 15, 15, 0.05), 0 8px 24px -12px rgba(15, 15, 15, 0.06);
 }
 
 [data-theme="dark"] {
-  --surface: #0c0f1a;
-  --surface-card: #151926;
-  --surface-alt: #1c2233;
-  --surface-hover: #1c2233;
-  --surface-active: #242d3f;
-  --text-primary: #f0f2f5;
-  --text-secondary: #b0b8c8;
-  --text-muted: #6b7a90;
-  --text-faint: #4a5568;
-  --border-default: #1f2937;
-  --border-subtle: #1a2030;
-  --border-input: #2d3a4d;
-  --input-bg: #111827;
+  --surface: #0a0a0b;
+  --surface-card: #111113;
+  --surface-alt: #18181b;
+  --surface-hover: #1e1e22;
+  --surface-active: #28282e;
+  --surface-emph: #fafafa;
+
+  --text-primary: #fafafa;
+  --text-secondary: #d4d4d8;
+  --text-muted: #8d8d94;
+  --text-faint: #5a5a60;
+  --text-on-emph: #0a0a0b;
+
+  --border-default: #222226;
+  --border-subtle: #18181b;
+  --border-input: #333339;
+  --border-strong: #5a5a60;
+  --input-bg: #111113;
   --overlay: rgba(0, 0, 0, 0.6);
-  --chart-grid: #1a2030;
-  --chart-axis: #4a5568;
-  --accent: #3b82f6;
-  --accent-hover: #2563eb;
-  --accent-light: rgba(59, 130, 246, 0.15);
-  --gain: #22c55e;
-  --loss: #ef4444;
-  --gain-bg: rgba(34, 197, 94, 0.1);
-  --loss-bg: rgba(239, 68, 68, 0.1);
-  --font-body: "Inter", system-ui, -apple-system, sans-serif;
-  --font-heading: "Inter", system-ui, -apple-system, sans-serif;
-  --radius-card: 0.75rem;
-  --radius-badge: 0.375rem;
-  --radius-button: 0.5rem;
-  --shadow-card: 0 1px 3px rgba(0,0,0,0.08);
-  --letter-spacing-body: normal;
-  --letter-spacing-heading: normal;
-  --text-transform-badge: none;
+
+  --chart-grid: #1a1a1d;
+  --chart-axis: #5a5a60;
+
+  --accent: #6d87ff;
+  --accent-hover: #889dff;
+  --accent-light: rgba(109, 135, 255, 0.14);
+
+  --gain: #3dd88b;
+  --loss: #ff5a4f;
+  --gain-bg: rgba(61, 216, 139, 0.10);
+  --loss-bg: rgba(255, 90, 79, 0.10);
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-hero: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
 }
 
-[data-theme="midnight"] {
-  --surface: #050509;
-  --surface-card: #0d0d14;
-  --surface-alt: #16161f;
-  --surface-hover: #16161f;
-  --surface-active: #1f1f2c;
-  --text-primary: #f0f2f5;
-  --text-secondary: #b0b8c8;
-  --text-muted: #5a6478;
-  --text-faint: #3d4555;
-  --border-default: #1a1a28;
-  --border-subtle: #111118;
-  --border-input: #252535;
-  --input-bg: #0a0a12;
-  --overlay: rgba(0, 0, 0, 0.7);
-  --chart-grid: #141420;
-  --chart-axis: #3d4555;
-  --accent: #3b82f6;
-  --accent-hover: #2563eb;
-  --accent-light: rgba(59, 130, 246, 0.15);
-  --gain: #22c55e;
-  --loss: #ef4444;
-  --gain-bg: rgba(34, 197, 94, 0.1);
-  --loss-bg: rgba(239, 68, 68, 0.1);
-  --font-body: "Inter", system-ui, -apple-system, sans-serif;
-  --font-heading: "Inter", system-ui, -apple-system, sans-serif;
-  --radius-card: 0.75rem;
-  --radius-badge: 0.375rem;
-  --radius-button: 0.5rem;
-  --shadow-card: 0 1px 3px rgba(0,0,0,0.08);
-  --letter-spacing-body: normal;
-  --letter-spacing-heading: normal;
-  --text-transform-badge: none;
-}
-
-/* ═══ Heritage Theme — Private Bank / Financial Times ═══ */
-[data-theme="heritage"] {
-  --font-body: "Source Serif 4", Georgia, "Times New Roman", serif;
-  --font-heading: "Libre Baskerville", Georgia, "Times New Roman", serif;
-  --letter-spacing-body: 0.005em;
-  --letter-spacing-heading: -0.01em;
-  --text-transform-badge: none;
-
-  --surface: #f4f1ec;
-  --surface-card: #f9f7f4;
-  --surface-alt: #eceae5;
-  --surface-hover: #eceae5;
-  --surface-active: #e1ded8;
-
-  --text-primary: #1a1612;
-  --text-secondary: #3b352d;
-  --text-muted: #6b6358;
-  --text-faint: #928a7e;
-
-  --border-default: #d6d1c9;
-  --border-subtle: #e5e2dc;
-  --border-input: #c2bbb1;
-  --input-bg: #f9f7f4;
-  --overlay: rgba(26, 22, 18, 0.4);
-  --chart-grid: #e5e2dc;
-  --chart-axis: #928a7e;
-
-  --accent: #b8860b;
-  --accent-hover: #9a7209;
-  --accent-light: rgba(184, 134, 11, 0.12);
-
-  --gain: #256b47;
-  --loss: #a12a2e;
-  --gain-bg: rgba(37, 107, 71, 0.08);
-  --loss-bg: rgba(161, 42, 46, 0.08);
-
-  --radius-card: 0.5rem;
-  --radius-badge: 0.25rem;
-  --radius-button: 0.375rem;
-  --shadow-card: 0 1px 4px rgba(26, 22, 18, 0.08);
-}
-
-/* ═══ Terminal Theme — Bloomberg / Sci-Fi HUD ═══ */
-[data-theme="terminal"] {
-  --font-body: "JetBrains Mono", "Fira Code", "Courier New", monospace;
-  --font-heading: "JetBrains Mono", "Fira Code", "Courier New", monospace;
-  --letter-spacing-body: -0.02em;
-  --letter-spacing-heading: -0.02em;
-  --text-transform-badge: uppercase;
-
-  --surface: #0a0a0a;
-  --surface-card: #111111;
-  --surface-alt: #1a1a1a;
-  --surface-hover: #1a1a1a;
-  --surface-active: #222222;
-
-  --text-primary: #00ff88;
-  --text-secondary: #00ddcc;
-  --text-muted: #5a7a6a;
-  --text-faint: #334a3f;
-
-  --border-default: #1a3a2a;
-  --border-subtle: #122218;
-  --border-input: #2a5a3a;
-  --input-bg: #0d0d0d;
-  --overlay: rgba(0, 0, 0, 0.8);
-  --chart-grid: #122218;
-  --chart-axis: #334a3f;
-
-  --accent: #00d4ff;
-  --accent-hover: #00b8e0;
-  --accent-light: rgba(0, 212, 255, 0.12);
-
-  --gain: #00ff88;
-  --loss: #ff3366;
-  --gain-bg: rgba(0, 255, 136, 0.08);
-  --loss-bg: rgba(255, 51, 102, 0.08);
-
-  --radius-card: 0;
-  --radius-badge: 0;
-  --radius-button: 0;
-  --shadow-card: none;
-}
-
-/* ═══ Register as Tailwind Colors ═══ */
+/* ════════════════════════════════════════════════════════════════════
+   Tailwind v4 color registration — keeps existing utility classes
+   (bg-surface-card, text-t-primary, border-b-default, etc.) working
+   so the rest of the app inherits Mercury automatically.
+   ════════════════════════════════════════════════════════════════════ */
 @theme {
   --color-surface: var(--surface);
   --color-surface-card: var(--surface-card);
   --color-surface-alt: var(--surface-alt);
   --color-surface-hover: var(--surface-hover);
   --color-surface-active: var(--surface-active);
+  --color-surface-emph: var(--surface-emph);
   --color-t-primary: var(--text-primary);
   --color-t-secondary: var(--text-secondary);
   --color-t-muted: var(--text-muted);
   --color-t-faint: var(--text-faint);
+  --color-t-on-emph: var(--text-on-emph);
   --color-b-default: var(--border-default);
   --color-b-subtle: var(--border-subtle);
   --color-b-input: var(--border-input);
+  --color-b-strong: var(--border-strong);
   --color-input-bg: var(--input-bg);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
@@ -227,80 +144,242 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ═══ Form Element Theming ═══ */
-input,
-textarea,
-select {
+/* ── Form elements ── */
+input, textarea, select {
   background-color: var(--input-bg);
   color: var(--text-primary);
 }
-
-input::placeholder,
-textarea::placeholder {
+input::placeholder, textarea::placeholder {
   color: var(--text-faint);
 }
 
-/* ═══ Recharts Theming ═══ */
-.recharts-legend-item-text {
-  color: var(--text-secondary) !important;
-}
+/* ── Recharts theming ── */
+.recharts-legend-item-text { color: var(--text-secondary) !important; }
+.recharts-tooltip-label { color: var(--text-primary) !important; }
 
-.recharts-tooltip-label {
-  color: var(--text-primary) !important;
-}
+/* ── Tabular numerals ── */
+.tabular-nums { font-variant-numeric: tabular-nums; }
+.tabular { font-variant-numeric: tabular-nums; }
 
-/* ═══ Tabular Numbers for Financial Data ═══ */
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
-}
-
-/* ═══ Theme-Aware Structural Utilities ═══ */
+/* ── Theme-aware structural utilities ── */
 .card-radius { border-radius: var(--radius-card); }
 .badge-radius { border-radius: var(--radius-badge); }
 .button-radius { border-radius: var(--radius-button); }
 .card-shadow { box-shadow: var(--shadow-card); }
 .badge-transform { text-transform: var(--text-transform-badge); }
 
-/* ═══ Terminal Badge Brackets ═══ */
-[data-theme="terminal"] .badge-transform::before { content: "["; }
-[data-theme="terminal"] .badge-transform::after { content: "]"; }
-
-/* ═══ Modal Entrance Animation ═══ */
+/* ── Modal entrance animation ── */
 @keyframes modal-enter {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
-.animate-modal-enter {
-  animation: modal-enter 0.2s ease-out;
-}
+.animate-modal-enter { animation: modal-enter 0.2s ease-out; }
 
-/* ═══ Scrollbar Styling ═══ */
-[data-theme="dark"],
-[data-theme="midnight"],
-[data-theme="terminal"] {
+/* ── Scrollbar styling ── */
+[data-theme="dark"] {
   scrollbar-color: var(--border-default) transparent;
 }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
 
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* ════════════════════════════════════════════════════════════════════
+   Mercury layout primitives
+   These component classes back the new Header / HeroCard / KPI band /
+   etc. They sit alongside the Tailwind utility set; the rest of the
+   app (Holdings table, Modals, etc.) keeps its existing utility
+   classes and inherits Mercury via the variable swap above.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── Header ── */
+.m-header {
+  border-bottom: 1px solid var(--border-default);
+  background: color-mix(in srgb, var(--surface-card) 85%, transparent);
+  backdrop-filter: saturate(180%) blur(14px);
+  position: sticky; top: 0; z-index: 30;
+}
+.m-header-inner {
+  max-width: 1280px; margin: 0 auto; padding: 0 28px;
+  height: 56px; display: flex; align-items: center; justify-content: space-between;
+}
+.m-brand {
+  display: flex; align-items: center; gap: 10px;
+  font-weight: 600; font-size: 15px; letter-spacing: -0.02em;
+}
+.m-brand-mark {
+  width: 22px; height: 22px; border-radius: 6px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  display: grid; place-items: center; color: white; font-weight: 700; font-size: 11px;
+  font-family: var(--font-display);
+}
+.m-tabs { display: flex; align-items: center; gap: 2px; }
+.m-tab {
+  padding: 7px 12px; font-size: 13px; font-weight: 500;
+  color: var(--text-muted); border-radius: 6px;
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: color 0.12s, background 0.12s;
+  background: transparent; border: 0; cursor: pointer;
+  font-family: inherit;
+}
+.m-tab:hover { color: var(--text-primary); background: var(--surface-alt); }
+.m-tab.active { color: var(--text-primary); background: var(--surface-alt); }
+.m-header-actions { display: flex; align-items: center; gap: 4px; }
+.m-icon-btn {
+  width: 32px; height: 32px; display: grid; place-items: center;
+  border-radius: 6px; color: var(--text-muted);
+  transition: color 0.12s, background 0.12s;
+  background: transparent; border: 0; cursor: pointer;
+}
+.m-icon-btn:hover { background: var(--surface-alt); color: var(--text-primary); }
+.m-icon-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.m-asof {
+  font-size: 11px; color: var(--text-faint); font-variant-numeric: tabular-nums;
+  margin-right: 4px;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+/* ── Hero card ── */
+.mv2-hero {
+  position: relative;
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-top: 20px;
+  box-shadow: var(--shadow-hero);
+}
+.mv2-hero-chart {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  opacity: 0.55;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 22%, #000 100%);
+          mask-image: linear-gradient(to bottom, transparent 0%, #000 22%, #000 100%);
+}
+[data-theme="dark"] .mv2-hero-chart { opacity: 0.42; }
+.mv2-hero-content { position: relative; z-index: 2; padding: 28px 32px 24px; }
+.mv2-hero-top {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 24px;
+  margin-bottom: 120px; /* reserves space for the watermark chart to show through */
+}
+.mv2-hero-left { min-width: 0; }
+.mv2-hero-right { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.mv2-hero-value {
+  font-family: var(--font-display);
+  font-size: 60px; font-weight: 400; letter-spacing: -0.035em;
+  line-height: 1.0; margin: 10px 0 10px;
+  font-feature-settings: "ss01", "cv11", "tnum";
+  color: var(--text-primary);
+}
+.mv2-hero-delta {
+  display: inline-flex; align-items: baseline; gap: 8px; font-size: 14px; font-weight: 500;
+}
+.mv2-hero-delta .amt { font-weight: 600; }
+.mv2-hero-delta .period { color: var(--text-muted); font-weight: 400; }
+.m-hero-label {
+  font-size: 11px; color: var(--text-muted); font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.mv2-range-pills {
+  display: inline-flex; padding: 3px; background: var(--surface-alt);
+  border-radius: 8px; gap: 2px;
+}
+.mv2-range-pills button {
+  padding: 5px 10px; font-size: 11px; font-weight: 500;
+  color: var(--text-muted); border-radius: 5px;
+  font-variant-numeric: tabular-nums;
+  transition: all 0.12s;
+  background: transparent; border: 0; cursor: pointer; font-family: inherit;
+}
+.mv2-range-pills button.active {
+  background: var(--surface-card); color: var(--text-primary);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+.mv2-hero-strip {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 0;
+  padding: 16px 32px 20px;
+  border-top: 1px solid var(--border-default);
+  background: color-mix(in srgb, var(--surface-card) 92%, transparent);
+  position: relative; z-index: 2;
+  backdrop-filter: blur(2px);
+}
+.mv2-hero-strip > div + div { border-left: 1px solid var(--border-default); padding-left: 16px; }
+.mv2-hero-strip > div { padding-right: 16px; }
+.m-strip-label { font-size: 10.5px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+.m-strip-val { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.015em; color: var(--text-primary); }
+.m-strip-sub { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+/* ── KPI band ── */
+.m-kpi-card {
+  padding: 16px 18px; border: 1px solid var(--border-default);
+  border-radius: 10px; background: var(--surface-card);
+}
+.m-kpi-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
+.m-kpi-val { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; margin-top: 4px; color: var(--text-primary); }
+.m-kpi-sub { font-size: 12px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+/* ── Allocation list rows ── */
+.m-cat-row {
+  display: grid; grid-template-columns: 140px 1fr 130px; gap: 16px; align-items: center;
+  padding: 10px 0; border-bottom: 1px solid var(--border-subtle);
+}
+.m-cat-row:last-child { border-bottom: none; }
+.m-cat-label { font-size: 13px; color: var(--text-primary); }
+.m-cat-bar { height: 8px; background: var(--surface-alt); border-radius: 4px; overflow: hidden; position: relative; }
+.m-cat-bar-fill { height: 100%; border-radius: 4px; transition: width 0.7s ease; }
+.m-cat-val { text-align: right; font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--text-primary); }
+.m-cat-pct { color: var(--text-muted); font-size: 12px; margin-left: 8px; }
+
+/* ── Top movers row ── */
+.m-mover-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0; border-bottom: 1px solid var(--border-subtle);
+}
+.m-mover-row:last-child { border-bottom: none; }
+.m-tkr { font-weight: 600; letter-spacing: -0.01em; font-size: 13px; color: var(--text-primary); }
+.m-tkr-name { font-size: 11.5px; color: var(--text-muted); margin-top: 1px; }
+
+/* ── Recent transaction rows ── */
+.mv2-tx-row {
+  display: grid;
+  grid-template-columns: 56px auto 1fr auto;
+  gap: 12px; align-items: center;
+  padding: 10px 0; border-bottom: 1px solid var(--border-subtle);
+  font-size: 13px;
+}
+.mv2-tx-row:last-child { border-bottom: none; }
+.mv2-tx-date {
+  font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
 }
 
-::-webkit-scrollbar-thumb {
-  background: var(--border-default);
-  border-radius: 4px;
+/* ── Card / panel-head primitives ── */
+.mv2-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  box-shadow: var(--shadow-card);
+}
+.mv2-card-pad { padding: 20px 22px; }
+.mv2-card-title {
+  font-size: 13px; font-weight: 600; letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+.mv2-card-subtitle { font-size: 12px; color: var(--text-muted); }
+.mv2-panel-head {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 14px; gap: 16px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-faint);
+/* ── Generic helpers ── */
+.pct-up { color: var(--gain); }
+.pct-down { color: var(--loss); }
+
+/* ── Mobile collapses for the hero ── */
+@media (max-width: 768px) {
+  .mv2-hero-content { padding: 20px 18px 16px; }
+  .mv2-hero-top { flex-direction: column; margin-bottom: 80px; gap: 12px; }
+  .mv2-hero-right { align-items: flex-start; }
+  .mv2-hero-value { font-size: 40px; }
+  .mv2-hero-strip { grid-template-columns: repeat(2, 1fr); padding: 14px 18px 16px; gap: 12px; }
+  .mv2-hero-strip > div { border-left: 0 !important; padding-left: 0 !important; padding-right: 0 !important; }
 }

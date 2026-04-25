@@ -2,6 +2,15 @@ import { useEffect, useState, useCallback } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import type { ThemeId, ThemePreference } from '../types';
 
+/**
+ * Mercury themes only: light + dark.
+ *
+ * Legacy themes ('midnight', 'heritage', 'terminal') were dropped during
+ * the Mercury layout migration. The persisted value from the old picker
+ * is normalized on read by `normalizeLegacy()` below — anything that was
+ * dark-flavored becomes 'dark', anything light-flavored becomes 'light'.
+ */
+
 const CHART_COLORS: Record<ThemeId, {
   grid: string;
   axis: string;
@@ -12,49 +21,22 @@ const CHART_COLORS: Record<ThemeId, {
   targetBar: string;
 }> = {
   light: {
-    grid: '#f3f4f6',
-    axis: '#9ca3af',
+    grid: '#f0f0ef',
+    axis: '#a3a3a3',
     tooltipBg: '#ffffff',
-    tooltipBorder: '#e5e7eb',
-    tooltipText: '#111827',
-    refLine: '#e5e7eb',
-    targetBar: '#d1d5db',
+    tooltipBorder: '#e8e8e6',
+    tooltipText: '#0a0a0a',
+    refLine: '#e8e8e6',
+    targetBar: '#d4d4d2',
   },
   dark: {
-    grid: '#1a2030',
-    axis: '#4a5568',
-    tooltipBg: '#151926',
-    tooltipBorder: '#1f2937',
-    tooltipText: '#f0f2f5',
-    refLine: '#1f2937',
-    targetBar: '#4a5568',
-  },
-  midnight: {
-    grid: '#141420',
-    axis: '#3d4555',
-    tooltipBg: '#0d0d14',
-    tooltipBorder: '#1a1a28',
-    tooltipText: '#f0f2f5',
-    refLine: '#1a1a28',
-    targetBar: '#3d4555',
-  },
-  heritage: {
-    grid: '#e5e2dc',
-    axis: '#928a7e',
-    tooltipBg: '#f9f7f4',
-    tooltipBorder: '#d6d1c9',
-    tooltipText: '#1a1612',
-    refLine: '#d6d1c9',
-    targetBar: '#c2bbb1',
-  },
-  terminal: {
-    grid: '#122218',
-    axis: '#334a3f',
-    tooltipBg: '#111111',
-    tooltipBorder: '#1a3a2a',
-    tooltipText: '#00ff88',
-    refLine: '#1a3a2a',
-    targetBar: '#2a5a3a',
+    grid: '#1a1a1d',
+    axis: '#5a5a60',
+    tooltipBg: '#111113',
+    tooltipBorder: '#222226',
+    tooltipText: '#fafafa',
+    refLine: '#222226',
+    targetBar: '#5a5a60',
   },
 };
 
@@ -63,28 +45,17 @@ export function getChartColors(theme: ThemeId) {
 }
 
 // ─── Theme-aware chart palettes ───
+// Same palette across both themes — Mercury's design relies on the
+// surface/contrast contrast doing the work, not bespoke palettes.
+const SHARED_CHART_PALETTE = [
+  '#3b5bdb', '#10b981', '#f59e0b', '#a855f7',
+  '#ec4899', '#06b6d4', '#ef4444', '#f97316',
+  '#14b8a6', '#6366f1',
+];
 
 const CHART_PALETTES: Record<ThemeId, string[]> = {
-  light: [
-    '#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b',
-    '#ef4444', '#ec4899', '#f97316', '#14b8a6', '#3b82f6',
-  ],
-  dark: [
-    '#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b',
-    '#ef4444', '#ec4899', '#f97316', '#14b8a6', '#3b82f6',
-  ],
-  midnight: [
-    '#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b',
-    '#ef4444', '#ec4899', '#f97316', '#14b8a6', '#3b82f6',
-  ],
-  heritage: [
-    '#b8860b', '#256b47', '#6e6459', '#a12a2e', '#5f5137',
-    '#3d6d3a', '#8b6914', '#5c4033', '#708567', '#9e7248',
-  ],
-  terminal: [
-    '#00ff88', '#00d4ff', '#ffaa00', '#ff3366', '#aa55ff',
-    '#00ffcc', '#ff6600', '#66ff33', '#ff00aa', '#33aaff',
-  ],
+  light: SHARED_CHART_PALETTE,
+  dark: SHARED_CHART_PALETTE,
 };
 
 export function getChartPalette(theme: ThemeId): string[] {
@@ -98,6 +69,22 @@ function resolveAutoTheme(): ThemeId {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
   return 'light';
+}
+
+/**
+ * One-time normalization for users upgrading from a build that supported
+ * midnight/heritage/terminal themes. Maps each retired theme to its
+ * closest Mercury equivalent.
+ *
+ *   midnight, terminal   → dark   (both are dark-flavored)
+ *   heritage             → light  (cream-on-paper aesthetic)
+ *   anything unknown     → auto
+ */
+function normalizeLegacy(value: unknown): ThemePreference {
+  if (value === 'light' || value === 'dark' || value === 'auto') return value;
+  if (value === 'midnight' || value === 'terminal') return 'dark';
+  if (value === 'heritage') return 'light';
+  return 'auto';
 }
 
 function resolveTheme(pref: ThemePreference): ThemeId {
@@ -153,18 +140,29 @@ function lightenHex(hex: string, percent: number): string {
 
 function accentLightValue(hex: string, isDark: boolean): string {
   if (isDark) {
-    // For dark themes, use rgba with low opacity
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r}, ${g}, ${b}, 0.15)`;
+    return `rgba(${r}, ${g}, ${b}, 0.14)`;
   }
   return lightenHex(hex, 40);
 }
 
 export function useTheme() {
-  const [themePreference, setThemePreference] = useLocalStorage<ThemePreference>('theme', 'auto');
-  const [accentColor, setAccentColor] = useLocalStorage<string>('accent-color', '#3b82f6');
+  // Read with the legacy normalizer so any saved 'heritage' / 'midnight' /
+  // 'terminal' value is rehydrated as a Mercury-supported preference.
+  const [rawPref, setRawPref] = useLocalStorage<ThemePreference>('theme', 'auto');
+  const themePreference: ThemePreference = normalizeLegacy(rawPref);
+
+  // If we just normalized a legacy value, write it back so subsequent
+  // reads don't keep hitting the migration path.
+  useEffect(() => {
+    if (rawPref !== themePreference) {
+      setRawPref(themePreference);
+    }
+  }, [rawPref, themePreference, setRawPref]);
+
+  const [accentColor, setAccentColor] = useLocalStorage<string>('accent-color', '#3b5bdb');
   const [theme, setResolvedTheme] = useState<ThemeId>(() => resolveTheme(themePreference));
 
   // Listen for system appearance changes when in auto mode
@@ -173,11 +171,7 @@ export function useTheme() {
       setResolvedTheme(themePreference);
       return;
     }
-
-    // Initial resolve
     setResolvedTheme(resolveAutoTheme());
-
-    // Listen for changes
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const handler = (e: MediaQueryListEvent) => {
       setResolvedTheme(e.matches ? 'dark' : 'light');
@@ -189,7 +183,6 @@ export function useTheme() {
   // Apply resolved theme to DOM
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    // Update body background to match theme
     const styles = getComputedStyle(document.documentElement);
     const surface = styles.getPropertyValue('--surface').trim();
     if (surface) {
@@ -199,7 +192,7 @@ export function useTheme() {
 
   // Apply accent color as CSS custom properties
   useEffect(() => {
-    const isDark = theme !== 'light' && theme !== 'heritage';
+    const isDark = theme === 'dark';
     const el = document.documentElement;
     el.style.setProperty('--accent', accentColor);
     el.style.setProperty('--accent-hover', darkenHex(accentColor, 10));
@@ -207,11 +200,11 @@ export function useTheme() {
   }, [accentColor, theme]);
 
   const setTheme = useCallback((pref: ThemePreference) => {
-    setThemePreference(pref);
-  }, [setThemePreference]);
+    setRawPref(pref);
+  }, [setRawPref]);
 
   return {
-    theme,                // ThemeId — always resolved, use for rendering
+    theme,                // ThemeId — always resolved
     themePreference,      // ThemePreference — what user selected ('auto' | ThemeId)
     setTheme,             // accepts ThemePreference
     accentColor,

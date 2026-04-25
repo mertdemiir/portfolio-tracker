@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { ChevronDown, ChevronRight, FileText, Bookmark, Plus } from 'lucide-react';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { usePricesFx } from '../context/PricesFxContext';
+import { computeCumulativeContributions } from '../utils/contributions';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useAnnotations } from '../hooks/useAnnotations';
 import { PdfReportModal } from './PdfReportModal';
@@ -32,8 +33,9 @@ export function Charts() {
     filteredEnrichedHoldings,
     netWorthSummary,
     snapshots,
+    transactions,
   } = usePortfolioContext();
-  const { benchmarkData, benchmarkEnabled, toggleBenchmark } = usePricesFx();
+  const { benchmarkData, benchmarkEnabled, toggleBenchmark, convertToBase } = usePricesFx();
 
   const [showHistory, setShowHistory] = useState(false);
   const [showPdfModal, setShowPdfModal] = useState(false);
@@ -41,10 +43,25 @@ export function Charts() {
   const [milestones] = useLocalStorage<NWMilestone[]>('nw-milestones', []);
   const [timeRange, setTimeRange] = useLocalStorage<TimeRange>('chart-time-range', 'ALL');
   const [showAnnotations, setShowAnnotations] = useLocalStorage<boolean>('show-annotations', true);
+  const [showContributions, setShowContributions] = useLocalStorage<boolean>('show-contributions', false);
   const { annotations, addAnnotation, deleteAnnotation } = useAnnotations();
   const hasHoldings = allEnrichedHoldings.length > 0;
 
   const anyBenchmarkHasData = benchmarkData.spx.length > 0 || benchmarkData.btc.length > 0 || benchmarkData.gold.length > 0;
+
+  // Phase 4.1: cumulative contributions per snapshot date for the overlay.
+  // Cheap to recompute (txn count is small); cached in useMemo so the
+  // chart doesn't re-derive on every render.
+  const contributionsByDate = useMemo(
+    () => computeCumulativeContributions(transactions, convertToBase),
+    [transactions, convertToBase],
+  );
+  // Whether *any* contribution txn exists. If not, the toggle is hidden
+  // entirely — the dashed line would just trace the solid one.
+  const hasContributions = useMemo(
+    () => transactions.some((t) => t.type === 'deposit' || t.type === 'withdrawal' || t.type === 'correction'),
+    [transactions],
+  );
 
   const summaryStats = useMemo(() => {
     if (snapshots.length === 0) return null;
@@ -155,21 +172,39 @@ export function Charts() {
             </div>
           )}
 
-          {/* Time Range Selector */}
-          <div className="flex items-center gap-1 mb-6">
-            {TIME_RANGES.map((r) => (
+          {/* Time Range Selector + chart toggles */}
+          <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
+            <div className="flex items-center gap-1">
+              {TIME_RANGES.map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setTimeRange(r)}
+                  className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
+                    timeRange === r
+                      ? 'bg-accent text-white rounded-lg'
+                      : 'text-t-muted hover:text-t-secondary'
+                  }`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+            {hasContributions && (
               <button
-                key={r}
-                onClick={() => setTimeRange(r)}
-                className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
-                  timeRange === r
-                    ? 'bg-accent text-white rounded-lg'
-                    : 'text-t-muted hover:text-t-secondary'
+                type="button"
+                onClick={() => setShowContributions((v) => !v)}
+                role="switch"
+                aria-checked={showContributions}
+                title="Overlay a dashed line for net worth excluding deposits/withdrawals — i.e. pure market gain."
+                className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors border ${
+                  showContributions
+                    ? 'bg-accent/10 text-accent border-accent/30'
+                    : 'text-t-muted border-b-default hover:text-t-secondary'
                 }`}
               >
-                {r}
+                Show contributions overlay
               </button>
-            ))}
+            )}
           </div>
 
           {/* Hero: Net Worth Line Chart — full width */}
@@ -182,6 +217,8 @@ export function Charts() {
               timeRange={timeRange}
               annotations={annotations}
               showAnnotations={showAnnotations}
+              contributionsByDate={contributionsByDate}
+              showContributions={showContributions}
             />
           </div>
 

@@ -14,6 +14,14 @@ interface NetWorthLineChartProps {
   timeRange?: TimeRange;
   annotations?: TimelineAnnotation[];
   showAnnotations?: boolean;
+  /**
+   * Phase 4.1 — when provided AND showContributions is true, the chart
+   * renders a second dashed line: NW(t) − cumulativeContributions(t).
+   * That second line tracks the portfolio's *market* performance — the
+   * portion not attributable to deposits/withdrawals.
+   */
+  contributionsByDate?: Map<string, number>;
+  showContributions?: boolean;
 }
 
 /** Filter snapshots by time range — exported for reuse */
@@ -72,6 +80,8 @@ export function NetWorthLineChart({
   timeRange = 'ALL',
   annotations = [],
   showAnnotations = false,
+  contributionsByDate,
+  showContributions = false,
 }: NetWorthLineChartProps) {
   const { theme } = useSettings();
   const cc = getChartColors(theme);
@@ -277,10 +287,39 @@ export function NetWorthLineChart({
   // ── Default: absolute dollar value view ──
   // Use ISO date (YYYY-MM-DD) as x-axis key to avoid cross-year collisions.
   const sortedSnapshots = [...filteredSnapshots].sort((a, b) => a.date.localeCompare(b.date));
-  const data = sortedSnapshots.map((s) => ({
-    date: s.date,
-    value: parseFloat((s.netWorthValue ?? s.totalValue).toFixed(2)),
-  }));
+
+  // Phase 4.1: precompute a sorted contributions array for fast lookup
+  // (binary-search to find the cumulative value at or before each snapshot).
+  const sortedContrib =
+    showContributions && contributionsByDate
+      ? [...contributionsByDate.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+      : null;
+  function contribAt(date: string): number {
+    if (!sortedContrib || sortedContrib.length === 0) return 0;
+    // Latest entry with key ≤ date.
+    let lo = 0;
+    let hi = sortedContrib.length - 1;
+    if (date < sortedContrib[0][0]) return 0;
+    if (date >= sortedContrib[hi][0]) return sortedContrib[hi][1];
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi + 1) / 2);
+      if (sortedContrib[mid][0] <= date) lo = mid;
+      else hi = mid - 1;
+    }
+    return sortedContrib[lo][1];
+  }
+
+  const data = sortedSnapshots.map((s) => {
+    const value = parseFloat((s.netWorthValue ?? s.totalValue).toFixed(2));
+    const contrib = sortedContrib ? contribAt(s.date) : 0;
+    return {
+      date: s.date,
+      value,
+      // "Net worth excluding contributions" — the portion attributable to
+      // market gains/losses alone. Equals NW when contributions=0.
+      ...(sortedContrib ? { exclContrib: parseFloat((value - contrib).toFixed(2)) } : {}),
+    };
+  });
 
   const values = data.map((d) => d.value);
   const currentNW = values[values.length - 1] ?? 0;
@@ -296,7 +335,25 @@ export function NetWorthLineChart({
 
   return (
     <div className="bg-surface-card card-radius card-shadow p-5">
-      <h3 className="text-sm font-semibold text-t-primary mb-4">Net Worth Over Time</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-t-primary">Net Worth Over Time</h3>
+        {sortedContrib && (
+          <div className="flex items-center gap-3 text-[11px] text-t-muted">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-3 h-0.5 bg-gain" aria-hidden="true" />
+              Total NW
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span
+                className="w-3 h-0.5 bg-accent"
+                style={{ backgroundImage: 'repeating-linear-gradient(90deg, currentColor 0 4px, transparent 4px 7px)' }}
+                aria-hidden="true"
+              />
+              Excl. contributions
+            </span>
+          </div>
+        )}
+      </div>
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={data} margin={{ left: 10, right: 20 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} />
@@ -355,11 +412,24 @@ export function NetWorthLineChart({
           <Line
             type="monotone"
             dataKey="value"
+            name="Net Worth"
             stroke="#10b981"
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 4, strokeWidth: 2 }}
           />
+          {sortedContrib && (
+            <Line
+              type="monotone"
+              dataKey="exclContrib"
+              name="NW excl. contributions"
+              stroke="var(--accent)"
+              strokeWidth={1.75}
+              strokeDasharray="5 4"
+              dot={false}
+              activeDot={{ r: 3, strokeWidth: 2 }}
+            />
+          )}
         </LineChart>
       </ResponsiveContainer>
     </div>

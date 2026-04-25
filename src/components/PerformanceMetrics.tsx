@@ -79,7 +79,7 @@ export function PerformanceMetrics() {
   const { best, worst } = getBestWorst(filteredEnrichedHoldings);
 
   return (
-    <div className="bg-surface-card card-radius border border-b-default p-5 mb-6">
+    <div className="mv2-card mv2-card-pad mb-6">
       <h3 className="text-sm font-semibold text-t-primary mb-4">Performance</h3>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Return */}

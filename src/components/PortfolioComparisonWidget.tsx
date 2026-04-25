@@ -52,7 +52,7 @@ export function PortfolioComparisonWidget() {
   if (snapshots.length === 0) return null;
 
   return (
-    <div className="bg-surface-card card-radius border border-b-default p-5 mb-6">
+    <div className="mv2-card mv2-card-pad mb-6">
       <h3 className="text-sm font-semibold text-t-primary mb-3">Net worth comparison</h3>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">

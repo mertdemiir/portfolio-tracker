@@ -61,7 +61,10 @@ describe('migration 4 — reconcile holding ledger with storage', () => {
     expect(syn.pricePerShare).toBe(70); // matches stored.buyPrice
     expect(syn.holdingId).toBe('h1');
     expect(syn.date).toBe('2024-09-01');
-    expect(syn.notes).toMatch(/migration 4/);
+    // Note may say migration 4 OR migration 5 depending on which pass last
+    // touched the synthetic — migration 5 (when present) wipes and re-adds
+    // the migration-4 synthetic with its own note. Both are reconciliations.
+    expect(syn.notes).toMatch(/Phase 3 reconciliation/);
   });
 
   it('chooses the synthetic price so weighted-avg matches stored.buyPrice (partial gap case)', async () => {
@@ -216,11 +219,14 @@ describe('migration 4 — reconcile holding ledger with storage', () => {
     await runMigrations();
 
     const txns = JSON.parse(localStorage.getItem('transactions')!);
-    const m4 = txns.filter(
-      (t: { notes?: string }) => typeof t.notes === 'string' && /migration 4/.test(t.notes),
+    // Migration 4 OR 5 may have authored the synthetics — both are
+    // labeled "Phase 3 reconciliation". This test verifies that for
+    // multiple holdings the right shares land regardless.
+    const recon = txns.filter(
+      (t: { notes?: string }) => typeof t.notes === 'string' && /Phase 3 reconciliation/.test(t.notes),
     );
-    expect(m4).toHaveLength(2);
-    expect(m4.find((t: { ticker: string }) => t.ticker === 'XLE').shares).toBe(50);
-    expect(m4.find((t: { ticker: string }) => t.ticker === 'XLI').shares).toBe(30);
+    expect(recon).toHaveLength(2);
+    expect(recon.find((t: { ticker: string }) => t.ticker === 'XLE').shares).toBe(50);
+    expect(recon.find((t: { ticker: string }) => t.ticker === 'XLI').shares).toBe(30);
   });
 });

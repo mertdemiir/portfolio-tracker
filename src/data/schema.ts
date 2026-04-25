@@ -86,8 +86,20 @@ export const APP_META_KEY = 'app-meta';
  *       so the weighted-average buy price still equals the stored
  *       holding.buyPrice. Idempotent — running again is a no-op once
  *       the ledger agrees.
+ *   5 — v1.4.4. Migration 4 had a date bug: it stamped synthetics at
+ *       holding.buyDate, which for closed-and-reopened cycles can sit
+ *       BEFORE the closing sell, allowing the sell to partially
+ *       "consume" the synthetic's shares during the chronological
+ *       walk. Migration 5 is a brute-force reconcile: for each non-
+ *       cash holding it removes EVERY prior synthetic linked to that
+ *       holding, re-derives shares from the cleaned ledger, then
+ *       appends ONE corrective synthetic dated at MAX(buyDate,
+ *       latest_contributing_txn_date) so it's chronologically last
+ *       and can't be swallowed by a prior sell. Idempotent: re-
+ *       running on already-reconciled data wipes and re-adds the
+ *       same synthetic.
  */
-export const CURRENT_SCHEMA_VERSION = 4;
+export const CURRENT_SCHEMA_VERSION = 5;
 
 const EMPTY_META: AppMeta = {
   schemaVersion: 0,

@@ -23,6 +23,8 @@ import {
   type MigrationRecord,
 } from './schema';
 import { gatherBackupData, serializeBackup } from './backup';
+import { deriveHolding } from '../utils/transactionLedger';
+import type { AssetType, Transaction } from '../types';
 
 /** A migration function advances the schema by exactly one version. */
 export type Migration = () => void | Promise<void>;
@@ -308,13 +310,209 @@ const MIGRATIONS: Record<number, Migration> = {
       // Non-fatal
     }
   },
+
+  /**
+   * v3 → v4: Reconcile each holding's ledger with its stored shape.
+   *
+   * Why this is needed: migration 3's check for "does the holding need
+   * a synthetic buy?" was too coarse — it only looked for the *existence*
+   * of any buy in (ticker, portfolioId) scope. Holdings with closed-and-
+   * reopened history have real legacy buys, so migration 3 skipped them,
+   * but the chronological-reset deriveHolding from v1.4.2 then closes
+   * those legacy cycles at zero shares. The current open position ends
+   * up unrepresented.
+   *
+   * What this does: for each Holding, run deriveHolding to compute the
+   * ledger view of (shares, avgBuyPrice). If derived shares ≠ stored
+   * shares (within a small tolerance), append a synthetic top-up txn:
+   *   - storedShares > derivedShares  →  synthetic BUY of the gap
+   *   - storedShares < derivedShares  →  synthetic SELL of the gap
+   *
+   * The synthetic-buy price is chosen so the post-migration weighted-
+   * average buy price exactly equals stored.buyPrice, preserving the
+   * cost basis the user has been seeing for years. Synthetic sells are
+   * stamped with costBasisPerShare=stored.buyPrice (no realized P&L
+   * effect since they're synthetic reconciliations, not real trades).
+   *
+   * Synthetic txns are dated at holding.buyDate (or today as a fallback)
+   * and tagged synthetic: true + holdingId: holding.id + an explanatory
+   * note so the user knows why they exist if they ever scroll the
+   * transaction log.
+   *
+   * Idempotent: re-running on already-reconciled data finds derived ==
+   * stored for every holding and writes nothing.
+   *
+   * Cash holdings: skipped. Cash uses its own deposit/withdrawal/
+   * interest/correction model which migration 3 already covers, and
+   * the deriveHolding chronological-reset rule does not apply to cash.
+   */
+  4: () => {
+    const DEFAULT_PORTFOLIO_ID = 'default';
+    const SHARES_TOL = 1e-6;
+
+    const makeId = (): string => {
+      const c: Crypto | undefined = typeof crypto !== 'undefined' ? crypto : undefined;
+      if (c && typeof c.randomUUID === 'function') return c.randomUUID();
+      return `syn-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    };
+
+    let holdings: Array<Record<string, unknown> & { id?: string }> = [];
+    let txns: Transaction[] = [];
+
+    try {
+      const raw = localStorage.getItem('portfolio-holdings');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) holdings = parsed;
+      }
+    } catch {
+      return; // malformed, leave alone
+    }
+    try {
+      const raw = localStorage.getItem('transactions');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) txns = parsed;
+      }
+    } catch {
+      return; // malformed, leave alone
+    }
+
+    let added = 0;
+    const newTxns: Transaction[] = [];
+
+    for (const h of holdings) {
+      if (!h || typeof h.id !== 'string' || typeof h.ticker !== 'string') continue;
+      // Skip cash — different ledger model handled by migration 3.
+      const assetType = typeof h.assetType === 'string' ? (h.assetType as AssetType) : 'stock';
+      if (assetType === 'cash') continue;
+
+      const storedShares = typeof h.shares === 'number' ? h.shares : 0;
+      const storedBuyPrice = typeof h.buyPrice === 'number' ? h.buyPrice : 0;
+      if (storedShares <= 0) continue;
+
+      const portfolioId = typeof h.portfolioId === 'string' && h.portfolioId
+        ? h.portfolioId
+        : DEFAULT_PORTFOLIO_ID;
+      const buyDate = typeof h.buyDate === 'string' && h.buyDate
+        ? h.buyDate
+        : new Date().toISOString().slice(0, 10);
+
+      // Derive from the ledger using the chronological-reset algorithm.
+      const d = deriveHolding(
+        {
+          id: h.id,
+          ticker: h.ticker,
+          portfolioId,
+          assetType,
+          buyDate,
+        },
+        // Include the synthetics we've already queued in this pass so
+        // the next holding's derivation doesn't double-count them. (The
+        // pass is per-holding, so this is mostly a safety net.)
+        [...txns, ...newTxns],
+      );
+
+      const gap = storedShares - d.shares;
+      if (Math.abs(gap) < SHARES_TOL) continue; // already agrees
+
+      const ticker = h.ticker;
+      const name = typeof h.name === 'string' ? h.name : ticker;
+      const currency = typeof h.currency === 'string' ? h.currency : undefined;
+      const buyFxRate = typeof h.buyFxRate === 'number' ? h.buyFxRate : undefined;
+      const category = typeof h.category === 'string' ? h.category : undefined;
+
+      if (gap > 0) {
+        // Need a synthetic buy of `gap` shares. Choose its price so the
+        // post-migration weighted-avg buy price equals storedBuyPrice:
+        //
+        //   weightedAvg = (existingBuyCost + gap * synPrice) / (existingBuyShares + gap)
+        //   storedBuyPrice = ↑
+        //
+        // From deriveHolding's contract: when derived.shares > 0, the
+        // weighted-avg of buys in the open cycle is d.buyPrice over
+        // d.shares worth of buys. When derived.shares == 0 (post-reset),
+        // there are no contributing buys in the open cycle.
+        const existingBuyShares = d.shares; // positive contributors
+        const existingBuyCost = existingBuyShares * d.buyPrice;
+        const synPrice =
+          existingBuyShares > 0
+            ? (storedShares * storedBuyPrice - existingBuyCost) / gap
+            : storedBuyPrice;
+
+        const synthetic: Transaction = {
+          id: makeId(),
+          date: buyDate,
+          ticker,
+          name,
+          type: 'buy',
+          shares: gap,
+          pricePerShare: synPrice,
+          total: gap * synPrice,
+          portfolioId,
+          holdingId: h.id,
+          synthetic: true,
+          notes:
+            'Phase 3 reconciliation (migration 4): brings the transaction ledger ' +
+            'in line with the stored holding shares and cost basis. Auto-generated; ' +
+            'safe to ignore or delete if you re-enter the actual purchase history.',
+          assetType,
+          ...(category ? { category } : {}),
+          ...(currency ? { currency } : {}),
+          ...(buyFxRate !== undefined ? { buyFxRate } : {}),
+        };
+        newTxns.push(synthetic);
+        added++;
+      } else {
+        // gap < 0 — derived has more shares than stored. Add a synthetic
+        // sell of |gap| shares at storedBuyPrice (so realized P&L is 0).
+        const synShares = -gap;
+        const synthetic: Transaction = {
+          id: makeId(),
+          date: buyDate,
+          ticker,
+          name,
+          type: 'sell',
+          shares: synShares,
+          pricePerShare: storedBuyPrice,
+          total: synShares * storedBuyPrice,
+          costBasisPerShare: storedBuyPrice, // P&L impact: 0
+          portfolioId,
+          holdingId: h.id,
+          synthetic: true,
+          notes:
+            'Phase 3 reconciliation (migration 4): brings the transaction ledger ' +
+            'in line with the stored holding shares. Auto-generated.',
+          assetType,
+          ...(category ? { category } : {}),
+          ...(currency ? { currency } : {}),
+        };
+        newTxns.push(synthetic);
+        added++;
+      }
+    }
+
+    if (added > 0) {
+      try {
+        localStorage.setItem('transactions', JSON.stringify([...txns, ...newTxns]));
+      } catch {
+        throw new Error('v4: failed to write reconciled transactions to localStorage');
+      }
+    }
+  },
 };
 
 /**
  * Maximum number of pre-migration backups to retain in localStorage.
  * Oldest are purged when this limit is exceeded.
  */
-const MAX_BACKUPS_IN_LOCALSTORAGE = 3;
+/**
+ * Keep at least this many recent pre-migration backups. Sized to comfortably
+ * exceed the current migration count so that running every pending
+ * migration in a single boot still leaves the user with the rollback point
+ * for the very first migration step. Bump if total migrations grow past 6.
+ */
+const MAX_BACKUPS_IN_LOCALSTORAGE = 8;
 
 const BACKUP_KEY_PREFIX = '__pre_migration_';
 
@@ -372,7 +570,10 @@ function purgeOldBackups(keepCount: number): void {
     // underscore-prefixed colon-replaced ISO date. Parse it back.
     const ageDropped = new Set<string>();
     for (const k of keys) {
-      const tsPart = k.replace(`${BACKUP_KEY_PREFIX}`, '').split('_').slice(2).join('_');
+      // Key shape: __pre_migration_<from>_to_<to>_<timestamp>
+      // After stripping prefix: <from>_to_<to>_<timestamp> (4 underscore-
+      // separated parts). Drop the first three to get the timestamp.
+      const tsPart = k.replace(`${BACKUP_KEY_PREFIX}`, '').split('_').slice(3).join('_');
       // tsPart looks like 2026-04-25T00-00-00-000Z (colons + dots replaced
       // with dashes during writePreMigrationBackup). Reverse it so Date can
       // parse: keep the date portion and put the time back together.

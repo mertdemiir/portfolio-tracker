@@ -75,8 +75,19 @@ export const APP_META_KEY = 'app-meta';
  *       authoritative for cost basis in v1.3.0 — this migration only
  *       establishes the ledger so a future release can flip the source
  *       of truth without data loss.
+ *   4 — v1.4.3. Reconciles each Holding's ledger with its stored shape.
+ *       Migration 3's "any buy exists → skip" check was too coarse:
+ *       holdings with closed-and-reopened cycles often had real legacy
+ *       buy/sell history that net out to zero, leaving the *current*
+ *       open position unrepresented in the ledger. Migration 4 derives
+ *       shares from the ledger using the chronological-reset algorithm
+ *       and, for every holding where derived ≠ stored, appends a
+ *       clearly-marked synthetic top-up buy or sell at a price chosen
+ *       so the weighted-average buy price still equals the stored
+ *       holding.buyPrice. Idempotent — running again is a no-op once
+ *       the ledger agrees.
  */
-export const CURRENT_SCHEMA_VERSION = 3;
+export const CURRENT_SCHEMA_VERSION = 4;
 
 const EMPTY_META: AppMeta = {
   schemaVersion: 0,

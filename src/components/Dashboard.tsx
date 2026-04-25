@@ -15,17 +15,13 @@ import { PortfolioComparisonWidget } from './PortfolioComparisonWidget';
 import { ShareImageModal } from './ShareImageModal';
 import { LiabilitiesSection } from './LiabilitiesSection';
 import { HeroCard } from './HeroCard';
+import { KpiBand } from './KpiBand';
 import type { NWMilestone, TabId } from '../types';
 import type { NavFilter } from '../App';
 
 interface DashboardProps {
   onNavigate?: (tab: TabId, filter?: NavFilter) => void;
 }
-
-const CATEGORY_COLORS = [
-  'bg-indigo-500', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500',
-  'bg-violet-500', 'bg-cyan-500', 'bg-orange-500', 'bg-pink-500',
-];
 
 export function Dashboard({ onNavigate }: DashboardProps) {
   const {
@@ -144,6 +140,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             : undefined
         }
       />
+
+      {/* Mercury KpiBand (M3) */}
+      <KpiBand />
 
       {/* Milestones card */}
       <div className="bg-surface-card rounded-2xl border border-b-default p-5 mb-6 mt-4">
@@ -281,66 +280,87 @@ export function Dashboard({ onNavigate }: DashboardProps) {
       {/* Section B2: Performance Metrics */}
       <PerformanceMetrics />
 
-      {/* Section C: Net Worth by Category */}
+      {/* Section C: Net Worth by Category — Mercury m-cat-row layout (M3) */}
       {netWorthSummary.categoryBreakdown.length > 0 && (
-        <div className="bg-surface-card card-radius border border-b-default p-5 mb-6">
-          <h3 className="text-sm font-semibold text-t-primary mb-4">Net Worth by Category</h3>
-          <div className="space-y-3">
-            {netWorthSummary.categoryBreakdown.map((cat, i) => (
-              <button
-                key={cat.key}
-                onClick={() => onNavigate?.('holdings', { category: cat.key })}
-                className="block w-full text-left hover:bg-surface-alt/50 -mx-2 px-2 py-1 rounded-lg transition-colors"
-              >
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-sm text-t-secondary">{cat.label}</span>
-                  <div className="text-sm text-right tabular-nums">
-                    <span className="font-medium text-t-primary">{formatCurrency(cat.value)}</span>
-                    <span className="text-t-faint ml-2 text-xs">{cat.percentage.toFixed(1)}%</span>
+        <div className="mv2-card mv2-card-pad mb-6">
+          <div className="mv2-panel-head">
+            <div>
+              <div className="mv2-card-title">Net Worth by Category</div>
+              <div className="mv2-card-subtitle">Distribution across all categories</div>
+            </div>
+          </div>
+          <div>
+            {netWorthSummary.categoryBreakdown.map((cat, i) => {
+              const palette = ['#3b5bdb', '#10b981', '#f59e0b', '#a855f7', '#ec4899', '#06b6d4', '#ef4444', '#f97316'];
+              const fill = palette[i % palette.length];
+              return (
+                <button
+                  key={cat.key}
+                  onClick={() => onNavigate?.('holdings', { category: cat.key })}
+                  className="m-cat-row w-full text-left hover:bg-surface-alt/40 transition-colors -mx-2 px-2 rounded-md"
+                  style={{ marginInline: 0 }}
+                >
+                  <div className="m-cat-label">{cat.label}</div>
+                  <div className="m-cat-bar">
+                    <div
+                      className="m-cat-bar-fill"
+                      style={{ width: `${Math.max(cat.percentage, 0.5)}%`, background: fill }}
+                    />
                   </div>
-                </div>
-                <div className="h-2 bg-surface-alt rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-700 ease-out ${CATEGORY_COLORS[i % CATEGORY_COLORS.length]}`}
-                    style={{ width: `${Math.max(cat.percentage, 0.5)}%` }}
-                  />
-                </div>
-              </button>
-            ))}
+                  <div className="m-cat-val">
+                    {formatCurrency(cat.value)}
+                    <span className="m-cat-pct">{cat.percentage.toFixed(1)}%</span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* Section D: Top Movers (portfolio only) */}
+      {/* Section D: Top Movers — Mercury 3-column m-mover-row grid (M3) */}
       {filteredEnrichedHoldings.length > 0 && (
-        <div className="bg-surface-card card-radius border border-b-default p-5">
-          <h3 className="text-sm font-semibold text-t-primary mb-3">Top Movers Today</h3>
-          <div className="flex flex-wrap gap-2">
-            {[...filteredEnrichedHoldings]
-              .sort((a, b) => Math.abs(b.dailyChangePercent) - Math.abs(a.dailyChangePercent))
-              .filter(h => h.dailyChange.amount !== 0)
-              .slice(0, 8)
-              .map((h) => (
-                <button
-                  key={h.id}
-                  onClick={() => onNavigate?.('holdings', { ticker: h.ticker })}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                    h.dailyChangePercent >= 0
-                      ? 'bg-gain/[0.08] text-gain hover:bg-gain/[0.15]'
-                      : 'bg-loss/[0.08] text-loss hover:bg-loss/[0.15]'
-                  }`}
-                >
-                  <span className="font-bold text-t-primary">{h.ticker}</span>
-                  {formatPercent(h.dailyChangePercent)}
-                  <span className="text-t-muted font-normal">
-                    ({formatSignedCurrency(h.dailyChange)})
-                  </span>
-                </button>
-              ))}
-            {filteredEnrichedHoldings.every(h => h.dailyChange.amount === 0) && (
-              <p className="text-xs text-t-faint">No movers today</p>
-            )}
+        <div className="mv2-card mv2-card-pad mb-6">
+          <div className="m-row" style={{ marginBottom: 12 }}>
+            <div className="mv2-card-title">Top movers today</div>
+            <span className="mv2-card-subtitle">Sorted by % change</span>
           </div>
+          {(() => {
+            const movers = [...filteredEnrichedHoldings]
+              .filter((h) => h.dailyChange.amount !== 0)
+              .sort((a, b) => Math.abs(b.dailyChangePercent) - Math.abs(a.dailyChangePercent))
+              .slice(0, 6);
+            if (movers.length === 0) {
+              return <p className="text-xs text-t-faint">No movers today</p>;
+            }
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8">
+                {movers.map((h) => (
+                  <button
+                    key={h.id}
+                    onClick={() => onNavigate?.('holdings', { ticker: h.ticker })}
+                    className="m-mover-row w-full text-left hover:bg-surface-alt/40 transition-colors px-2 -mx-2 rounded-md"
+                  >
+                    <div>
+                      <div className="m-tkr">{h.ticker}</div>
+                      <div className="m-tkr-name">{h.name}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div
+                        className={'tabular ' + (h.dailyChangePercent >= 0 ? 'pct-up' : 'pct-down')}
+                        style={{ fontWeight: 600, fontSize: 13 }}
+                      >
+                        {formatPercent(h.dailyChangePercent)}
+                      </div>
+                      <div className="tabular" style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                        {formatSignedCurrency(h.dailyChange)}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
         </div>
       )}
       {showShareModal && (

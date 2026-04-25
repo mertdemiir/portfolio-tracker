@@ -302,33 +302,32 @@ export function Simulator() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-semibold text-t-primary tracking-tight">
-          {mode === 'simulate' ? 'What-If Simulator' : 'Portfolio Rebalancer'}
-        </h2>
+      <div className="m-page-head">
+        <div>
+          <div className="m-h1">
+            {mode === 'simulate' ? 'What-If Simulator' : 'Portfolio Rebalancer'}
+          </div>
+          <div className="m-sub">
+            {mode === 'simulate'
+              ? 'Stress-test prices and scenarios against your portfolio.'
+              : 'Plan trades to bring your allocation back to target.'}
+          </div>
+        </div>
         <div className="flex items-center gap-3">
           {/* Mode Toggle */}
-          <div className="flex bg-surface-alt rounded-lg p-0.5">
+          <div className="mv2-sort-pills">
             <button
               onClick={() => setMode('simulate')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                mode === 'simulate'
-                  ? 'bg-surface-card text-t-primary shadow-sm'
-                  : 'text-t-muted hover:text-t-secondary'
-              }`}
+              className={mode === 'simulate' ? 'active' : ''}
             >
-              <TrendingUp size={13} />
+              <TrendingUp size={13} aria-hidden="true" className="inline mr-1" />
               Simulate
             </button>
             <button
               onClick={() => setMode('rebalance')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                mode === 'rebalance'
-                  ? 'bg-surface-card text-t-primary shadow-sm'
-                  : 'text-t-muted hover:text-t-secondary'
-              }`}
+              className={mode === 'rebalance' ? 'active' : ''}
             >
-              <Scale size={13} />
+              <Scale size={13} aria-hidden="true" className="inline mr-1" />
               Rebalance
             </button>
           </div>

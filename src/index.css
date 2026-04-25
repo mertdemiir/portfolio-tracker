@@ -383,3 +383,204 @@ input::placeholder, textarea::placeholder {
   .mv2-hero-strip { grid-template-columns: repeat(2, 1fr); padding: 14px 18px 16px; gap: 12px; }
   .mv2-hero-strip > div { border-left: 0 !important; padding-left: 0 !important; padding-right: 0 !important; }
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   Mercury — Holdings page primitives (M4)
+   ════════════════════════════════════════════════════════════════════ */
+
+.m-page-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 0 0 16px;
+}
+.m-h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.022em; color: var(--text-primary); }
+.m-sub { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+
+.m-toolbar {
+  display: flex; gap: 8px; align-items: center;
+  margin-bottom: 14px; padding: 8px 10px;
+  background: var(--surface-card); border: 1px solid var(--border-default);
+  border-radius: 10px;
+}
+.m-search {
+  flex: 1; display: flex; align-items: center; gap: 8px;
+  color: var(--text-muted); padding-left: 6px;
+}
+.m-search input {
+  flex: 1; background: transparent; border: 0; outline: none;
+  font-size: 13px; color: var(--text-primary);
+  padding: 4px 0;
+}
+.m-select {
+  background: transparent; border: 1px solid var(--border-default);
+  border-radius: 6px; padding: 4px 10px; font-size: 12px; color: var(--text-secondary);
+  cursor: pointer;
+}
+
+/* Pill group (filter chips) */
+.m-pill-group {
+  display: inline-flex; padding: 3px; background: var(--surface-alt);
+  border-radius: 8px; gap: 2px;
+}
+.m-pill {
+  padding: 5px 12px; font-size: 12px; font-weight: 500;
+  color: var(--text-muted); border-radius: 6px;
+  background: transparent; border: 0; cursor: pointer; font-family: inherit;
+  transition: all 0.12s;
+}
+.m-pill:hover { color: var(--text-primary); }
+.m-pill.active {
+  background: var(--surface-card); color: var(--text-primary);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 1px 0 rgba(0,0,0,0.02);
+}
+
+/* Sort pills (smaller variant) */
+.mv2-sort-pills {
+  display: inline-flex; padding: 3px; background: var(--surface-alt);
+  border-radius: 7px; gap: 2px;
+}
+.mv2-sort-pills button {
+  padding: 5px 10px; font-size: 12px; font-weight: 500;
+  color: var(--text-muted); border-radius: 5px;
+  background: transparent; border: 0; cursor: pointer; font-family: inherit;
+  transition: all 0.12s;
+}
+.mv2-sort-pills button.active {
+  background: var(--surface-card); color: var(--text-primary);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+
+/* Mercury table (Holdings, Watchlist, Transactions) */
+.m-table {
+  width: 100%; border-collapse: collapse; font-size: 13px;
+  background: var(--surface-card); border: 1px solid var(--border-default);
+  border-radius: 12px; overflow: hidden;
+}
+.m-table thead { background: var(--surface-alt); }
+.m-table th {
+  text-align: left; padding: 10px 16px; font-weight: 500;
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text-muted); border-bottom: 1px solid var(--border-default);
+}
+.m-table th.num,
+.m-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.m-table td { padding: 12px 16px; border-bottom: 1px solid var(--border-subtle); color: var(--text-secondary); }
+.m-table tbody tr:last-child td { border-bottom: none; }
+.m-table tbody tr:hover { background: var(--surface-alt); }
+.m-table tbody tr td:first-child { color: var(--text-primary); }
+
+/* Mercury badge (neutral) — used in filter chips, watchlist tags etc */
+.m-badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 7px; font-size: 10.5px; font-weight: 500;
+  border-radius: 4px;
+  background: var(--surface-alt); color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   Mercury — Simulator primitives (M6)
+   ════════════════════════════════════════════════════════════════════ */
+
+.mv2-scenario-btn {
+  display: block; width: 100%; text-align: left;
+  padding: 12px 14px; border-radius: 8px;
+  border: 1px solid var(--border-default);
+  background: var(--surface-card);
+  font-size: 13px; font-weight: 500; color: var(--text-secondary);
+  margin-bottom: 8px;
+  transition: all 0.12s;
+  cursor: pointer; font-family: inherit;
+}
+.mv2-scenario-btn:hover { background: var(--surface-alt); }
+.mv2-scenario-btn.active {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.mv2-scenario-btn .label { display: block; font-weight: 600; }
+.mv2-scenario-btn .meta {
+  display: block; font-size: 11px; color: var(--text-muted);
+  margin-top: 3px; font-variant-numeric: tabular-nums;
+}
+.mv2-scenario-btn.active .meta {
+  color: color-mix(in srgb, var(--accent) 70%, var(--text-muted));
+}
+
+.mv2-override-field {
+  display: grid; grid-template-columns: 96px 1fr 56px;
+  gap: 10px; align-items: center;
+  padding: 8px 0;
+}
+.mv2-override-field > label {
+  font-size: 11px; color: var(--text-muted); text-transform: uppercase;
+  letter-spacing: 0.05em; font-weight: 500;
+}
+.mv2-override-field input[type="range"] {
+  width: 100%; accent-color: var(--accent);
+}
+.mv2-override-field .val {
+  text-align: right; font-size: 12px; font-variant-numeric: tabular-nums;
+  font-weight: 600; color: var(--text-primary);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   Mercury — FIRE primitives (M6)
+   ════════════════════════════════════════════════════════════════════ */
+
+.mv2-fire-hero {
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: 14px; padding: 32px;
+  box-shadow: var(--shadow-hero);
+  margin-bottom: 16px;
+}
+.mv2-fire-year {
+  font-family: var(--font-display);
+  font-size: 88px; font-weight: 400; letter-spacing: -0.04em;
+  line-height: 1; color: var(--text-primary);
+  font-feature-settings: "tnum";
+}
+.mv2-fire-bar {
+  margin-top: 20px; height: 8px; background: var(--surface-alt);
+  border-radius: 4px; overflow: hidden;
+}
+.mv2-fire-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+  border-radius: 4px; transition: width 0.6s ease;
+}
+.m-fire-card {
+  padding: 20px; border-radius: 12px; border: 1px solid var(--border-default);
+  background: var(--surface-card);
+}
+.m-fire-card .variant {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-muted); font-weight: 500;
+}
+.m-fire-card .target {
+  font-family: var(--font-display); font-size: 28px; font-weight: 400;
+  letter-spacing: -0.03em; margin: 6px 0 2px;
+  color: var(--text-primary);
+}
+.m-fire-card .age { font-size: 13px; color: var(--text-muted); }
+
+.mv2-field {
+  display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px;
+}
+.mv2-field > label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-muted); font-weight: 500;
+}
+.mv2-field input,
+.mv2-field select {
+  background: var(--input-bg); color: var(--text-primary);
+  border: 1px solid var(--border-input); border-radius: 7px;
+  padding: 8px 10px; font-size: 13px; font-variant-numeric: tabular-nums;
+  width: 100%;
+}
+
+/* ── Mobile collapses for tables ── */
+@media (max-width: 768px) {
+  .m-toolbar { flex-wrap: wrap; }
+  .mv2-fire-year { font-size: 56px; }
+}

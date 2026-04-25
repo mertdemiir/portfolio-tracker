@@ -114,26 +114,34 @@ export function Modal({
       onKeyDown={handleKeyDown}
     >
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/40 backdrop-blur-[4px]"
         onClick={disableDismiss ? undefined : onClose}
         aria-hidden="true"
       />
       <div
         ref={dialogRef}
         tabIndex={-1}
-        className={`relative bg-surface-card rounded-2xl shadow-xl w-full ${SIZE_CLASS[size]} p-6 max-h-[90vh] overflow-y-auto animate-modal-enter outline-none ${className ?? ''}`}
+        className={`relative bg-surface-card border border-b-default w-full ${SIZE_CLASS[size]} p-6 max-h-[90vh] overflow-y-auto animate-modal-enter outline-none ${className ?? ''}`}
+        style={{
+          borderRadius: 14,
+          boxShadow: '0 24px 60px -24px rgba(0,0,0,0.3)',
+        }}
       >
         <div className="flex items-center justify-between mb-5">
-          <h2 id={titleId} className="text-lg font-semibold text-t-primary">
+          <h2
+            id={titleId}
+            className="text-base font-semibold text-t-primary"
+            style={{ letterSpacing: 'var(--letter-spacing-heading)' }}
+          >
             {title}
           </h2>
           {!hideCloseButton && (
             <button
               onClick={onClose}
-              className="p-1 hover:bg-surface-alt rounded-lg transition-colors"
+              className="m-icon-btn"
               aria-label="Close dialog"
             >
-              <X className="w-5 h-5 text-t-muted" aria-hidden="true" />
+              <X className="w-[16px] h-[16px]" aria-hidden="true" />
             </button>
           )}
         </div>

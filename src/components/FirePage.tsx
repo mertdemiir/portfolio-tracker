@@ -466,52 +466,80 @@ export function FirePage() {
 
       {!needsSetup && (
         <>
-          {/* ── FIRE Progress Hero ──────────────────────────────────────────── */}
-          <div className="bg-surface-card card-radius border border-b-default p-5 mb-6 card-shadow">
-            <h3 className="text-sm font-semibold text-t-primary mb-4">FIRE Progress</h3>
+          {/* ── FIRE Hero (M6) ─── giant year display + progress bar ── */}
+          <div className="mv2-fire-hero">
+            <div className="flex flex-wrap items-end justify-between gap-6 mb-2">
+              <div>
+                <div className="m-hero-label">
+                  {progress >= 100 ? 'FIRE achieved' : projection?.fireAge ? 'Projected FIRE' : 'FIRE goal'}
+                </div>
+                <div className="mv2-fire-year">
+                  {progress >= 100
+                    ? 'Now'
+                    : projection?.fireAge
+                    ? new Date().getFullYear() +
+                      Math.max(0, Math.ceil(projection.fireAge) - settings.currentAge)
+                    : '50+'}
+                </div>
+                <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                  {progress >= 100
+                    ? `Net worth has crossed your FIRE number of ${formatCurrency(fireNumber)}.`
+                    : projection?.fireAge
+                    ? `Age ${Math.ceil(projection.fireAge)} · about ${Math.max(
+                        0,
+                        Math.ceil(projection.fireAge) - settings.currentAge,
+                      )} years from now`
+                    : `Need over 50 years at the current rate. Adjust expenses or contributions.`}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="m-hero-label">Progress</div>
+                <div className="text-3xl font-semibold tabular-nums" style={{ color: 'var(--text-primary)' }}>
+                  {progress.toFixed(1)}%
+                </div>
+              </div>
+            </div>
 
-            {/* Progress bar */}
-            <div className="relative h-6 bg-surface-alt rounded-full overflow-hidden mb-3">
+            {/* Mercury progress bar */}
+            <div className="mv2-fire-bar">
               <div
-                className="h-full rounded-full transition-all duration-700"
+                className="mv2-fire-bar-fill"
                 style={{
                   width: `${Math.min(progress, 100)}%`,
-                  backgroundColor: progress >= 100 ? 'var(--gain)' : 'var(--accent)',
+                  background:
+                    progress >= 100
+                      ? 'var(--gain)'
+                      : 'linear-gradient(90deg, var(--accent), var(--accent-hover))',
                 }}
               />
-              <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-t-primary">
-                {progress.toFixed(1)}%
-              </span>
             </div>
 
             {/* Stats row */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-5">
               <div>
-                <span className="text-xs text-t-muted font-medium">Current Net Worth</span>
-                <p className="text-lg font-bold tabular-nums text-t-primary">{formatCurrency(currentNetWorth)}</p>
+                <span className="m-hero-label">Current</span>
+                <p className="text-lg font-semibold tabular-nums mt-1" style={{ color: 'var(--text-primary)' }}>{formatCurrency(currentNetWorth)}</p>
               </div>
               <div>
-                <span className="text-xs text-t-muted font-medium">FIRE Number</span>
-                <p className="text-lg font-bold tabular-nums text-accent">{formatCurrency(fireNumber)}</p>
+                <span className="m-hero-label">FIRE Number</span>
+                <p className="text-lg font-semibold tabular-nums text-accent mt-1">{formatCurrency(fireNumber)}</p>
               </div>
               <div>
-                <span className="text-xs text-t-muted font-medium">Remaining</span>
-                <p className={`text-lg font-bold tabular-nums ${fireNumber - currentNetWorth <= 0 ? 'text-gain' : 'text-t-primary'}`}>
+                <span className="m-hero-label">Remaining</span>
+                <p className={`text-lg font-semibold tabular-nums mt-1 ${fireNumber - currentNetWorth <= 0 ? 'text-gain' : ''}`} style={fireNumber - currentNetWorth > 0 ? { color: 'var(--text-primary)' } : undefined}>
                   {fireNumber - currentNetWorth <= 0
                     ? 'FIRE Achieved!'
                     : formatCurrency(fireNumber - currentNetWorth)}
                 </p>
               </div>
               <div>
-                <span className="text-xs text-t-muted font-medium">
-                  {projection?.fireAge ? 'FIRE Age' : 'Est. FIRE Age'}
-                </span>
-                <p className="text-lg font-bold tabular-nums text-t-primary">
+                <span className="m-hero-label">{projection?.fireAge ? 'FIRE Age' : 'Est. Age'}</span>
+                <p className="text-lg font-semibold tabular-nums mt-1" style={{ color: 'var(--text-primary)' }}>
                   {projection?.fireAge
                     ? `Age ${Math.ceil(projection.fireAge)}`
                     : progress >= 100
                     ? 'Now!'
-                    : '50+ years'}
+                    : '50+'}
                 </p>
               </div>
             </div>

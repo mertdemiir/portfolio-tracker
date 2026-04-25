@@ -249,9 +249,9 @@ export function TransactionLog({ initialFilter }: TransactionLogProps) {
   // Bug 4: use context's realizedPnl which is already FX-converted
   const totalRealizedPnl = realizedPnl;
 
-  const SortHeader = ({ label, field }: { label: string; field: SortKey }) => (
+  const SortHeader = ({ label, field, numeric }: { label: string; field: SortKey; numeric?: boolean }) => (
     <th
-      className="pb-2 text-[11px] font-semibold text-t-muted uppercase tracking-wider cursor-pointer hover:text-t-secondary select-none"
+      className={(numeric ? 'num ' : '') + 'cursor-pointer hover:text-t-primary select-none'}
       onClick={() => toggleSort(field)}
     >
       <span className="inline-flex items-center gap-1">
@@ -263,11 +263,18 @@ export function TransactionLog({ initialFilter }: TransactionLogProps) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-semibold text-t-primary tracking-tight">Transactions</h2>
+      <div className="m-page-head">
+        <div>
+          <div className="m-h1">Transactions</div>
+          {transactions.length > 0 && (
+            <div className="m-sub">
+              {transactions.length} entries · {formatCurrency(totalBuys)} bought · {formatCurrency(totalSells)} sold
+            </div>
+          )}
+        </div>
         <button
           onClick={() => setShowModal(true)}
-          className="flex items-center gap-1.5 px-3 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover shadow-sm transition-colors"
+          className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-surface-emph text-t-on-emph rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
         >
           <Plus size={16} />
           Log Transaction
@@ -323,114 +330,115 @@ export function TransactionLog({ initialFilter }: TransactionLogProps) {
         );
       })()}
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-surface-card card-radius border border-b-default p-4 hover:shadow-sm transition-all duration-200">
-          <p className="text-xs text-t-muted mb-1">Total Transactions</p>
-          <p className="text-xl font-bold text-t-primary tabular-nums">{transactions.length}</p>
+      {/* Summary cards — Mercury m-kpi-card */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <div className="m-kpi-card">
+          <div className="m-kpi-label">Total transactions</div>
+          <div className="m-kpi-val">{transactions.length}</div>
         </div>
-        <div className="bg-surface-card card-radius border border-b-default border-l-4 border-l-gain p-4 hover:shadow-sm transition-all duration-200">
-          <p className="text-xs text-t-muted mb-1">Total Bought</p>
-          <p className="text-xl font-bold text-gain tabular-nums">{formatCurrency(totalBuys)}</p>
+        <div className="m-kpi-card">
+          <div className="m-kpi-label">Total bought</div>
+          <div className="m-kpi-val pct-up">{formatCurrency(totalBuys)}</div>
         </div>
-        <div className="bg-surface-card card-radius border border-b-default border-l-4 border-l-loss p-4 hover:shadow-sm transition-all duration-200">
-          <p className="text-xs text-t-muted mb-1">Total Sold</p>
-          <p className="text-xl font-bold text-loss tabular-nums">{formatCurrency(totalSells)}</p>
+        <div className="m-kpi-card">
+          <div className="m-kpi-label">Total sold</div>
+          <div className="m-kpi-val pct-down">{formatCurrency(totalSells)}</div>
         </div>
-        <div className={`bg-surface-card card-radius border border-b-default border-l-4 ${totalRealizedPnl >= 0 ? 'border-l-gain' : 'border-l-loss'} p-4 hover:shadow-sm transition-all duration-200`}>
-          <p className="text-xs text-t-muted mb-1">Realized P&L</p>
-          <p className={`text-xl font-bold tabular-nums ${totalRealizedPnl >= 0 ? 'text-gain' : 'text-loss'}`}>
+        <div className="m-kpi-card">
+          <div className="m-kpi-label">Realized P&L</div>
+          <div className={'m-kpi-val ' + (totalRealizedPnl >= 0 ? 'pct-up' : 'pct-down')}>
             {formatSignedCurrency(totalRealizedPnl)}
-          </p>
+          </div>
         </div>
       </div>
 
-      {/* Filters & Table */}
-      <div className="bg-surface-card card-radius border border-b-default overflow-hidden">
-        <div className="flex flex-wrap items-center gap-3 p-5 pb-4">
-          <div className="flex flex-wrap bg-surface-alt rounded-lg p-0.5 gap-0.5">
-            {FILTER_OPTIONS.map((opt) => {
-              // Hide a filter chip if no transactions of that type exist yet.
-              // Always show 'all', 'buy', 'sell' so the core set is visible.
-              const coreTypes: FilterType[] = ['all', 'buy', 'sell'];
-              const hasAny = opt.id === 'all' || transactions.some((t) => t.type === opt.id);
-              if (!coreTypes.includes(opt.id) && !hasAny) return null;
-              return (
-                <button
-                  key={opt.id}
-                  onClick={() => setFilterType(opt.id)}
-                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                    filterType === opt.id
-                      ? 'bg-surface-card text-t-primary shadow-sm'
-                      : 'text-t-muted hover:text-t-secondary'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              );
-            })}
-          </div>
+      {/* Filters — Mercury m-toolbar */}
+      <div className="m-toolbar">
+        <div className="m-search">
           <input
             type="text"
             value={filterTicker}
             onChange={(e) => setFilterTicker(e.target.value)}
             placeholder="Filter by ticker..."
-            className="px-3 py-1.5 border border-b-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent w-48"
+            aria-label="Filter transactions by ticker"
           />
         </div>
+        <div className="mv2-sort-pills">
+          {FILTER_OPTIONS.map((opt) => {
+            const coreTypes: FilterType[] = ['all', 'buy', 'sell'];
+            const hasAny = opt.id === 'all' || transactions.some((t) => t.type === opt.id);
+            if (!coreTypes.includes(opt.id) && !hasAny) return null;
+            return (
+              <button
+                key={opt.id}
+                onClick={() => setFilterType(opt.id)}
+                className={filterType === opt.id ? 'active' : ''}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
-        {filtered.length === 0 ? (
-          <p className="text-sm text-t-muted text-center py-8 px-5">
+      {filtered.length === 0 ? (
+        <div className="bg-surface-card card-radius border border-b-default p-8 text-center">
+          <p className="text-sm text-t-muted">
             {transactions.length === 0
               ? 'No transactions yet. Log your first buy or sell.'
               : 'No transactions match your filters.'}
           </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="m-table">
               <thead>
-                <tr className="border-b border-b-default text-left">
+                <tr>
                   <SortHeader label="Date" field="date" />
                   <SortHeader label="Type" field="type" />
                   <SortHeader label="Ticker" field="ticker" />
-                  <th className="pb-2 text-[11px] font-semibold text-t-muted uppercase tracking-wider">Name</th>
-                  <th className="pb-2 text-[11px] font-semibold text-t-muted uppercase tracking-wider text-right">Shares</th>
-                  <th className="pb-2 text-[11px] font-semibold text-t-muted uppercase tracking-wider text-right">Price</th>
-                  <SortHeader label="Total" field="total" />
-                  <th className="pb-2 text-[11px] font-semibold text-t-muted uppercase tracking-wider text-right">P&L</th>
-                  <th className="pb-2 w-8"></th>
-                  <th className="pb-2 w-10"></th>
+                  <th>Name</th>
+                  <th className="num">Shares</th>
+                  <th className="num">Price</th>
+                  <SortHeader label="Total" field="total" numeric />
+                  <th className="num">P&L</th>
+                  <th style={{ width: 32 }}></th>
+                  <th style={{ width: 40 }}></th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((t) => (
                   <React.Fragment key={t.id}>
-                  <tr className="border-b border-b-subtle last:border-0 hover:bg-surface-alt/50 transition-colors group">
-                    <td className="py-2 text-t-secondary tabular-nums">{formatDate(t.date)}</td>
-                    <td className="py-2">
+                  <tr className="group">
+                    <td className="tabular-nums">{formatDate(t.date)}</td>
+                    <td>
                       <span
-                        className={`inline-block px-2 py-0.5 rounded-md text-[11px] font-semibold ${
-                          TYPE_BADGE_CLASSES[t.type]
-                        }`}
+                        className={`m-badge ${TYPE_BADGE_CLASSES[t.type]}`}
+                        style={{
+                          textTransform: 'uppercase',
+                          fontWeight: 600,
+                          letterSpacing: '0.04em',
+                          borderColor: 'transparent',
+                        }}
                       >
                         {t.type.toUpperCase()}
                       </span>
                     </td>
-                    <td className="py-2 font-medium text-t-primary">{t.ticker}</td>
-                    <td className="py-2 text-t-muted text-xs truncate max-w-[120px]">{t.name}</td>
-                    <td className="py-2 text-right text-t-secondary tabular-nums">{t.shares}</td>
-                    <td className="py-2 text-right text-t-secondary tabular-nums">{formatCurrency(t.pricePerShare)}</td>
-                    <td className="py-2 text-right font-medium text-t-primary tabular-nums">{formatCurrency(t.total)}</td>
-                    <td className="py-2 text-right text-sm">
+                    <td className="font-medium" style={{ color: 'var(--text-primary)' }}>{t.ticker}</td>
+                    <td className="text-xs truncate max-w-[120px]" style={{ color: 'var(--text-muted)' }}>{t.name}</td>
+                    <td className="num">{t.shares}</td>
+                    <td className="num">{formatCurrency(t.pricePerShare)}</td>
+                    <td className="num font-medium" style={{ color: 'var(--text-primary)' }}>{formatCurrency(t.total)}</td>
+                    <td className="num">
                       {t.type === 'sell' && t.costBasisPerShare !== undefined ? (
-                        <span className={`font-medium tabular-nums ${(t.pricePerShare - t.costBasisPerShare) >= 0 ? 'text-gain' : 'text-loss'}`}>
+                        <span className={`font-medium ${(t.pricePerShare - t.costBasisPerShare) >= 0 ? 'text-gain' : 'text-loss'}`}>
                           {formatSignedCurrency((t.pricePerShare - t.costBasisPerShare) * t.shares)}
                         </span>
                       ) : (
-                        <span className="text-t-faint">-</span>
+                        <span className="text-t-faint">—</span>
                       )}
                     </td>
-                    <td className="py-2 text-center">
+                    <td className="text-center">
                       {t.notes && (
                         <button
                           onClick={() => setExpandedRow(expandedRow === t.id ? null : t.id)}
@@ -443,7 +451,7 @@ export function TransactionLog({ initialFilter }: TransactionLogProps) {
                         </button>
                       )}
                     </td>
-                    <td className="py-2 text-right">
+                    <td className="text-right">
                       {confirmDelete === t.id ? (
                         <div className="flex items-center gap-1 justify-end">
                           <button
@@ -495,8 +503,7 @@ export function TransactionLog({ initialFilter }: TransactionLogProps) {
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+      )}
 
       {pendingUndo && (
         <UndoToast

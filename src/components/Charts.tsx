@@ -84,7 +84,7 @@ export function Charts() {
           {/* Net Worth Section */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold tracking-tight text-t-primary">Net Worth</h2>
+              <h2 className="m-h1">Net Worth</h2>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setShowAnnotations(!showAnnotations)}
@@ -172,18 +172,15 @@ export function Charts() {
             </div>
           )}
 
-          {/* Time Range Selector + chart toggles */}
+          {/* Time Range Selector + chart toggles — Mercury mv2-range-pills */}
           <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
-            <div className="flex items-center gap-1">
+            <div className="mv2-range-pills" role="group" aria-label="Time range">
               {TIME_RANGES.map((r) => (
                 <button
                   key={r}
                   onClick={() => setTimeRange(r)}
-                  className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
-                    timeRange === r
-                      ? 'bg-accent text-white rounded-lg'
-                      : 'text-t-muted hover:text-t-secondary'
-                  }`}
+                  className={timeRange === r ? 'active' : ''}
+                  aria-pressed={timeRange === r}
                 >
                   {r}
                 </button>
@@ -257,7 +254,7 @@ export function Charts() {
           {/* Portfolio Section */}
           {filteredEnrichedHoldings.length > 0 && (
             <>
-              <h2 className="text-lg font-semibold tracking-tight text-t-primary mb-6">Portfolio</h2>
+              <h2 className="m-h1 mb-6">Portfolio</h2>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
                 <AllocationPieChart holdings={filteredEnrichedHoldings} />
                 <GainLossBarChart holdings={filteredEnrichedHoldings} />
@@ -291,7 +288,7 @@ export function Charts() {
       {/* Monthly/Yearly Summary */}
       {hasHoldings && (
         <>
-          <h2 className="text-lg font-semibold tracking-tight text-t-primary mb-6">Summary</h2>
+          <h2 className="m-h1 mb-6">Summary</h2>
           <MonthlySummary />
         </>
       )}

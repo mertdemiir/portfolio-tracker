@@ -1,4 +1,4 @@
-import { Pencil, Trash2, AlertTriangle, Star, GripVertical, FolderInput } from 'lucide-react';
+import { Pencil, Trash2, AlertTriangle, Star, GripVertical, FolderInput, Square, CheckSquare } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { formatCurrency, formatPercent, formatSignedCurrency } from '../utils/formatters';
@@ -26,6 +26,15 @@ interface HoldingRowProps {
   onToggleFavorite: () => void;
   onMove?: () => void;
   onTickerClick?: () => void;
+  /**
+   * Phase 4.3 — bulk-select state. When `selectMode` is true, a
+   * checkbox replaces the drag handle in the table layout (and is
+   * shown as a leading control on the mobile card layout). Clicking
+   * the checkbox calls `onToggleSelect`.
+   */
+  selectMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 }
 
 function getStaleWarning(holding: EnrichedHolding, priceCache: PriceCache): string | null {
@@ -68,7 +77,7 @@ function getStaleWarning(holding: EnrichedHolding, priceCache: PriceCache): stri
   return null;
 }
 
-export function HoldingRow({ holding, baseCurrency, categoryLabel, showPortfolioBadge, priceCache, isDraggable, layout, onEdit, onDelete, onToggleFavorite, onMove, onTickerClick }: HoldingRowProps) {
+export function HoldingRow({ holding, baseCurrency, categoryLabel, showPortfolioBadge, priceCache, isDraggable, layout, onEdit, onDelete, onToggleFavorite, onMove, onTickerClick, selectMode, selected, onToggleSelect }: HoldingRowProps) {
   const gainColor = holding.gainLoss.amount >= 0 ? 'text-gain' : 'text-loss';
   const dailyColor = holding.dailyChange.amount >= 0 ? 'text-gain' : 'text-loss';
   const config = ASSET_TYPE_CONFIG[holding.assetType ?? 'stock'];
@@ -98,13 +107,29 @@ export function HoldingRow({ holding, baseCurrency, categoryLabel, showPortfolio
         style={dragStyle}
         className="hover:bg-surface-alt/50 transition-colors group"
       >
-        {isDraggable && (
+        {selectMode ? (
+          <td className="px-2 py-3 w-8">
+            <button
+              type="button"
+              onClick={onToggleSelect}
+              className="p-1 text-t-muted hover:text-accent transition-colors"
+              aria-label={selected ? `Deselect ${holding.ticker}` : `Select ${holding.ticker}`}
+              aria-pressed={selected}
+            >
+              {selected ? (
+                <CheckSquare className="w-4 h-4 text-accent" aria-hidden="true" />
+              ) : (
+                <Square className="w-4 h-4" aria-hidden="true" />
+              )}
+            </button>
+          </td>
+        ) : isDraggable ? (
           <td className="px-2 py-3 w-8">
             <button {...listeners} {...attributes} className="cursor-grab active:cursor-grabbing p-1 text-t-faint hover:text-t-muted" aria-label="Drag to reorder">
               <GripVertical className="w-4 h-4" aria-hidden="true" />
             </button>
           </td>
-        )}
+        ) : null}
         <td className="px-4 py-3">
           <div className="flex items-center gap-2">
             <div>
@@ -238,11 +263,25 @@ export function HoldingRow({ holding, baseCurrency, categoryLabel, showPortfolio
     >
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-start gap-2">
-            {isDraggable && (
+            {selectMode ? (
+              <button
+                type="button"
+                onClick={onToggleSelect}
+                className="p-1 text-t-muted hover:text-accent transition-colors mt-0.5"
+                aria-label={selected ? `Deselect ${holding.ticker}` : `Select ${holding.ticker}`}
+                aria-pressed={selected}
+              >
+                {selected ? (
+                  <CheckSquare className="w-4 h-4 text-accent" aria-hidden="true" />
+                ) : (
+                  <Square className="w-4 h-4" aria-hidden="true" />
+                )}
+              </button>
+            ) : isDraggable ? (
               <button {...listeners} {...attributes} className="cursor-grab active:cursor-grabbing p-1 text-t-faint hover:text-t-muted mt-0.5">
                 <GripVertical className="w-4 h-4" />
               </button>
-            )}
+            ) : null}
             <div>
             <div className="flex items-center gap-1.5">
               <span

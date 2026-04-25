@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { PlusCircle, ArrowUpDown, RefreshCw, AlertTriangle, GripVertical, Search } from 'lucide-react';
+import { PlusCircle, ArrowUpDown, RefreshCw, AlertTriangle, GripVertical, Search, CheckSquare, Square, FolderInput, Tag, Trash2, X } from 'lucide-react';
 import { formatCurrency, formatSignedCurrency, formatPercent } from '../utils/formatters';
 import {
   DndContext,
@@ -19,6 +19,7 @@ import { HoldingRow } from './HoldingRow';
 import { AddEditStockModal } from './AddEditStockModal';
 import { CashLedgerModal } from './CashLedgerModal';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
+import { BulkActionsModal, type BulkActionMode } from './BulkActionsModal';
 import { MoveToPortfolioModal } from './MoveToPortfolioModal';
 import { EmptyState } from './EmptyState';
 import type { Holding, EnrichedHolding, AssetType, TabId } from '../types';
@@ -52,6 +53,10 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
   const [cashLedgerHolding, setCashLedgerHolding] = useState<Holding | null>(null);
   const [deletingHolding, setDeletingHolding] = useState<Holding | null>(null);
   const [movingHolding, setMovingHolding] = useState<Holding | null>(null);
+  // Phase 4.3 — bulk select state
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkAction, setBulkAction] = useState<BulkActionMode | null>(null);
   const hasMultiplePortfolios = portfolios.length > 1;
   const [sortKey, setSortKey] = useLocalStorage<SortKey>('holdings-sort-key', 'marketValue');
   const [sortAsc, setSortAsc] = useLocalStorage<boolean>('holdings-sort-asc', false);
@@ -175,6 +180,20 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
     );
   }
 
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function exitSelectMode() {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  }
+
   function handleEditHolding(h: Holding) {
     // Cash holdings have a bespoke deposit/withdrawal/interest/correction
     // dialog that also logs a matching transaction. Non-cash holdings
@@ -245,6 +264,20 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
             <span className="hidden sm:inline">Refresh</span>
           </button>
           <button
+            onClick={() => {
+              if (selectMode) exitSelectMode();
+              else setSelectMode(true);
+            }}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors ${
+              selectMode ? 'bg-accent text-white' : 'text-t-muted hover:bg-surface-alt'
+            }`}
+            title={selectMode ? 'Exit select mode' : 'Select multiple holdings for bulk actions'}
+            aria-pressed={selectMode}
+          >
+            {selectMode ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+            <span className="hidden sm:inline">Select</span>
+          </button>
+          <button
             onClick={() => setShowAddModal(true)}
             className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors shadow-sm"
           >
@@ -280,6 +313,68 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
               })()}
             </span>
           </span>
+        </div>
+      )}
+
+      {/* Bulk actions toolbar (Phase 4.3) */}
+      {selectMode && (
+        <div className="flex items-center justify-between gap-3 mb-4 px-3 py-2 bg-accent/5 border border-accent/30 rounded-lg">
+          <div className="flex items-center gap-3 text-sm">
+            <span className="font-semibold text-t-primary">
+              {selectedIds.size} selected
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                if (selectedIds.size === sorted.length) {
+                  setSelectedIds(new Set());
+                } else {
+                  setSelectedIds(new Set(sorted.map((h) => h.id)));
+                }
+              }}
+              className="text-xs text-accent hover:underline"
+            >
+              {selectedIds.size === sorted.length ? 'Clear all' : 'Select all visible'}
+            </button>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              disabled={selectedIds.size === 0}
+              onClick={() => setBulkAction('move')}
+              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-t-secondary hover:bg-surface-alt rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <FolderInput className="w-3.5 h-3.5" aria-hidden="true" />
+              Move
+            </button>
+            <button
+              type="button"
+              disabled={selectedIds.size === 0}
+              onClick={() => setBulkAction('retag')}
+              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-t-secondary hover:bg-surface-alt rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Tag className="w-3.5 h-3.5" aria-hidden="true" />
+              Retag
+            </button>
+            <button
+              type="button"
+              disabled={selectedIds.size === 0}
+              onClick={() => setBulkAction('delete')}
+              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-loss hover:bg-loss-bg rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+              Delete
+            </button>
+            <button
+              type="button"
+              onClick={exitSelectMode}
+              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-t-faint hover:bg-surface-alt rounded-lg transition-colors"
+              aria-label="Exit select mode"
+              title="Exit select mode"
+            >
+              <X className="w-3.5 h-3.5" aria-hidden="true" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -401,6 +496,9 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
                     onToggleFavorite={() => toggleFavorite(h)}
                     onMove={hasMultiplePortfolios ? () => setMovingHolding(h) : undefined}
                     onTickerClick={onNavigate ? () => onNavigate('transactions', { ticker: h.ticker }) : undefined}
+                    selectMode={selectMode}
+                    selected={selectedIds.has(h.id)}
+                    onToggleSelect={() => toggleSelect(h.id)}
                   />
                 ))}
               </tbody>
@@ -466,6 +564,15 @@ export function HoldingsTable({ initialFilter, onNavigate }: HoldingsTableProps)
           holding={cashLedgerHolding}
           onEditDetails={() => setEditingHolding(cashLedgerHolding)}
           onClose={() => setCashLedgerHolding(null)}
+        />
+      )}
+
+      {bulkAction && (
+        <BulkActionsModal
+          mode={bulkAction}
+          holdingIds={Array.from(selectedIds)}
+          onClose={() => setBulkAction(null)}
+          onComplete={exitSelectMode}
         />
       )}
 

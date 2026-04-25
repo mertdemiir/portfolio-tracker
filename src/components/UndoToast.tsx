@@ -75,8 +75,10 @@ export function UndoToast({ message, duration = 5000, onUndo, onDismiss }: UndoT
         <button
           onClick={handleClose}
           className="text-t-faint hover:text-t-muted transition-colors"
+          aria-label="Dismiss"
+          title="Dismiss"
         >
-          <X className="w-3.5 h-3.5" />
+          <X className="w-3.5 h-3.5" aria-hidden="true" />
         </button>
         {/* Progress bar */}
         <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-surface-alt rounded-full overflow-hidden">

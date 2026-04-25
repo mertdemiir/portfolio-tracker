@@ -317,8 +317,22 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                     className="w-28 px-2.5 py-1.5 border border-b-input rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
                     autoFocus
                   />
-                  <button onClick={addMilestone} className="p-1 text-gain hover:opacity-80 transition-opacity"><Check size={14} /></button>
-                  <button onClick={() => { setAddingMilestone(false); setNewName(''); setNewValue(''); }} className="p-1 text-t-faint hover:text-t-muted"><X size={14} /></button>
+                  <button
+                    onClick={addMilestone}
+                    className="p-1 text-gain hover:opacity-80 transition-opacity"
+                    aria-label="Add milestone"
+                    title="Add milestone"
+                  >
+                    <Check size={14} aria-hidden="true" />
+                  </button>
+                  <button
+                    onClick={() => { setAddingMilestone(false); setNewName(''); setNewValue(''); }}
+                    className="p-1 text-t-faint hover:text-t-muted"
+                    aria-label="Cancel"
+                    title="Cancel"
+                  >
+                    <X size={14} aria-hidden="true" />
+                  </button>
                 </div>
               )}
             </>

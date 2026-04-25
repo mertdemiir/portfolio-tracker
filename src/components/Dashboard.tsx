@@ -11,6 +11,7 @@ import { EmptyState } from './EmptyState';
 import { AddEditStockModal } from './AddEditStockModal';
 import { PerformanceMetrics } from './PerformanceMetrics';
 import { DailyDigest } from './DailyDigest';
+import { WhatChangedTodayCard } from './WhatChangedTodayCard';
 import { ShareImageModal } from './ShareImageModal';
 import { LiabilitiesSection } from './LiabilitiesSection';
 import type { NWMilestone, TabId } from '../types';
@@ -329,6 +330,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
       {/* Daily Digest */}
       <DailyDigest />
+
+      {/* What changed today (Phase 4.4) */}
+      <WhatChangedTodayCard onNavigate={onNavigate} />
 
       {/* Section B: Portfolio Cards */}
       {activeName && (

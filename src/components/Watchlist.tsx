@@ -116,20 +116,27 @@ export function Watchlist() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-semibold text-t-primary tracking-tight">Watchlist</h2>
+      <div className="m-page-head">
+        <div>
+          <div className="m-h1">Watchlist</div>
+          {items.length > 0 && (
+            <div className="m-sub">{items.length} symbol{items.length === 1 ? '' : 's'} tracked</div>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <button
             onClick={refresh}
             disabled={loading}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-t-muted hover:bg-surface-alt rounded-lg transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-t-muted hover:bg-surface-alt rounded-lg transition-colors disabled:opacity-50"
+            title="Refresh prices"
+            aria-label="Refresh prices"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">Refresh</span>
           </button>
           <button
             onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover shadow-sm transition-colors"
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-surface-emph text-t-on-emph rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
           >
             <PlusCircle className="w-4 h-4" />
             Add Symbol
@@ -151,18 +158,18 @@ export function Watchlist() {
         </div>
       ) : (
         <>
-          {/* Desktop table */}
-          <div className="hidden md:block bg-surface-card card-radius border border-b-default overflow-hidden">
-            <table className="w-full">
+          {/* Desktop table — Mercury m-table */}
+          <div className="hidden md:block">
+            <table className="m-table">
               <thead>
-                <tr className="text-[11px] font-semibold text-t-muted uppercase tracking-wider border-b border-b-default">
-                  <th className="px-4 py-3 text-left"><SortButton label="Symbol" field="ticker" /></th>
-                  <th className="px-4 py-3 text-left">Name</th>
-                  <th className="px-4 py-3 text-right"><SortButton label="Price" field="price" /></th>
-                  <th className="px-4 py-3 text-right"><SortButton label="Change" field="change" /></th>
-                  <th className="px-4 py-3 text-right"><SortButton label="Change %" field="changePercent" /></th>
-                  <th className="px-4 py-3 text-right"><SortButton label="Added" field="addedDate" /></th>
-                  <th className="px-4 py-3 text-right w-16">Actions</th>
+                <tr>
+                  <th><SortButton label="Symbol" field="ticker" /></th>
+                  <th>Name</th>
+                  <th className="num"><SortButton label="Price" field="price" /></th>
+                  <th className="num"><SortButton label="Change" field="change" /></th>
+                  <th className="num"><SortButton label="Change %" field="changePercent" /></th>
+                  <th className="num"><SortButton label="Added" field="addedDate" /></th>
+                  <th style={{ width: 64, textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -170,29 +177,29 @@ export function Watchlist() {
                   const changeColor = item.change >= 0 ? 'text-gain' : 'text-loss';
                   const config = ASSET_TYPE_CONFIG[item.assetType ?? 'stock'];
                   return (
-                    <tr key={item.id} className="border-b border-b-subtle hover:bg-surface-alt/50 transition-colors group">
-                      <td className="px-4 py-3">
+                    <tr key={item.id} className="group">
+                      <td>
                         <div className="flex items-center gap-1.5">
-                          <span className="font-semibold text-t-primary">{item.ticker}</span>
-                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${config.badgeBg} ${config.badgeColor}`}>
+                          <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{item.ticker}</span>
+                          <span className={`m-badge ${config.badgeBg} ${config.badgeColor}`} style={{ borderColor: 'transparent' }}>
                             {config.label}
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-t-muted truncate max-w-[200px]">{item.name}</td>
-                      <td className="px-4 py-3 text-right text-sm text-t-secondary tabular-nums">
+                      <td className="text-xs truncate max-w-[200px]" style={{ color: 'var(--text-muted)' }}>{item.name}</td>
+                      <td className="num">
                         {item.price > 0 ? formatCurrency(item.price) : '—'}
                       </td>
-                      <td className={`px-4 py-3 text-right text-sm tabular-nums ${changeColor}`}>
+                      <td className={`num ${changeColor}`}>
                         {item.price > 0 ? formatSignedCurrency(item.change) : '—'}
                       </td>
-                      <td className={`px-4 py-3 text-right text-sm font-medium tabular-nums ${changeColor}`}>
+                      <td className={`num font-medium ${changeColor}`}>
                         {item.price > 0 ? formatPercent(item.changePercent) : '—'}
                       </td>
-                      <td className="px-4 py-3 text-right text-sm text-t-faint tabular-nums">
+                      <td className="num" style={{ color: 'var(--text-faint)' }}>
                         {formatDate(item.addedDate)}
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="text-right">
                         <button
                           onClick={() => deleteItem(item.id)}
                           className="p-1.5 hover:bg-loss-bg rounded-lg transition-colors opacity-0 group-hover:opacity-100"

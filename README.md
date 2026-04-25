@@ -41,7 +41,7 @@ Stocks, ETFs, crypto, cash, gold & silver, real estate, vehicles, custom assets,
 
 **Planning** — FIRE calculator with Lean/Regular/Fat/Coast variants · Monte Carlo withdrawal simulation · Price-shock simulator · Rebalance planner · Milestones
 
-**Extras** — Timeline annotations · PDF reports · Shareable snapshot images · Watchlist · 5 themes · 8 accent colors + custom picker · Auto-backup to a folder you choose
+**Extras** — Timeline annotations · PDF reports · Shareable snapshot images · Watchlist · Light + Dark themes · 8 accent colors + custom picker · Auto-backup to a folder you choose
 
 ## Your data is safe
 

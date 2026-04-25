@@ -51,7 +51,8 @@
       "WebFetch(domain:linear.app)",
       "WebFetch(domain:www.saasframe.io)",
       "WebFetch(domain:mercury.com)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(npx vite build)"
     ]
   }
 }

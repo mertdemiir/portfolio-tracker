@@ -702,7 +702,304 @@ const MIGRATIONS: Record<number, Migration> = {
       }
     }
   },
+
+  /**
+   * v5 → v6: Complete ledger reconcile (shares + buyPrice).
+   *
+   * Migration 5 only fixed shares mismatches. Holdings where shares
+   * already agreed but buyPrice diverged (e.g. user's stored buyPrice
+   * differs from the real-txn weighted-average) stayed divergent.
+   * Migration 6 fixes both in one pass.
+   *
+   * Algorithm (per non-cash holding):
+   *   1. Wipe every prior synthetic linked to this holding (both by
+   *      holdingId and by ticker+portfolio fallback). Same as mig 5.
+   *   2. Re-derive shares + buyPrice + totalBuyShares + totalBuyCost
+   *      from the cleaned ledger.
+   *   3. If derived.shares ≠ stored.shares (within tolerance):
+   *      add ONE shares-fix synthetic (buy or sell of the gap, dated
+   *      chronologically last). Same as mig 5.
+   *   4. If derived.buyPrice ≠ stored.buyPrice (within tolerance):
+   *      add a synthetic BUY + synthetic SELL pair, both dated
+   *      chronologically last. The buy uses an off-market price chosen
+   *      so the post-pair weighted-average exactly matches stored.buyPrice.
+   *      The sell cancels the share change so the net position stays at
+   *      stored.shares.
+   *
+   *      Math: post buys = totalBuyShares + X, post cost = totalBuyCost
+   *      + X*P. Want (post cost / post shares) = stored.buyPrice. With
+   *      X = totalBuyShares (or stored.shares if no buys exist), solve:
+   *        P = stored.buyPrice + (stored.buyPrice − derived.buyPrice)
+   *            * totalBuyShares / X
+   *      Reduces to P = 2 * stored.buyPrice − derived.buyPrice when
+   *      X = totalBuyShares.
+   *
+   * Reset-rule defense: the synthetic buy bumps shares from stored to
+   * (stored + X), the synthetic sell brings it back to stored. As long
+   * as stored > 0 (we already filter `storedShares <= 0` out), shares
+   * never hit zero between the buy and sell, so the chronological-reset
+   * doesn't fire.
+   *
+   * Idempotent: re-running wipes the synthetics again and re-adds the
+   * same set. End state is identical.
+   *
+   * Cash holdings: skipped (different ledger model, handled by mig 3).
+   */
+  6: () => {
+    const DEFAULT_PORTFOLIO_ID = 'default';
+    const SHARES_TOL = 1e-6;
+    const PRICE_TOL = 0.005; // half-cent — tighter than the validator's $0.01
+
+    const makeId = (): string => {
+      const c: Crypto | undefined = typeof crypto !== 'undefined' ? crypto : undefined;
+      if (c && typeof c.randomUUID === 'function') return c.randomUUID();
+      return `syn-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    };
+
+    let holdings: Array<Record<string, unknown> & { id?: string }> = [];
+    let txns: Transaction[] = [];
+
+    try {
+      const raw = localStorage.getItem('portfolio-holdings');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) holdings = parsed;
+      }
+    } catch {
+      return;
+    }
+    try {
+      const raw = localStorage.getItem('transactions');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) txns = parsed;
+      }
+    } catch {
+      return;
+    }
+
+    let mutated = false;
+
+    for (const h of holdings) {
+      if (!h || typeof h.id !== 'string' || typeof h.ticker !== 'string') continue;
+      const assetType = typeof h.assetType === 'string' ? (h.assetType as AssetType) : 'stock';
+      if (assetType === 'cash') continue;
+
+      const storedShares = typeof h.shares === 'number' ? h.shares : 0;
+      const storedBuyPrice = typeof h.buyPrice === 'number' ? h.buyPrice : 0;
+      if (storedShares <= 0) continue;
+
+      const tickerUpper = h.ticker.toUpperCase();
+      const portfolioId = typeof h.portfolioId === 'string' && h.portfolioId
+        ? h.portfolioId
+        : DEFAULT_PORTFOLIO_ID;
+      const buyDate = typeof h.buyDate === 'string' && h.buyDate
+        ? h.buyDate
+        : new Date().toISOString().slice(0, 10);
+
+      // Step 1: drop every prior synthetic linked to this holding.
+      const before = txns.length;
+      txns = txns.filter((t) => {
+        if (!t.synthetic) return true;
+        if (t.holdingId === h.id) return false;
+        if (
+          !t.holdingId &&
+          typeof t.ticker === 'string' &&
+          t.ticker.toUpperCase() === tickerUpper &&
+          t.portfolioId === portfolioId
+        ) {
+          return false;
+        }
+        return true;
+      });
+      if (txns.length !== before) mutated = true;
+
+      // Step 2: derive from cleaned ledger.
+      const d = deriveHolding(
+        { id: h.id, ticker: h.ticker, portfolioId, assetType, buyDate },
+        txns,
+      );
+
+      // Find the chronologically-last contributing-txn date so we can
+      // stamp synthetics after it.
+      let latestContribDate = '';
+      for (const t of txns) {
+        const matches = t.holdingId
+          ? t.holdingId === h.id
+          : typeof t.ticker === 'string' &&
+            t.ticker.toUpperCase() === tickerUpper &&
+            t.portfolioId === portfolioId &&
+            (!buyDate || t.date >= buyDate);
+        if (matches && typeof t.date === 'string' && t.date > latestContribDate) {
+          latestContribDate = t.date;
+        }
+      }
+      const synDate = latestContribDate > buyDate ? latestContribDate : buyDate;
+
+      const ticker = h.ticker;
+      const name = typeof h.name === 'string' ? h.name : ticker;
+      const currency = typeof h.currency === 'string' ? h.currency : undefined;
+      const buyFxRate = typeof h.buyFxRate === 'number' ? h.buyFxRate : undefined;
+      const category = typeof h.category === 'string' ? h.category : undefined;
+
+      // Step 3: shares fix (if needed).
+      const shareGap = storedShares - d.shares;
+      let derivedSharesAfter = d.shares;
+      let derivedTotalBuyShares = d.totalBuyShares;
+      let derivedTotalBuyCost = d.totalBuyCost;
+
+      if (Math.abs(shareGap) >= SHARES_TOL) {
+        if (shareGap > 0) {
+          // Synthetic buy. Price chosen so weighted-avg post-this-step
+          // matches stored.buyPrice (assuming no further price-fix needed).
+          const synPrice =
+            d.totalBuyShares > 0
+              ? (storedShares * storedBuyPrice - d.totalBuyCost) / shareGap
+              : storedBuyPrice;
+          txns.push({
+            id: makeId(),
+            date: synDate,
+            ticker,
+            name,
+            type: 'buy',
+            shares: shareGap,
+            pricePerShare: synPrice,
+            total: shareGap * synPrice,
+            portfolioId,
+            holdingId: h.id,
+            synthetic: true,
+            notes:
+              'Phase 3 reconciliation (migration 6): one-time top-up to align ' +
+              'transaction ledger with stored holding shares. Auto-generated; ' +
+              'safe to delete or replace with real purchase history.',
+            assetType,
+            ...(category ? { category } : {}),
+            ...(currency ? { currency } : {}),
+            ...(buyFxRate !== undefined ? { buyFxRate } : {}),
+          });
+          derivedSharesAfter = storedShares;
+          derivedTotalBuyShares += shareGap;
+          derivedTotalBuyCost += shareGap * synPrice;
+          mutated = true;
+        } else {
+          const synShares = -shareGap;
+          txns.push({
+            id: makeId(),
+            date: synDate,
+            ticker,
+            name,
+            type: 'sell',
+            shares: synShares,
+            pricePerShare: storedBuyPrice,
+            total: synShares * storedBuyPrice,
+            costBasisPerShare: storedBuyPrice,
+            portfolioId,
+            holdingId: h.id,
+            synthetic: true,
+            notes:
+              'Phase 3 reconciliation (migration 6): one-time correction so ' +
+              'the ledger matches stored holding shares. Auto-generated.',
+            assetType,
+            ...(category ? { category } : {}),
+            ...(currency ? { currency } : {}),
+          });
+          derivedSharesAfter = storedShares;
+          mutated = true;
+        }
+      }
+
+      // Step 4: buyPrice fix (if needed). Recompute from updated locals.
+      const currentBuyPrice =
+        derivedTotalBuyShares > 0 ? derivedTotalBuyCost / derivedTotalBuyShares : 0;
+
+      if (
+        derivedSharesAfter > 0 &&
+        Math.abs(currentBuyPrice - storedBuyPrice) > PRICE_TOL
+      ) {
+        // Add a synthetic buy + sell pair. Net 0 share change but adjusts
+        // weighted-avg buyPrice.
+        const X = derivedTotalBuyShares > 0 ? derivedTotalBuyShares : storedShares;
+        // P solves: (totalBuyCost + X*P) / (totalBuyShares + X) = stored.buyPrice
+        const synBuyPrice = (storedBuyPrice * (derivedTotalBuyShares + X) - derivedTotalBuyCost) / X;
+
+        // Synthetic buy first.
+        txns.push({
+          id: makeId(),
+          date: synDate,
+          ticker,
+          name,
+          type: 'buy',
+          shares: X,
+          pricePerShare: synBuyPrice,
+          total: X * synBuyPrice,
+          portfolioId,
+          holdingId: h.id,
+          synthetic: true,
+          notes:
+            'Phase 3 reconciliation (migration 6): part 1 of 2 — adjusts the ' +
+            'weighted-average cost basis to match stored holding.buyPrice. ' +
+            'Paired with a synthetic sell of equal shares so the net position ' +
+            'is unchanged.',
+          assetType,
+          ...(category ? { category } : {}),
+          ...(currency ? { currency } : {}),
+          ...(buyFxRate !== undefined ? { buyFxRate } : {}),
+        });
+
+        // Synthetic sell to cancel the share change. Date one day later
+        // so the chronological sort ALWAYS places it after the buy
+        // (date comparison is lexical and we want to be defensive against
+        // unstable sorts even though localeCompare is stable).
+        const synSellDate = bumpDateByOneDay(synDate);
+        txns.push({
+          id: makeId(),
+          date: synSellDate,
+          ticker,
+          name,
+          type: 'sell',
+          shares: X,
+          pricePerShare: storedBuyPrice,
+          total: X * storedBuyPrice,
+          costBasisPerShare: storedBuyPrice,
+          portfolioId,
+          holdingId: h.id,
+          synthetic: true,
+          notes:
+            'Phase 3 reconciliation (migration 6): part 2 of 2 — cancels the ' +
+            'share change from the paired synthetic buy. Net position unchanged.',
+          assetType,
+          ...(category ? { category } : {}),
+          ...(currency ? { currency } : {}),
+        });
+        mutated = true;
+      }
+    }
+
+    if (mutated) {
+      try {
+        localStorage.setItem('transactions', JSON.stringify(txns));
+      } catch {
+        throw new Error('v6: failed to write reconciled transactions to localStorage');
+      }
+    }
+  },
 };
+
+/**
+ * Adds one day to an ISO yyyy-mm-dd date string. Used by migration 6 to
+ * place a synthetic sell strictly after a paired synthetic buy on the
+ * chronological walk.
+ */
+function bumpDateByOneDay(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return iso;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  d.setDate(d.getDate() + 1);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
 
 /**
  * Maximum number of pre-migration backups to retain in localStorage.

@@ -10,7 +10,9 @@ import { ManagePortfoliosModal } from './ManagePortfoliosModal';
 import { gatherBackupData, parseBackup, serializeBackup } from '../data/backup';
 import { updateAppMeta, readAppMeta } from '../data/schema';
 import { switchBackend } from '../data/store/backendSwitch';
-import { getAdapter } from '../data/store/hydration';
+import { getAdapter, writeCached } from '../data/store/hydration';
+import { isManagedStoreKey } from '../data/store/types';
+import { notifyStorageRefresh } from '../hooks/useLocalStorage';
 import { formatMonthYear } from '../utils/dateHelpers';
 import type { CustomCategory, ThemeId, BenchmarkId } from '../types';
 import { BENCHMARK_CONFIG, ACCENT_PRESETS, SUPPORTED_CURRENCIES } from '../types';
@@ -195,33 +197,51 @@ export function SettingsModal({
       }
       if (!confirm('This will replace ALL your current data with the backup. Continue?')) return;
 
-      localStorage.setItem('portfolio-holdings', JSON.stringify(backup.holdings));
-      localStorage.setItem('portfolio-snapshots', JSON.stringify(backup.snapshots));
-      if (backup.customCategories) localStorage.setItem('custom-categories', JSON.stringify(backup.customCategories));
-      if (backup.apiKey) localStorage.setItem('finnhub-api-key', JSON.stringify(backup.apiKey));
-      if (backup.transactions) localStorage.setItem('transactions', JSON.stringify(backup.transactions));
-      if (backup.targetAllocations) localStorage.setItem('target-allocations', JSON.stringify(backup.targetAllocations));
-      if (backup.nwTarget !== undefined) localStorage.setItem('nw-target', JSON.stringify(backup.nwTarget));
-      if (backup.nwMilestones) localStorage.setItem('nw-milestones', JSON.stringify(backup.nwMilestones));
-      if (backup.benchmarkDataSpx) localStorage.setItem('benchmark-data-spx', JSON.stringify(backup.benchmarkDataSpx));
-      if (backup.benchmarkDataBtc) localStorage.setItem('benchmark-data-btc', JSON.stringify(backup.benchmarkDataBtc));
-      if (backup.benchmarkDataGold) localStorage.setItem('benchmark-data-gold', JSON.stringify(backup.benchmarkDataGold));
-      if (backup.accentColor) localStorage.setItem('accent-color', JSON.stringify(backup.accentColor));
-      if (backup.watchlistItems) localStorage.setItem('watchlist-items', JSON.stringify(backup.watchlistItems));
-      if (backup.holdingOrder) localStorage.setItem('holding-order', JSON.stringify(backup.holdingOrder));
-      if (backup.baseCurrency) localStorage.setItem('base-currency', JSON.stringify(backup.baseCurrency));
-      if (backup.portfolios) localStorage.setItem('portfolios', JSON.stringify(backup.portfolios));
-      if (backup.liabilities) localStorage.setItem('liabilities', JSON.stringify(backup.liabilities));
-      if (backup.annotations) localStorage.setItem('timeline-annotations', JSON.stringify(backup.annotations));
-      if (backup.theme) localStorage.setItem('theme', JSON.stringify(backup.theme));
-      if (backup.benchmarkEnabled) localStorage.setItem('benchmark-enabled', JSON.stringify(backup.benchmarkEnabled));
+      /**
+       * Helper for the Phase 5.1 backup-import flow.
+       *
+       * Routes the value to the right storage layer (hydration cache for
+       * managed keys, raw localStorage for everything else) and then fires
+       * a same-tab refresh signal so all useLocalStorage subscribers for
+       * this key re-read. Eliminates the page reload that previously
+       * concluded the import.
+       */
+      const writeKey = (key: string, value: unknown) => {
+        if (isManagedStoreKey(key)) {
+          writeCached(key, value);
+        } else {
+          try {
+            localStorage.setItem(key, JSON.stringify(value));
+          } catch {
+            // Storage full / disabled — non-fatal for the rest of the import.
+          }
+        }
+        notifyStorageRefresh(key);
+      };
 
-      // Show a success state BEFORE reloading so the user understands why
-      // the app is about to reload. (Full removal of the reload is deferred
-      // to Phase 3 — it requires the context split so consumers can
-      // re-hydrate from storage without a page-level refresh.)
-      setBackupStatus('Backup imported — reloading…');
-      setTimeout(() => window.location.reload(), 1200);
+      writeKey('portfolio-holdings', backup.holdings);
+      writeKey('portfolio-snapshots', backup.snapshots);
+      if (backup.customCategories) writeKey('custom-categories', backup.customCategories);
+      if (backup.apiKey) writeKey('finnhub-api-key', backup.apiKey);
+      if (backup.transactions) writeKey('transactions', backup.transactions);
+      if (backup.targetAllocations) writeKey('target-allocations', backup.targetAllocations);
+      if (backup.nwTarget !== undefined) writeKey('nw-target', backup.nwTarget);
+      if (backup.nwMilestones) writeKey('nw-milestones', backup.nwMilestones);
+      if (backup.benchmarkDataSpx) writeKey('benchmark-data-spx', backup.benchmarkDataSpx);
+      if (backup.benchmarkDataBtc) writeKey('benchmark-data-btc', backup.benchmarkDataBtc);
+      if (backup.benchmarkDataGold) writeKey('benchmark-data-gold', backup.benchmarkDataGold);
+      if (backup.accentColor) writeKey('accent-color', backup.accentColor);
+      if (backup.watchlistItems) writeKey('watchlist-items', backup.watchlistItems);
+      if (backup.holdingOrder) writeKey('holding-order', backup.holdingOrder);
+      if (backup.baseCurrency) writeKey('base-currency', backup.baseCurrency);
+      if (backup.portfolios) writeKey('portfolios', backup.portfolios);
+      if (backup.liabilities) writeKey('liabilities', backup.liabilities);
+      if (backup.annotations) writeKey('timeline-annotations', backup.annotations);
+      if (backup.theme) writeKey('theme', backup.theme);
+      if (backup.benchmarkEnabled) writeKey('benchmark-enabled', backup.benchmarkEnabled);
+
+      setBackupStatus('Backup imported.');
+      setTimeout(() => setBackupStatus(null), 2500);
     } catch {
       setBackupStatus('Failed to parse backup file.');
       setTimeout(() => setBackupStatus(null), 3000);

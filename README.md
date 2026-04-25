@@ -45,12 +45,40 @@ Stocks, ETFs, crypto, cash, gold & silver, real estate, vehicles, custom assets,
 
 ## Your data is safe
 
-Data lives in `localStorage` on your machine. In addition:
+Data lives in `localStorage` (or IndexedDB, opt-in via Settings → Storage Backend) on your machine. In addition:
 
 - **Manual export anywhere** — ⌘⇧E / Ctrl+Shift+E drops a JSON file wherever you want
 - **Auto-backup** on a schedule to a folder of your choice
 - **Pre-migration backups** run automatically before any data upgrade
 - **Error recovery screen** — if anything ever crashes, you get a one-click export before anything else
+
+### Backup & restore
+
+The export covers everything: holdings, transactions, snapshots, liabilities, portfolios, watchlist, milestones, target allocations, custom categories, benchmark CSVs, theme, accent color, base currency, and your Finnhub key.
+
+| | |
+|--|--|
+| **Export** | header download icon, `⌘⇧E` / `Ctrl+Shift+E`, or **Settings → Backup → Export now** |
+| **Import** | **Settings → Backup → Import** — replaces all current data with the backup file's contents (a confirm prompt warns you first) |
+| **Auto-backup** | **Settings → Auto-backup** — pick a folder and a cadence (off / weekly / monthly). The Electron app writes a timestamped JSON to that folder |
+
+The backup format is a single JSON file with a top-level `schemaVersion` field (see below). Every release that introduces a schema change reads older versions and runs migrations forward — your old backups stay restorable.
+
+### Schema versioning
+
+The app tracks its own data shape under a `schemaVersion` key. On every cold start the migration runner:
+
+1. Writes a pre-migration backup of localStorage to `__pre_migration_<from>_to_<to>_<timestamp>` (kept for the most recent 3, or 30 days, whichever ends first).
+2. Runs each pending migration in order. Each migration is idempotent — re-running on already-upgraded data is a no-op.
+3. On failure the runner halts, records the error in `app-meta.history`, leaves your data on the previous version, and surfaces a recovery screen.
+
+Migration history so far:
+
+| Version | What changed |
+|---:|---|
+| 1 | `portfolioId` normalization across holdings + transactions |
+| 2 | Unified portfolio + watchlist price caches |
+| 3 | Synthesized buy transactions for every existing holding (1:1 ledger parity), backfilled `holdingId` |
 
 ## Download
 

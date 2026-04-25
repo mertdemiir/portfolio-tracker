@@ -3,6 +3,31 @@ import { isManagedStoreKey } from '../data/store/types';
 import { readCached, writeCached } from '../data/store/hydration';
 
 /**
+ * Custom event name that useLocalStorage instances listen for. Fire it
+ * after a same-tab bulk write (e.g. backup import) to force every
+ * subscriber for the matching key to re-read storage.
+ *
+ *   notifyStorageRefresh('portfolio-holdings')
+ *
+ * The native `storage` event only fires on OTHER tabs/windows when the
+ * current tab calls localStorage.setItem, so it's no help for
+ * "I just imported a backup; please re-render the rest of this tab".
+ */
+export const STORAGE_REFRESH_EVENT = 'app:storage-refresh';
+
+/**
+ * Fire a refresh signal for one key. Subscribers re-read from storage
+ * (or the hydration cache for managed keys).
+ */
+export function notifyStorageRefresh(key: string): void {
+  try {
+    window.dispatchEvent(new CustomEvent(STORAGE_REFRESH_EVENT, { detail: { key } }));
+  } catch {
+    // No window in this environment (e.g. SSR / unit tests). Silent.
+  }
+}
+
+/**
  * Persistent React state with the same API as React.useState, but the
  * value survives reloads.
  *
@@ -64,6 +89,25 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
     };
     window.addEventListener('storage', handler);
     return () => window.removeEventListener('storage', handler);
+  }, [key, isManaged]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Same-tab refresh signal (fired after bulk imports / restores).
+  // Re-reads from the source of truth so the UI updates without a page reload.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ key: string }>).detail;
+      if (!detail || detail.key !== key) return;
+      if (isManaged) {
+        setStoredValue(readCached<T>(key, initialValue));
+        return;
+      }
+      try {
+        const item = localStorage.getItem(key);
+        if (item !== null) setStoredValue(JSON.parse(item) as T);
+      } catch { /* ignore */ }
+    };
+    window.addEventListener(STORAGE_REFRESH_EVENT, handler);
+    return () => window.removeEventListener(STORAGE_REFRESH_EVENT, handler);
   }, [key, isManaged]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setValue = useCallback(

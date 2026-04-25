@@ -278,8 +278,13 @@ export function HoldingRow({ holding, baseCurrency, categoryLabel, showPortfolio
                 )}
               </button>
             ) : isDraggable ? (
-              <button {...listeners} {...attributes} className="cursor-grab active:cursor-grabbing p-1 text-t-faint hover:text-t-muted mt-0.5">
-                <GripVertical className="w-4 h-4" />
+              <button
+                {...listeners}
+                {...attributes}
+                className="cursor-grab active:cursor-grabbing p-1 text-t-faint hover:text-t-muted mt-0.5"
+                aria-label="Drag to reorder"
+              >
+                <GripVertical className="w-4 h-4" aria-hidden="true" />
               </button>
             ) : null}
             <div>

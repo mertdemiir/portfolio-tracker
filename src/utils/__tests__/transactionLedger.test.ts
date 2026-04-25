@@ -16,7 +16,7 @@ function txn(p: Partial<Transaction> & { id: string; type: Transaction['type'] }
   };
 }
 
-function holdingShape(over: Partial<{ id: string; ticker: string; portfolioId: string; assetType: AssetType }> = {}) {
+function holdingShape(over: Partial<{ id: string; ticker: string; portfolioId: string; assetType: AssetType; buyDate: string }> = {}) {
   return {
     id: 'h1',
     ticker: 'AAPL',
@@ -143,17 +143,19 @@ describe('deriveHolding', () => {
     expect(r.realizedPnl).toBe((150 - 100) * 3); // +150
   });
 
-  it('full sell + rebuy: shares & weighted-avg from rebuy only', () => {
+  it('full sell + rebuy: shares & weighted-avg track only the latest open cycle', () => {
+    // Phase 5 fix: after a full sell, accumulators reset. The next buy starts
+    // a fresh weighted-avg calculation; pre-close cost basis no longer
+    // contaminates the post-rebuy buyPrice. Realized P&L stays cumulative.
     const txns: Transaction[] = [
-      txn({ id: 't1', holdingId: 'h1', type: 'buy', shares: 10, pricePerShare: 100 }),
-      txn({ id: 't2', holdingId: 'h1', type: 'sell', shares: 10, pricePerShare: 150, costBasisPerShare: 100 }),
-      txn({ id: 't3', holdingId: 'h1', type: 'buy', shares: 5, pricePerShare: 200 }),
+      txn({ id: 't1', holdingId: 'h1', type: 'buy',  shares: 10, pricePerShare: 100, date: '2024-01-01' }),
+      txn({ id: 't2', holdingId: 'h1', type: 'sell', shares: 10, pricePerShare: 150, costBasisPerShare: 100, date: '2024-06-01' }),
+      txn({ id: 't3', holdingId: 'h1', type: 'buy',  shares: 5,  pricePerShare: 200, date: '2024-09-01' }),
     ];
     const r = deriveHolding(holdingShape(), txns);
     expect(r.shares).toBe(5);
-    // weighted avg of all buys = (10*100 + 5*200) / (10+5) = 2000/15
-    expect(r.buyPrice).toBeCloseTo(2000 / 15, 6);
-    expect(r.realizedPnl).toBe(500); // (150-100)*10
+    expect(r.buyPrice).toBe(200); // rebuy price only — pre-close 100s gone
+    expect(r.realizedPnl).toBe(500); // (150-100)*10 stays
   });
 
   it('weighted-avg buyFxRate from buys that carry one; undefined when none do', () => {
@@ -204,5 +206,79 @@ describe('deriveHolding', () => {
     ]);
     expect(r.shares).toBe(7);
     expect(r.realizedPnl).toBe(0);
+  });
+
+  // ── Phase 5 fix: closed-and-reopened position cycles ──────────────
+  // These reproduce the v1.4.1 banner regression where holdings with a
+  // history of buy → fully sold → re-bought were derived as negative
+  // shares because all historical sells were attributed to the new
+  // holding incarnation.
+
+  it('closed-and-reopened: all txns share holdingId; resets on the close, weighted-avg from rebuy only', () => {
+    const r = deriveHolding(holdingShape({ buyDate: '2024-06-01' }), [
+      // First cycle: bought 100 @ $50, fully sold 100 @ $80 — closes the position.
+      txn({ id: 't1', holdingId: 'h1', type: 'buy',  shares: 100, pricePerShare: 50, date: '2023-01-15' }),
+      txn({ id: 't2', holdingId: 'h1', type: 'sell', shares: 100, pricePerShare: 80, costBasisPerShare: 50, date: '2023-12-10' }),
+      // Second cycle: rebought 50 @ $70 — current holding.
+      txn({ id: 't3', holdingId: 'h1', type: 'buy',  shares: 50,  pricePerShare: 70, date: '2024-06-01' }),
+    ]);
+    expect(r.shares).toBe(50);
+    expect(r.buyPrice).toBe(70);
+    // Realized P&L from the closed cycle stays accumulated (taxes care).
+    expect(r.realizedPnl).toBe((80 - 50) * 100); // +3000
+  });
+
+  it('closed-and-reopened with multiple closes: only the final open cycle drives shares + buyPrice', () => {
+    const r = deriveHolding(holdingShape({ buyDate: '2024-09-01' }), [
+      // Cycle 1: 10 @ $10, sold all
+      txn({ id: 't1', holdingId: 'h1', type: 'buy',  shares: 10, pricePerShare: 10, date: '2022-01-01' }),
+      txn({ id: 't2', holdingId: 'h1', type: 'sell', shares: 10, pricePerShare: 15, costBasisPerShare: 10, date: '2022-06-01' }),
+      // Cycle 2: 20 @ $20, sold all
+      txn({ id: 't3', holdingId: 'h1', type: 'buy',  shares: 20, pricePerShare: 20, date: '2023-01-01' }),
+      txn({ id: 't4', holdingId: 'h1', type: 'sell', shares: 20, pricePerShare: 30, costBasisPerShare: 20, date: '2023-06-01' }),
+      // Cycle 3 (current): 5 @ $50
+      txn({ id: 't5', holdingId: 'h1', type: 'buy',  shares: 5,  pricePerShare: 50, date: '2024-09-01' }),
+    ]);
+    expect(r.shares).toBe(5);
+    expect(r.buyPrice).toBe(50);
+    expect(r.realizedPnl).toBe((15 - 10) * 10 + (30 - 20) * 20); // +250
+  });
+
+  it('ticker fallback honours buyDate guard: pre-buyDate txns excluded', () => {
+    const r = deriveHolding(holdingShape({ buyDate: '2024-01-01' }), [
+      // Old txns without holdingId — would have been migration-3-attributed
+      // ambiguously. The buyDate guard rejects them.
+      txn({ id: 't1', type: 'buy',  shares: 100, pricePerShare: 50, date: '2022-01-15' }),
+      txn({ id: 't2', type: 'sell', shares: 100, pricePerShare: 80, costBasisPerShare: 50, date: '2023-12-10' }),
+      // Current cycle txn (holdingId set)
+      txn({ id: 't3', holdingId: 'h1', type: 'buy', shares: 5, pricePerShare: 70, date: '2024-01-01' }),
+    ]);
+    expect(r.shares).toBe(5);
+    expect(r.buyPrice).toBe(70);
+    expect(r.matchedTxnCount).toBe(1); // only t3 contributed
+  });
+
+  it('partial sell that does NOT close the position keeps weighted-avg buyPrice intact', () => {
+    const r = deriveHolding(holdingShape({ buyDate: '2024-01-01' }), [
+      txn({ id: 't1', holdingId: 'h1', type: 'buy', shares: 10, pricePerShare: 100, date: '2024-01-01' }),
+      // Sell 3 — leaves 7 shares, no reset.
+      txn({ id: 't2', holdingId: 'h1', type: 'sell', shares: 3, pricePerShare: 150, costBasisPerShare: 100, date: '2024-06-01' }),
+    ]);
+    expect(r.shares).toBe(7);
+    expect(r.buyPrice).toBe(100); // unchanged by sell
+  });
+
+  it('cash holdings: position-closed reset does NOT apply (deposits + withdrawals net out naturally)', () => {
+    const r = deriveHolding(
+      holdingShape({ assetType: 'cash', ticker: 'CHECKING', buyDate: '2024-01-01' }),
+      [
+        txn({ id: 't1', holdingId: 'h1', ticker: 'CHECKING', type: 'deposit', shares: 1000, pricePerShare: 1, date: '2024-01-01' }),
+        // A withdrawal that empties the account — must NOT trigger a "reset" the way buy/sell does.
+        txn({ id: 't2', holdingId: 'h1', ticker: 'CHECKING', type: 'withdrawal', shares: 1000, pricePerShare: 1, date: '2024-02-01' }),
+        txn({ id: 't3', holdingId: 'h1', ticker: 'CHECKING', type: 'deposit', shares: 500, pricePerShare: 1, date: '2024-03-01' }),
+      ],
+    );
+    expect(r.shares).toBe(500); // 1000 − 1000 + 500
+    expect(r.buyPrice).toBe(1);
   });
 });

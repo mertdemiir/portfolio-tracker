@@ -1,23 +1,36 @@
 import { useState } from 'react';
-import { AlertTriangle, X } from 'lucide-react';
+import { Info, AlertTriangle, X } from 'lucide-react';
 import { usePortfolioContext } from '../context/PortfolioContext';
+import { useSettings } from '../context/SettingsContext';
 
 interface LedgerDivergenceBannerProps {
   onOpenSettings?: () => void;
 }
 
 /**
- * Phase 3 parallel-run banner. Surfaces a non-blocking warning when the
+ * Phase 3 parallel-run banner. Surfaces a non-blocking notice when the
  * transaction ledger disagrees with stored holding shares/cost basis by
- * more than the validator's tolerance ($0.01 cost-basis or 1e-6 shares).
+ * more than the validator's tolerance.
  *
- * Dismissable for the current session only — reload re-shows it. The
- * intent is "you'll see this every cold start until ledger and storage
- * agree", not "click X and forget about it forever". The banner is the
- * pre-flip safety belt.
+ * Tone depends on the source-of-truth flag:
+ *
+ *   Flag OFF (default): the displayed numbers are storage values and are
+ *   unaffected by the divergence. The banner is *informational* — a heads-up
+ *   that the ledger derivation doesn't yet agree, so the user knows not to
+ *   flip the flag yet. Blue, neutral language ("notice").
+ *
+ *   Flag ON: the displayed numbers are derived from the ledger, so a
+ *   divergence implies the user is looking at potentially different numbers
+ *   than they were before the flip. Amber, more emphatic language
+ *   ("warning") with a stronger nudge to review.
+ *
+ * Dismissable for the current session only — reload re-shows it. We don't
+ * persist dismissal because the divergence list can change between runs
+ * and the user benefits from re-noticing.
  */
 export function LedgerDivergenceBanner({ onOpenSettings }: LedgerDivergenceBannerProps) {
   const { ledgerDivergences } = usePortfolioContext();
+  const { useTxnSourceOfTruth } = useSettings();
   const [dismissed, setDismissed] = useState<boolean>(() => {
     try {
       return sessionStorage.getItem('ledger-divergence-dismissed') === 'true';
@@ -38,29 +51,58 @@ export function LedgerDivergenceBanner({ onOpenSettings }: LedgerDivergenceBanne
     setDismissed(true);
   }
 
+  const flagOn = useTxnSourceOfTruth;
+  // When the flag is OFF, this is informational — frame it neutrally.
+  // When it's ON, this is genuinely actionable — frame it as a warning.
+  const Icon = flagOn ? AlertTriangle : Info;
+  const containerClass = flagOn
+    ? 'bg-amber-500/10 border-b border-amber-500/30 text-amber-800 dark:text-amber-200'
+    : 'bg-blue-500/10 border-b border-blue-500/30 text-blue-800 dark:text-blue-200';
+  const dismissHoverClass = flagOn ? 'hover:bg-amber-500/20' : 'hover:bg-blue-500/20';
+  const count = ledgerDivergences.length;
+  const noun = count === 1 ? 'holding' : 'holdings';
+
   return (
-    <div
-      role="alert"
-      className="bg-amber-500/10 border-b border-amber-500/30 text-amber-800 dark:text-amber-200 px-4 sm:px-6 py-2"
-    >
+    <div role="status" className={`${containerClass} px-4 sm:px-6 py-2`}>
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-xs">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+          <Icon className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
           <span>
-            <strong>{ledgerDivergences.length}</strong>{' '}
-            holding{ledgerDivergences.length === 1 ? '' : 's'} disagree between
-            transaction ledger and stored cost basis.
-            {onOpenSettings && (
+            {flagOn ? (
               <>
-                {' '}
-                <button
-                  type="button"
-                  onClick={onOpenSettings}
-                  className="underline font-medium hover:opacity-80"
-                >
-                  Review in Settings
-                </button>
-                .
+                <strong>{count}</strong> {noun} disagree between transaction ledger and stored cost basis.
+                {onOpenSettings && (
+                  <>
+                    {' '}
+                    <button
+                      type="button"
+                      onClick={onOpenSettings}
+                      className="underline font-medium hover:opacity-80"
+                    >
+                      Review in Settings
+                    </button>
+                    .
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                Heads-up: the transaction ledger derivation doesn't yet match storage on{' '}
+                <strong>{count}</strong> {noun}. <strong>Your data is unaffected</strong> —
+                this only matters if you flip the ledger source-of-truth toggle.
+                {onOpenSettings && (
+                  <>
+                    {' '}
+                    <button
+                      type="button"
+                      onClick={onOpenSettings}
+                      className="underline font-medium hover:opacity-80"
+                    >
+                      Details in Settings
+                    </button>
+                    .
+                  </>
+                )}
               </>
             )}
           </span>
@@ -68,7 +110,7 @@ export function LedgerDivergenceBanner({ onOpenSettings }: LedgerDivergenceBanne
         <button
           type="button"
           onClick={handleDismiss}
-          className="flex-shrink-0 p-1 rounded hover:bg-amber-500/20 transition-colors"
+          className={`flex-shrink-0 p-1 rounded transition-colors ${dismissHoverClass}`}
           aria-label="Dismiss for this session"
           title="Dismiss for this session"
         >

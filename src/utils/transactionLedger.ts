@@ -72,25 +72,46 @@ export interface DerivedHolding {
  *
  * Selection of contributing txns:
  *   - Prefer explicit holdingId match (set by Phase 3 backfill + new flows).
- *   - Fall back to (ticker upper-cased, portfolioId) match for legacy txns
- *     whose holdingId was ambiguous at migration time.
+ *   - Fall back to (ticker upper-cased, portfolioId, date >= holding.buyDate)
+ *     match for legacy txns whose holdingId was ambiguous at migration time.
+ *     The buyDate guard prevents pre-existing txns from a *previous* (closed)
+ *     incarnation of this ticker from being attributed to the current holding.
+ *
+ * Closed-and-reopened cycles:
+ *   Even with the buyDate guard, a holdingId match might pull in older txns
+ *   from before the holding was rebuilt (e.g. if migration 3 attributed a
+ *   pre-close sell to a post-reopen holding). To handle this, the walk is
+ *   chronological and accumulators reset whenever shares fall to zero from
+ *   a sell — that's a position-closed boundary; everything before it
+ *   belongs to a previous cycle. Realized P&L stays accumulated across
+ *   cycles (taxes care about every sell).
  *
  * Idempotent + deterministic: repeated calls on the same inputs return the
  * same result. The function does not look at the wall clock or any external
  * state.
  */
 export function deriveHolding(
-  holding: { id: string; ticker: string; portfolioId: string; assetType: AssetType },
+  holding: { id: string; ticker: string; portfolioId: string; assetType: AssetType; buyDate?: string },
   allTransactions: Transaction[],
 ): DerivedHolding {
   const tickerUpper = holding.ticker.toUpperCase();
   const isCash = holding.assetType === 'cash';
 
   // Pick contributing transactions. holdingId is preferred when set.
-  const contributing = allTransactions.filter((t) => {
-    if (t.holdingId) return t.holdingId === holding.id;
-    return t.ticker.toUpperCase() === tickerUpper && t.portfolioId === holding.portfolioId;
-  });
+  // For ticker-fallback we additionally require date >= holding.buyDate so
+  // pre-existing txns from a previous (closed) incarnation of the same
+  // ticker don't bleed into the current holding's derivation.
+  const contributing = allTransactions
+    .filter((t) => {
+      if (t.holdingId) return t.holdingId === holding.id;
+      if (t.ticker.toUpperCase() !== tickerUpper) return false;
+      if (t.portfolioId !== holding.portfolioId) return false;
+      if (holding.buyDate && t.date < holding.buyDate) return false;
+      return true;
+    })
+    // Walk chronologically so the position-closed reset works correctly.
+    // ISO YYYY-MM-DD sorts lexically.
+    .sort((a, b) => a.date.localeCompare(b.date));
 
   let shares = 0;
   let totalBuyShares = 0;
@@ -98,6 +119,10 @@ export function deriveHolding(
   let totalBuyFxWeighted = 0;
   let totalBuyFxWeight = 0;
   let realizedPnl = 0;
+
+  // Treat values within this tolerance as effectively zero. Avoids
+  // floating-point drift after a fully-realized sell on fractional shares.
+  const ZERO_TOLERANCE = 1e-9;
 
   for (const t of contributing) {
     switch (t.type) {
@@ -115,6 +140,16 @@ export function deriveHolding(
         shares -= t.shares;
         if (typeof t.costBasisPerShare === 'number') {
           realizedPnl += (t.pricePerShare - t.costBasisPerShare) * t.shares;
+        }
+        // Position-closed boundary (non-cash only). Reset cost-basis
+        // accumulators so the next buy starts a fresh weighted-avg
+        // calculation. Realized P&L is intentionally NOT reset.
+        if (!isCash && shares <= ZERO_TOLERANCE) {
+          shares = 0;
+          totalBuyShares = 0;
+          totalBuyCost = 0;
+          totalBuyFxWeighted = 0;
+          totalBuyFxWeight = 0;
         }
         break;
 

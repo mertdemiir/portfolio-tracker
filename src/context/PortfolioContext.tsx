@@ -196,7 +196,13 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
 
     for (const h of holdings) {
       const d = deriveHolding(
-        { id: h.id, ticker: h.ticker, portfolioId: h.portfolioId, assetType: h.assetType },
+        {
+          id: h.id,
+          ticker: h.ticker,
+          portfolioId: h.portfolioId,
+          assetType: h.assetType,
+          buyDate: h.buyDate,
+        },
         transactions,
       );
 

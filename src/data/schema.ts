@@ -108,8 +108,18 @@ export const APP_META_KEY = 'app-meta';
  *       but adjusts the weighted-average buyPrice). After migration 6
  *       runs, every non-cash holding's deriveHolding output exactly
  *       matches its stored shares + buyPrice. Idempotent.
+ *   7 — v1.7.0. Phase 3 source-of-truth completion. The Settings flag
+ *       now defaults to true and the ledger is canonically authoritative.
+ *       Migration 7 verifies storage matches derivation for every
+ *       non-cash holding; if any drift is detected (shouldn't happen
+ *       post-mig-6 — only if the user manually edited storage), it
+ *       writes the derived values back so storage stays an accurate
+ *       cache of the ledger. We deliberately do NOT strip the
+ *       shares/buyPrice/buyFxRate fields from Holding storage — too many
+ *       consumers read them directly. Storage is now a ledger-derived
+ *       cache rather than the source of truth. Idempotent.
  */
-export const CURRENT_SCHEMA_VERSION = 6;
+export const CURRENT_SCHEMA_VERSION = 7;
 
 const EMPTY_META: AppMeta = {
   schemaVersion: 0,

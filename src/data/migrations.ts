@@ -348,18 +348,58 @@ function writePreMigrationBackup(fromVersion: number, toVersion: number): string
   return key;
 }
 
+/**
+ * Maximum age (days) for a pre-migration backup before it's pruned regardless
+ * of count. Together with MAX_BACKUPS_IN_LOCALSTORAGE, this caps both the
+ * count and the age of retained rollback points.
+ */
+const MAX_BACKUP_AGE_DAYS = 30;
+
 function purgeOldBackups(keepCount: number): void {
   try {
+    const now = Date.now();
+    const ageCutoffMs = MAX_BACKUP_AGE_DAYS * 24 * 60 * 60 * 1000;
     const keys: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
       if (k && k.startsWith(BACKUP_KEY_PREFIX)) keys.push(k);
     }
-    // Sort oldest-first (timestamp is embedded so lexical sort works)
+    // Sort oldest-first (timestamp is embedded so lexical sort works).
     keys.sort();
-    const toRemove = keys.slice(0, Math.max(0, keys.length - keepCount));
+
+    // First pass — drop any backup older than MAX_BACKUP_AGE_DAYS.
+    // The timestamp is the trailing component of the key after the last
+    // underscore-prefixed colon-replaced ISO date. Parse it back.
+    const ageDropped = new Set<string>();
+    for (const k of keys) {
+      const tsPart = k.replace(`${BACKUP_KEY_PREFIX}`, '').split('_').slice(2).join('_');
+      // tsPart looks like 2026-04-25T00-00-00-000Z (colons + dots replaced
+      // with dashes during writePreMigrationBackup). Reverse it so Date can
+      // parse: keep the date portion and put the time back together.
+      const restored = tsPart.replace(
+        /^(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/,
+        '$1T$2:$3:$4.$5Z',
+      );
+      const ts = Date.parse(restored);
+      if (!Number.isNaN(ts) && now - ts > ageCutoffMs) {
+        try {
+          localStorage.removeItem(k);
+          ageDropped.add(k);
+        } catch {
+          /* best effort */
+        }
+      }
+    }
+    const remaining = keys.filter((k) => !ageDropped.has(k));
+
+    // Second pass — apply the count cap on the remainder.
+    const toRemove = remaining.slice(0, Math.max(0, remaining.length - keepCount));
     for (const k of toRemove) {
-      localStorage.removeItem(k);
+      try {
+        localStorage.removeItem(k);
+      } catch {
+        /* best effort */
+      }
     }
   } catch {
     // best effort

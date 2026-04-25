@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Trash2, Plus, Key, Tag, Download, Upload, HardDrive, FileSpreadsheet, Sun, Moon, Stars, BarChart3, FolderOpen, Landmark, TerminalSquare, Database } from 'lucide-react';
+import { Trash2, Plus, Key, Tag, Download, Upload, HardDrive, FileSpreadsheet, Sun, Moon, Stars, BarChart3, FolderOpen, Landmark, TerminalSquare, Database, Receipt } from 'lucide-react';
 import { Modal } from './Modal';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { useSettings } from '../context/SettingsContext';
@@ -32,8 +32,8 @@ export function SettingsModal({
   onDeleteCategory,
   onClose,
 }: SettingsModalProps) {
-  const { holdings, snapshots } = usePortfolioContext();
-  const { theme, themePreference, setTheme, accentColor, setAccentColor, baseCurrency, setBaseCurrency } = useSettings();
+  const { holdings, snapshots, ledgerDivergences } = usePortfolioContext();
+  const { theme, themePreference, setTheme, accentColor, setAccentColor, baseCurrency, setBaseCurrency, useTxnSourceOfTruth, setUseTxnSourceOfTruth } = useSettings();
   const { importBenchmarkCsv, clearBenchmark, getBenchmarkDateRange } = usePricesFx();
   const [keyInput, setKeyInput] = useState(apiKey);
   const [newCategoryLabel, setNewCategoryLabel] = useState('');
@@ -570,6 +570,69 @@ export function SettingsModal({
             )}
           </div>
         )}
+
+        {/* Transaction ledger source-of-truth (Advanced — Phase 3 ramp) */}
+        <div className="mt-6">
+          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-b-subtle">
+            <Receipt className="w-4 h-4 text-t-muted" aria-hidden="true" />
+            <h3 className="text-sm font-semibold text-t-primary">
+              Transaction ledger
+              <span className="text-xs font-normal text-t-faint ml-1">Advanced — opt-in</span>
+            </h3>
+          </div>
+          <p className="text-xs text-t-faint mb-3">
+            When on, holding shares and weighted-avg cost basis are derived from
+            the transaction ledger instead of read from storage. The validator
+            below shows whether the two sources currently agree — flip the toggle
+            on only when there are <em>no</em> divergences.
+          </p>
+          <div className="flex items-center justify-between gap-3 mb-3 px-3 py-2 bg-surface-alt rounded-lg">
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-t-primary">Use ledger as source of truth</span>
+              <span className="text-xs text-t-muted">
+                {useTxnSourceOfTruth ? 'On — values come from transactions' : 'Off — values come from holdings storage'}
+              </span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={useTxnSourceOfTruth}
+              aria-label="Use ledger as source of truth"
+              onClick={() => setUseTxnSourceOfTruth(!useTxnSourceOfTruth)}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                useTxnSourceOfTruth ? 'bg-accent' : 'bg-surface-active'
+              }`}
+            >
+              <span
+                aria-hidden="true"
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition ${
+                  useTxnSourceOfTruth ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+          <div className={`text-xs px-3 py-2 rounded-lg ${ledgerDivergences.length === 0 ? 'bg-emerald-500/10 text-emerald-700' : 'bg-amber-500/10 text-amber-700'}`}>
+            <p className="font-semibold mb-1">
+              {ledgerDivergences.length === 0
+                ? 'Ledger and storage agree.'
+                : `${ledgerDivergences.length} holding${ledgerDivergences.length === 1 ? '' : 's'} diverge.`}
+            </p>
+            {ledgerDivergences.length > 0 && (
+              <ul className="space-y-0.5 mt-1">
+                {ledgerDivergences.slice(0, 5).map((d) => (
+                  <li key={d.holdingId} className="font-mono">
+                    {d.ticker}: stored {d.storedShares} sh @ ${d.storedBuyPrice.toFixed(2)} →
+                    derived {d.derivedShares} sh @ ${d.derivedBuyPrice.toFixed(2)}
+                    {' '}(Δ ${d.costBasisDeltaAmount.toFixed(2)})
+                  </li>
+                ))}
+                {ledgerDivergences.length > 5 && (
+                  <li className="italic">… and {ledgerDivergences.length - 5} more.</li>
+                )}
+              </ul>
+            )}
+          </div>
+        </div>
 
         {/* Storage Backend (Advanced) */}
         <div className="mt-6">

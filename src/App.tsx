@@ -4,6 +4,7 @@ import { SettingsProvider, useSettings } from './context/SettingsContext';
 import { PricesFxProvider, usePricesFx } from './context/PricesFxContext';
 import { PortfolioProvider } from './context/PortfolioContext';
 import { Layout } from './components/Layout';
+import { LedgerDivergenceBanner } from './components/LedgerDivergenceBanner';
 import { SettingsModal } from './components/SettingsModal';
 import { Dashboard } from './components/Dashboard';
 import { HoldingsTable } from './components/HoldingsTable';
@@ -101,6 +102,7 @@ function AppContent() {
 
   return (
     <Layout activeTab={activeTab} onTabChange={handleTabChange} onSettingsClick={() => setShowSettings(true)} latestPriceUpdate={latestPriceUpdate}>
+      <LedgerDivergenceBanner onOpenSettings={() => setShowSettings(true)} />
       {!isOnline && (
         <div className="mb-4 p-3 bg-red-900/20 border border-red-800/30 rounded-lg text-sm text-red-400 flex items-center gap-2">
           <WifiOff className="w-4 h-4 flex-shrink-0" />

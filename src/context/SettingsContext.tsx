@@ -64,6 +64,20 @@ interface SettingsContextValue {
   targetAllocations: TargetAllocation[];
   setTargetAllocation: (categoryKey: string, targetPercent: number) => void;
   removeTargetAllocation: (categoryKey: string) => void;
+
+  /**
+   * Feature flag: when true, holding.shares / holding.buyPrice / holding.buyFxRate
+   * are derived from the transaction ledger via deriveHolding instead of read
+   * from storage. Defaults false. Phase 3 plan: ship off, parallel-run validate
+   * for ≥2 weeks, flip on, then in a later release strip the redundant fields
+   * from Holding storage (migration 4).
+   *
+   * Even when off, the parallel-run validator computes both ways and surfaces
+   * a banner if any holding diverges by more than $0.01 — so the user (and we)
+   * see early warnings before flipping the flag.
+   */
+  useTxnSourceOfTruth: boolean;
+  setUseTxnSourceOfTruth: (v: boolean) => void;
 }
 
 const SettingsCtx = createContext<SettingsContextValue | null>(null);
@@ -73,6 +87,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const { theme, themePreference, setTheme, accentColor, setAccentColor } = useTheme();
   const [baseCurrency, setBaseCurrency] = useLocalStorage<string>('base-currency', 'USD');
   const { targetAllocations, setTargetAllocation, removeTargetAllocation } = useTargetAllocations();
+  // Defaults FALSE for Phase 3 ship — substrate is in place, but the flip
+  // is opt-in until parallel-run logs are clean.
+  const [useTxnSourceOfTruth, setUseTxnSourceOfTruth] = useLocalStorage<boolean>(
+    'use-txn-source-of-truth',
+    false,
+  );
 
   // Custom categories — owned here since they're a settings concern that
   // crosses many surfaces (Add Holding form, Settings modal, chart labels).
@@ -133,6 +153,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       targetAllocations,
       setTargetAllocation,
       removeTargetAllocation,
+      useTxnSourceOfTruth,
+      setUseTxnSourceOfTruth,
     }),
     [
       apiKey, setApiKey, hasApiKey,
@@ -140,6 +162,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       baseCurrency, setBaseCurrency,
       customCategories, allCategories, addCustomCategory, deleteCustomCategory,
       targetAllocations, setTargetAllocation, removeTargetAllocation,
+      useTxnSourceOfTruth, setUseTxnSourceOfTruth,
     ],
   );
 

@@ -137,12 +137,11 @@ describe('switchBackend — failure paths', () => {
     // Force the source.get to throw on second key
     const origGet = source.get.bind(source);
     let calls = 0;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     source.get = (async (key: string) => {
       calls++;
       if (calls > 1) throw new Error('simulated read failure');
       return origGet(key);
-    }) as any;
+    }) as typeof source.get;
 
     const result = await switchBackend('indexedDB', { backup: 'required', source });
     expect(result.ok).toBe(false);

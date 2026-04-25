@@ -61,8 +61,8 @@ export function PerformanceMetrics() {
     netWorthSummary,
   } = usePortfolioContext();
 
-  if (filteredEnrichedHoldings.length === 0) return null;
-
+  // Hooks must run unconditionally — the rules-of-hooks fix moves the
+  // empty-state guard below the useMemo calls.
   const portfolioCagr = useMemo(
     () => computeCAGR(snapshots, filteredPortfolioSummary.totalValue.amount, 'portfolioValue'),
     [snapshots, filteredPortfolioSummary.totalValue.amount],
@@ -72,6 +72,8 @@ export function PerformanceMetrics() {
     () => computeCAGR(snapshots, netWorthSummary.totalNetWorth.amount, 'netWorth'),
     [snapshots, netWorthSummary.totalNetWorth.amount],
   );
+
+  if (filteredEnrichedHoldings.length === 0) return null;
 
   const displayCagr = portfolioCagr ?? nwCagr;
   const { best, worst } = getBestWorst(filteredEnrichedHoldings);

@@ -34,6 +34,7 @@ import { usePortfolios } from '../hooks/usePortfolios';
 import { useLiabilities } from '../hooks/useLiabilities';
 import { useTransactions } from '../hooks/useTransactions';
 import { enrichHoldings, calculateSummary, calculateNetWorthSummary } from '../utils/calculations';
+import { deriveHolding } from '../utils/transactionLedger';
 import { LIVE_METAL_TICKERS } from '../utils/api';
 import { DEFAULT_PORTFOLIO_ID } from '../types';
 import type {
@@ -96,12 +97,33 @@ interface PortfolioContextValue {
   // Filtered by active portfolio (for holdings-level views)
   filteredEnrichedHoldings: EnrichedHolding[];
   filteredPortfolioSummary: PortfolioSummary;
+
+  /**
+   * Phase 3 parallel-run telemetry. Each entry is a holding whose stored
+   * shares/buyPrice diverged materially from what deriveHolding produced
+   * from the transaction ledger. A non-empty list surfaces a warning
+   * banner; empty list = ledger and storage agree.
+   */
+  ledgerDivergences: LedgerDivergence[];
+}
+
+export interface LedgerDivergence {
+  holdingId: string;
+  ticker: string;
+  storedShares: number;
+  derivedShares: number;
+  storedBuyPrice: number;
+  derivedBuyPrice: number;
+  /** dollar magnitude of the cost-basis disagreement, in transaction currency */
+  costBasisDeltaAmount: number;
+  /** how many txns contributed to the derivation */
+  matchedTxnCount: number;
 }
 
 const PortfolioCtx = createContext<PortfolioContextValue | null>(null);
 
 export function PortfolioProvider({ children }: { children: ReactNode }) {
-  const { customCategories, baseCurrency } = useSettings();
+  const { customCategories, baseCurrency, useTxnSourceOfTruth } = useSettings();
   const { priceCache, pricesLoading, convertToBase, fetchPrices } = usePricesFx();
   const { registerRefresh } = usePricesFxInternals();
 
@@ -153,16 +175,78 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, [holdings, fetchPrices]);
 
+  // ── Phase 3 parallel-run validator + flag-gated projection ─────────────
+  // Always derive each holding from the ledger (cheap; no I/O). When the
+  // flag is on, we project derived shares/buyPrice/buyFxRate over each
+  // Holding before enrichment. When off, we still compute the derivation
+  // to populate `ledgerDivergences` for the warning banner — so we get
+  // early signal before flipping the flag.
+  const { effectiveHoldings, ledgerDivergences } = useMemo(() => {
+    // Threshold for declaring a divergence:
+    //   - shares:   > 1e-6 absolute difference (handles fractional shares
+    //               down to about 6 decimal places, well below realistic
+    //               precision for crypto/equities)
+    //   - cost:     |derivedBuyPrice − storedBuyPrice| × storedShares > $0.01
+    //               (i.e. >1¢ of total cost-basis disagreement)
+    const SHARES_TOL = 1e-6;
+    const COST_TOL = 0.01;
+
+    const divergences: LedgerDivergence[] = [];
+    const projected: Holding[] = [];
+
+    for (const h of holdings) {
+      const d = deriveHolding(
+        { id: h.id, ticker: h.ticker, portfolioId: h.portfolioId, assetType: h.assetType },
+        transactions,
+      );
+
+      const sharesDelta = Math.abs(d.shares - h.shares);
+      const buyPriceDelta = Math.abs(d.buyPrice - h.buyPrice);
+      const costBasisDelta = buyPriceDelta * Math.max(h.shares, 0);
+      const isDivergent =
+        d.matchedTxnCount > 0 && (sharesDelta > SHARES_TOL || costBasisDelta > COST_TOL);
+
+      if (isDivergent) {
+        divergences.push({
+          holdingId: h.id,
+          ticker: h.ticker,
+          storedShares: h.shares,
+          derivedShares: d.shares,
+          storedBuyPrice: h.buyPrice,
+          derivedBuyPrice: d.buyPrice,
+          costBasisDeltaAmount: costBasisDelta,
+          matchedTxnCount: d.matchedTxnCount,
+        });
+      }
+
+      if (useTxnSourceOfTruth && d.matchedTxnCount > 0) {
+        // Flag-on path: project derived values onto the holding shape.
+        // We keep the holding's `buyFxRate` if the derivation didn't yield
+        // one (e.g. legacy buys without buyFxRate stored).
+        projected.push({
+          ...h,
+          shares: d.shares,
+          buyPrice: d.buyPrice,
+          ...(d.buyFxRate !== undefined ? { buyFxRate: d.buyFxRate } : {}),
+        });
+      } else {
+        projected.push(h);
+      }
+    }
+
+    return { effectiveHoldings: projected, ledgerDivergences: divergences };
+  }, [holdings, transactions, useTxnSourceOfTruth]);
+
   // All enriched holdings (net worth allocation)
   const allEnrichedHoldings = useMemo(
-    () => enrichHoldings(holdings, priceCache, convertToBase, baseCurrency),
-    [holdings, priceCache, convertToBase],
+    () => enrichHoldings(effectiveHoldings, priceCache, convertToBase, baseCurrency),
+    [effectiveHoldings, priceCache, convertToBase, baseCurrency],
   );
 
   // Portfolio-only enriched holdings
   const portfolioEnrichedHoldings = useMemo(
-    () => enrichHoldings(holdings.filter((h) => h.inPortfolio), priceCache, convertToBase, baseCurrency),
-    [holdings, priceCache, convertToBase],
+    () => enrichHoldings(effectiveHoldings.filter((h) => h.inPortfolio), priceCache, convertToBase, baseCurrency),
+    [effectiveHoldings, priceCache, convertToBase, baseCurrency],
   );
 
   const portfolioSummary = useMemo(
@@ -174,11 +258,11 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
   // See Phase 1C (#20) for the reasoning.
   const filteredEnrichedHoldings = useMemo(() => {
     if (activePortfolioId === 'all') return portfolioEnrichedHoldings;
-    const filtered = holdings.filter(
+    const filtered = effectiveHoldings.filter(
       (h) => h.portfolioId === activePortfolioId && h.inPortfolio,
     );
     return enrichHoldings(filtered, priceCache, convertToBase, baseCurrency);
-  }, [activePortfolioId, holdings, priceCache, convertToBase, portfolioEnrichedHoldings]);
+  }, [activePortfolioId, effectiveHoldings, priceCache, convertToBase, baseCurrency, portfolioEnrichedHoldings]);
 
   const filteredPortfolioSummary = useMemo(
     () => calculateSummary(filteredEnrichedHoldings, baseCurrency),
@@ -269,6 +353,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       portfolios, activePortfolioId, setActivePortfolioId, createPortfolio, renamePortfolio, deletePortfolio,
       liabilities, addLiability, updateLiability, deleteLiability,
       filteredEnrichedHoldings, filteredPortfolioSummary,
+      ledgerDivergences,
     }),
     [
       holdings, addHolding, updateHolding, deleteHolding, restoreHolding,
@@ -279,6 +364,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       portfolios, activePortfolioId, setActivePortfolioId, createPortfolio, renamePortfolio, deletePortfolio,
       liabilities, addLiability, updateLiability, deleteLiability,
       filteredEnrichedHoldings, filteredPortfolioSummary,
+      ledgerDivergences,
     ],
   );
 

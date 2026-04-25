@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { LayoutDashboard, List, BarChart3, Receipt, FlaskConical, Settings, Eye, Flame, Download } from 'lucide-react';
+// BarChart3 used in tabs[] for the "Charts" tab icon — keep it.
 import { PortfolioSelector } from './PortfolioSelector';
 import { gatherBackupData, serializeBackup } from '../data/backup';
 import { updateAppMeta } from '../data/schema';
@@ -92,50 +93,44 @@ export function Layout({ activeTab, onTabChange, onSettingsClick, latestPriceUpd
 
   return (
     <div className="min-h-screen bg-surface pb-20 md:pb-0">
-      {/* Header */}
-      <header className="bg-surface-card/80 backdrop-blur-xl border-b border-b-default/50 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <h1 className="text-base font-bold text-t-primary flex items-center gap-2 tracking-tight">
-            <BarChart3 className="w-5 h-5 text-accent" />
-            Wealth Tracker
-          </h1>
-          <div className="flex items-center">
-            {/* Desktop tabs */}
-            <nav className="hidden md:flex items-center">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => onTabChange(tab.id)}
-                  className={`relative px-3 py-4 text-[13px] font-medium transition-colors flex items-center gap-1.5
-                    ${
-                      activeTab === tab.id
-                        ? 'text-accent'
-                        : 'text-t-muted hover:text-t-secondary'
-                    }`}
-                >
-                  <tab.icon className="w-4 h-4" />
-                  {tab.label}
-                  {activeTab === tab.id && (
-                    <span className="absolute bottom-0 left-3 right-3 h-[2px] bg-accent rounded-full" />
-                  )}
-                </button>
-              ))}
-            </nav>
+      {/* Header — Mercury (M1) */}
+      <header className="m-header">
+        <div className="m-header-inner">
+          {/* Brand */}
+          <div className="m-brand">
+            <div className="m-brand-mark" aria-hidden="true">W</div>
+            <span>Wealth Tracker</span>
+          </div>
+
+          {/* Desktop tabs */}
+          <nav className="m-tabs hidden md:flex" aria-label="Primary">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => onTabChange(tab.id)}
+                className={'m-tab' + (activeTab === tab.id ? ' active' : '')}
+                aria-current={activeTab === tab.id ? 'page' : undefined}
+              >
+                <tab.icon className="w-[14px] h-[14px]" aria-hidden="true" />
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+
+          {/* Right actions */}
+          <div className="m-header-actions">
             {asOf && asOf.text && (
-              <span className={`hidden md:inline text-[11px] tabular-nums ml-3 ${asOf.stale ? 'text-amber-500' : 'text-t-faint'}`} title={`Prices updated ${asOf.text}`}>
+              <span
+                className={`m-asof hidden md:inline ${asOf.stale ? 'text-amber-500' : ''}`}
+                title={`Prices updated ${asOf.text}`}
+              >
                 {asOf.stale ? '⚠ ' : ''}as of {asOf.text}
               </span>
             )}
             <button
               onClick={handleExport}
               disabled={exportFlash === 'saving'}
-              className={`p-2 rounded-lg transition-colors ml-2 ${
-                exportFlash === 'saved'
-                  ? 'text-gain'
-                  : exportFlash === 'error'
-                  ? 'text-loss'
-                  : 'text-t-muted hover:bg-surface-alt'
-              }`}
+              className="m-icon-btn"
               title={
                 exportFlash === 'saved'
                   ? 'Backup saved'
@@ -144,17 +139,24 @@ export function Layout({ activeTab, onTabChange, onSettingsClick, latestPriceUpd
                   : 'Export backup (⌘⇧E)'
               }
               aria-label="Export backup"
+              style={
+                exportFlash === 'saved'
+                  ? { color: 'var(--gain)' }
+                  : exportFlash === 'error'
+                  ? { color: 'var(--loss)' }
+                  : undefined
+              }
             >
-              <Download className="w-[18px] h-[18px]" aria-hidden="true" />
+              <Download className="w-[16px] h-[16px]" aria-hidden="true" />
             </button>
             {onSettingsClick && (
               <button
                 onClick={onSettingsClick}
-                className="p-2 hover:bg-surface-alt rounded-lg transition-colors ml-1"
+                className="m-icon-btn"
                 title="Settings"
                 aria-label="Settings"
               >
-                <Settings className="w-[18px] h-[18px] text-t-muted" aria-hidden="true" />
+                <Settings className="w-[16px] h-[16px]" aria-hidden="true" />
               </button>
             )}
           </div>

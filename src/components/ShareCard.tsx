@@ -15,49 +15,22 @@ const THEME_STYLES: Record<ThemeId, {
   subtle: string; accent1: string; accent2: string;
 }> = {
   light: {
-    bg: 'linear-gradient(135deg, #f9fafb 0%, #e5e7eb 100%)',
-    text: '#111827',
-    muted: '#6b7280',
-    faint: '#9ca3af',
+    bg: 'linear-gradient(135deg, #fafaf9 0%, #e8e8e6 100%)',
+    text: '#0a0a0a',
+    muted: '#6b6b6b',
+    faint: '#a3a3a3',
     subtle: 'rgba(0,0,0,0.04)',
-    accent1: 'rgba(99,102,241,0.08)',
-    accent2: 'rgba(16,185,129,0.06)',
+    accent1: 'rgba(59, 91, 219, 0.08)',
+    accent2: 'rgba(15, 122, 63, 0.06)',
   },
   dark: {
-    bg: 'linear-gradient(135deg, #0c0f1a 0%, #151926 100%)',
-    text: '#f0f2f5',
-    muted: '#6b7a90',
-    faint: '#4a5568',
+    bg: 'linear-gradient(135deg, #0a0a0b 0%, #18181b 100%)',
+    text: '#fafafa',
+    muted: '#8d8d94',
+    faint: '#5a5a60',
     subtle: 'rgba(255,255,255,0.06)',
-    accent1: 'rgba(99,102,241,0.1)',
-    accent2: 'rgba(16,185,129,0.08)',
-  },
-  midnight: {
-    bg: 'linear-gradient(135deg, #050509 0%, #0d0d14 100%)',
-    text: '#f0f2f5',
-    muted: '#5a6478',
-    faint: '#3d4555',
-    subtle: 'rgba(255,255,255,0.05)',
-    accent1: 'rgba(99,102,241,0.12)',
-    accent2: 'rgba(16,185,129,0.08)',
-  },
-  heritage: {
-    bg: 'linear-gradient(135deg, #f4f1ec 0%, #eceae5 100%)',
-    text: '#1a1612',
-    muted: '#6b6358',
-    faint: '#928a7e',
-    subtle: 'rgba(26, 22, 18, 0.04)',
-    accent1: 'rgba(184, 134, 11, 0.08)',
-    accent2: 'rgba(37, 107, 71, 0.06)',
-  },
-  terminal: {
-    bg: 'linear-gradient(135deg, #0a0a0a 0%, #111111 100%)',
-    text: '#00ff88',
-    muted: '#5a7a6a',
-    faint: '#334a3f',
-    subtle: 'rgba(0, 255, 136, 0.04)',
-    accent1: 'rgba(0, 212, 255, 0.1)',
-    accent2: 'rgba(0, 255, 136, 0.06)',
+    accent1: 'rgba(109, 135, 255, 0.10)',
+    accent2: 'rgba(61, 216, 139, 0.08)',
   },
 };
 
@@ -75,11 +48,7 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
           height: 400,
           background: s.bg,
           color: s.text,
-          fontFamily: theme === 'heritage'
-            ? '"Source Serif 4", Georgia, serif'
-            : theme === 'terminal'
-            ? '"JetBrains Mono", monospace'
-            : '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
           padding: 32,
           display: 'flex',
           flexDirection: 'column',

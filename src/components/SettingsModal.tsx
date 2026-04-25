@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Trash2, Plus, Key, Tag, Download, Upload, HardDrive, FileSpreadsheet, Sun, Moon, Stars, BarChart3, FolderOpen, Landmark, TerminalSquare, Database, Receipt } from 'lucide-react';
+import { Trash2, Plus, Key, Tag, Download, Upload, HardDrive, FileSpreadsheet, Sun, Moon, BarChart3, FolderOpen, Database, Receipt } from 'lucide-react';
 import { Modal } from './Modal';
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { useSettings } from '../context/SettingsContext';
@@ -277,13 +277,10 @@ export function SettingsModal({
             </button>
           </div>
 
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {([
-              { id: 'heritage' as ThemeId, label: 'Heritage', icon: Landmark, bg: '#f4f1ec', card: '#f9f7f4', text: '#1a1612' },
-              { id: 'terminal' as ThemeId, label: 'Terminal', icon: TerminalSquare, bg: '#0a0a0a', card: '#111111', text: '#00ff88' },
-              { id: 'light' as ThemeId, label: 'Light', icon: Sun, bg: '#f9fafb', card: '#ffffff', text: '#111827' },
-              { id: 'dark' as ThemeId, label: 'Dark', icon: Moon, bg: '#0c0f1a', card: '#151926', text: '#f0f2f5' },
-              { id: 'midnight' as ThemeId, label: 'Midnight', icon: Stars, bg: '#050509', card: '#0d0d14', text: '#f0f2f5' },
+              { id: 'light' as ThemeId, label: 'Light', icon: Sun, bg: '#fafaf9', card: '#ffffff', text: '#0a0a0a' },
+              { id: 'dark' as ThemeId, label: 'Dark', icon: Moon, bg: '#0a0a0b', card: '#111113', text: '#fafafa' },
             ]).map((t) => (
               <button
                 key={t.id}

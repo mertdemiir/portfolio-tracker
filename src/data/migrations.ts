@@ -500,6 +500,208 @@ const MIGRATIONS: Record<number, Migration> = {
       }
     }
   },
+
+  /**
+   * v4 → v5: Brute-force ledger reconciliation.
+   *
+   * Why: migration 4 dated synthetics at holding.buyDate. For closed-
+   * and-reopened cycles, that date often sits BEFORE a closing sell, so
+   * the chronological walk in deriveHolding partially consumes the
+   * synthetic via the subsequent sell. Result: derived shares end up
+   * short by exactly the absolute value of the historical net-sell
+   * overhang. Migration 5 fixes this in a robust, repeatable way.
+   *
+   * Algorithm (per non-cash holding):
+   *   1. Find every transaction tagged synthetic: true that is linked
+   *      to this holding (by holdingId, or — for legacy synthetics —
+   *      by ticker + portfolioId match). Remove them.
+   *   2. With the cleaned ledger, run deriveHolding to compute the
+   *      true open-cycle position.
+   *   3. If derived === stored within tolerance, do nothing further.
+   *   4. Otherwise, append ONE corrective synthetic txn:
+   *        - Date = MAX(holding.buyDate, latest contributing txn date).
+   *          This guarantees the synthetic is chronologically last so
+   *          no prior sell can consume it.
+   *        - storedShares > derivedShares  →  synthetic BUY of the gap,
+   *          priced so weighted-avg = stored.buyPrice.
+   *        - storedShares < derivedShares  →  synthetic SELL of the
+   *          gap at stored.buyPrice (zero realized P&L impact).
+   *
+   * Idempotent: re-running on already-reconciled data wipes the
+   * existing synthetic and re-adds an identical one. No drift.
+   *
+   * Cash holdings: skipped — different ledger model, handled by
+   * migration 3 + the deriveHolding cash branch.
+   */
+  5: () => {
+    const DEFAULT_PORTFOLIO_ID = 'default';
+    const SHARES_TOL = 1e-6;
+
+    const makeId = (): string => {
+      const c: Crypto | undefined = typeof crypto !== 'undefined' ? crypto : undefined;
+      if (c && typeof c.randomUUID === 'function') return c.randomUUID();
+      return `syn-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    };
+
+    let holdings: Array<Record<string, unknown> & { id?: string }> = [];
+    let txns: Transaction[] = [];
+
+    try {
+      const raw = localStorage.getItem('portfolio-holdings');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) holdings = parsed;
+      }
+    } catch {
+      return;
+    }
+    try {
+      const raw = localStorage.getItem('transactions');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) txns = parsed;
+      }
+    } catch {
+      return;
+    }
+
+    let mutated = false;
+
+    for (const h of holdings) {
+      if (!h || typeof h.id !== 'string' || typeof h.ticker !== 'string') continue;
+      const assetType = typeof h.assetType === 'string' ? (h.assetType as AssetType) : 'stock';
+      if (assetType === 'cash') continue;
+
+      const storedShares = typeof h.shares === 'number' ? h.shares : 0;
+      const storedBuyPrice = typeof h.buyPrice === 'number' ? h.buyPrice : 0;
+      if (storedShares <= 0) continue;
+
+      const tickerUpper = h.ticker.toUpperCase();
+      const portfolioId = typeof h.portfolioId === 'string' && h.portfolioId
+        ? h.portfolioId
+        : DEFAULT_PORTFOLIO_ID;
+      const buyDate = typeof h.buyDate === 'string' && h.buyDate
+        ? h.buyDate
+        : new Date().toISOString().slice(0, 10);
+
+      // Step 1: drop every prior synthetic linked to this holding.
+      // Match by holdingId === h.id OR (synthetic && ticker + portfolioId match).
+      const before = txns.length;
+      txns = txns.filter((t) => {
+        if (!t.synthetic) return true;
+        if (t.holdingId === h.id) return false;
+        if (
+          !t.holdingId &&
+          typeof t.ticker === 'string' &&
+          t.ticker.toUpperCase() === tickerUpper &&
+          t.portfolioId === portfolioId
+        ) {
+          return false;
+        }
+        return true;
+      });
+      if (txns.length !== before) mutated = true;
+
+      // Step 2: derive from the cleaned ledger.
+      const d = deriveHolding(
+        { id: h.id, ticker: h.ticker, portfolioId, assetType, buyDate },
+        txns,
+      );
+      const gap = storedShares - d.shares;
+      if (Math.abs(gap) < SHARES_TOL) continue;
+
+      // Step 3: pick a date that is chronologically last among
+      // contributing txns (otherwise a later sell could consume the
+      // synthetic). We approximate the contributing-txn pool the same
+      // way deriveHolding does.
+      let latestContribDate = '';
+      for (const t of txns) {
+        const matches = t.holdingId
+          ? t.holdingId === h.id
+          : typeof t.ticker === 'string' &&
+            t.ticker.toUpperCase() === tickerUpper &&
+            t.portfolioId === portfolioId &&
+            (!buyDate || t.date >= buyDate);
+        if (matches && typeof t.date === 'string' && t.date > latestContribDate) {
+          latestContribDate = t.date;
+        }
+      }
+      const synDate = latestContribDate > buyDate ? latestContribDate : buyDate;
+
+      const ticker = h.ticker;
+      const name = typeof h.name === 'string' ? h.name : ticker;
+      const currency = typeof h.currency === 'string' ? h.currency : undefined;
+      const buyFxRate = typeof h.buyFxRate === 'number' ? h.buyFxRate : undefined;
+      const category = typeof h.category === 'string' ? h.category : undefined;
+
+      if (gap > 0) {
+        // Synthetic buy. Choose price so post-migration weighted-avg
+        // equals storedBuyPrice. existingBuyShares/Cost come from the
+        // open cycle that deriveHolding settled on.
+        const existingBuyShares = d.shares;
+        const existingBuyCost = existingBuyShares * d.buyPrice;
+        const synPrice =
+          existingBuyShares > 0
+            ? (storedShares * storedBuyPrice - existingBuyCost) / gap
+            : storedBuyPrice;
+
+        txns.push({
+          id: makeId(),
+          date: synDate,
+          ticker,
+          name,
+          type: 'buy',
+          shares: gap,
+          pricePerShare: synPrice,
+          total: gap * synPrice,
+          portfolioId,
+          holdingId: h.id,
+          synthetic: true,
+          notes:
+            'Phase 3 reconciliation (migration 5): one-time top-up to keep ' +
+            'the transaction ledger in sync with stored holding shares + ' +
+            'cost basis. Auto-generated; safe to delete or replace with ' +
+            'real purchase history.',
+          assetType,
+          ...(category ? { category } : {}),
+          ...(currency ? { currency } : {}),
+          ...(buyFxRate !== undefined ? { buyFxRate } : {}),
+        });
+        mutated = true;
+      } else {
+        const synShares = -gap;
+        txns.push({
+          id: makeId(),
+          date: synDate,
+          ticker,
+          name,
+          type: 'sell',
+          shares: synShares,
+          pricePerShare: storedBuyPrice,
+          total: synShares * storedBuyPrice,
+          costBasisPerShare: storedBuyPrice,
+          portfolioId,
+          holdingId: h.id,
+          synthetic: true,
+          notes:
+            'Phase 3 reconciliation (migration 5): one-time correction so ' +
+            'the ledger matches stored holding shares. Auto-generated.',
+          assetType,
+          ...(category ? { category } : {}),
+          ...(currency ? { currency } : {}),
+        });
+        mutated = true;
+      }
+    }
+
+    if (mutated) {
+      try {
+        localStorage.setItem('transactions', JSON.stringify(txns));
+      } catch {
+        throw new Error('v5: failed to write reconciled transactions to localStorage');
+      }
+    }
+  },
 };
 
 /**

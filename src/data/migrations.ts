@@ -983,6 +983,106 @@ const MIGRATIONS: Record<number, Migration> = {
       }
     }
   },
+
+  /**
+   * v6 → v7: Phase 3 source-of-truth completion.
+   *
+   * Migrations 1-6 established and reconciled the ledger; the
+   * useTxnSourceOfTruth flag now defaults to true. Migration 7 is the
+   * final guardrail: walk every non-cash holding, derive its position
+   * from the ledger, and if storage doesn't match (within tolerance),
+   * write the derived values back so storage is a faithful cache of
+   * the ledger from this point forward.
+   *
+   * Expected post-mig-6 state: NO holdings drift. Migration 7 should
+   * be a complete no-op for users who ran migrations 1-6 successfully.
+   * Only matters if storage drifted between mig 6 and now (manual edit,
+   * partial update from a corrupt save, etc.) — in which case mig 7
+   * silently corrects it on next boot.
+   *
+   * We deliberately do NOT strip shares/buyPrice/buyFxRate from the
+   * Holding type or zero them out in storage. Too many consumers
+   * (HoldingRow, AddTransactionModal, edit handlers, CSV import, etc.)
+   * read those fields directly. Storage stays populated with derived
+   * values; the ledger is the canonical source.
+   *
+   * Idempotent: writes only when there's drift.
+   * Cash holdings: skipped (deriveHolding's cash branch is fed by
+   * deposit/withdrawal/interest, which is its own model).
+   */
+  7: () => {
+    const SHARES_TOL = 1e-6;
+    const PRICE_TOL = 0.01; // matches the validator's tolerance
+
+    let holdings: Array<Record<string, unknown> & { id?: string }> = [];
+    let txns: Transaction[] = [];
+
+    try {
+      const raw = localStorage.getItem('portfolio-holdings');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) holdings = parsed;
+      }
+    } catch {
+      return;
+    }
+    try {
+      const raw = localStorage.getItem('transactions');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) txns = parsed;
+      }
+    } catch {
+      return;
+    }
+
+    let mutated = false;
+
+    for (const h of holdings) {
+      if (!h || typeof h.id !== 'string' || typeof h.ticker !== 'string') continue;
+      const assetType = typeof h.assetType === 'string' ? (h.assetType as AssetType) : 'stock';
+      if (assetType === 'cash') continue;
+
+      const storedShares = typeof h.shares === 'number' ? h.shares : 0;
+      const storedBuyPrice = typeof h.buyPrice === 'number' ? h.buyPrice : 0;
+      if (storedShares <= 0) continue;
+
+      const portfolioId = typeof h.portfolioId === 'string' && h.portfolioId
+        ? h.portfolioId
+        : 'default';
+      const buyDate = typeof h.buyDate === 'string' && h.buyDate
+        ? h.buyDate
+        : undefined;
+
+      const d = deriveHolding(
+        { id: h.id, ticker: h.ticker, portfolioId, assetType, buyDate },
+        txns,
+      );
+
+      if (d.matchedTxnCount === 0) continue; // no ledger to verify against
+
+      const sharesDelta = Math.abs(d.shares - storedShares);
+      const priceDelta = Math.abs(d.buyPrice - storedBuyPrice);
+
+      if (sharesDelta > SHARES_TOL || priceDelta > PRICE_TOL) {
+        // Storage drifted. Write derived values back.
+        h.shares = d.shares;
+        h.buyPrice = d.buyPrice;
+        if (d.buyFxRate !== undefined) {
+          h.buyFxRate = d.buyFxRate;
+        }
+        mutated = true;
+      }
+    }
+
+    if (mutated) {
+      try {
+        localStorage.setItem('portfolio-holdings', JSON.stringify(holdings));
+      } catch {
+        throw new Error('v7: failed to write reconciled holdings to localStorage');
+      }
+    }
+  },
 };
 
 /**

@@ -130,7 +130,7 @@ export function DailyDigest() {
   const borderColor = gained ? 'border-l-gain' : 'border-l-loss';
 
   return (
-    <div className={`bg-surface-card card-radius border border-b-default border-l-4 ${borderColor} p-4 mb-6`}>
+    <div className={`mv2-card mv2-card-pad border-l-4 ${borderColor} mb-6`}>
       <div className="space-y-2">
         {lines.map((line, i) => (
           <div key={i} className="flex items-center gap-2.5">

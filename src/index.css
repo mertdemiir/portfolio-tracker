@@ -579,8 +579,59 @@ input::placeholder, textarea::placeholder {
   width: 100%;
 }
 
-/* ── Mobile collapses for tables ── */
+/* ════════════════════════════════════════════════════════════════════
+   Mobile responsive overrides (≤ 768px)
+   ════════════════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
-  .m-toolbar { flex-wrap: wrap; }
+  /* Header — drop the brand wordmark on really small screens, keep mark */
+  .m-header-inner { padding: 0 14px; height: 52px; }
+
+  /* Page heading — stack title above action buttons */
+  .m-page-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .m-page-head > div:last-child {
+    flex-wrap: wrap;
+  }
+
+  /* Toolbar — search takes full width on top, pills + select below */
+  .m-toolbar {
+    flex-wrap: wrap;
+    padding: 8px 10px;
+    gap: 6px;
+  }
+  .m-toolbar .m-search {
+    flex-basis: 100%;
+    order: -1;
+  }
+
+  /* Tables — slightly tighter type, horizontal scroll preserved */
+  .m-table { font-size: 12px; }
+  .m-table th,
+  .m-table td { padding: 10px 12px; }
+
+  /* KPI cards — value sized down for small viewports */
+  .m-kpi-val { font-size: 18px; }
+  .m-kpi-card { padding: 12px 14px; }
+
+  /* Allocation rows — narrower label/value columns */
+  .m-cat-row {
+    grid-template-columns: 100px 1fr 100px;
+    gap: 10px;
+  }
+
+  /* FIRE hero — already had a year font drop; tighten padding too */
+  .mv2-fire-hero { padding: 24px 18px; }
   .mv2-fire-year { font-size: 56px; }
+
+  /* Cards — pull the inset in a touch */
+  .mv2-card-pad { padding: 16px 16px; }
+
+  /* Hide the long brand wordmark on very narrow screens */
+}
+@media (max-width: 480px) {
+  .m-brand span { display: none; }
 }

@@ -21,6 +21,10 @@ const HOLDING_FIELDS = [
   { key: 'buyDate', label: 'Buy Date', required: false },
   { key: 'assetType', label: 'Asset Type', required: false },
   { key: 'category', label: 'Category', required: false },
+  // Phase 3.7 leftovers — full pass-through.
+  { key: 'currency', label: 'Currency (e.g. USD, EUR)', required: false },
+  { key: 'portfolioId', label: 'Portfolio ID', required: false },
+  { key: 'skipStaleCheck', label: 'Skip Stale Check (true/false)', required: false },
 ];
 
 const TRANSACTION_FIELDS = [
@@ -161,6 +165,17 @@ export function CsvImportModal({ onClose }: CsvImportModalProps) {
             default: return 'other';
           }
         })();
+        // Phase 3.7 pass-through: optional currency / portfolioId /
+        // skipStaleCheck columns. portfolioId defaults to DEFAULT
+        // unless the row explicitly names a different bucket.
+        const rawCurrency = getRowValue(row, 'currency').trim().toUpperCase();
+        const currency = rawCurrency.length === 3 ? rawCurrency : undefined;
+        const rawPortfolioId = getRowValue(row, 'portfolioId').trim();
+        const portfolioId = rawPortfolioId || DEFAULT_PORTFOLIO_ID;
+        const rawSkipStale = getRowValue(row, 'skipStaleCheck').trim().toLowerCase();
+        const skipStaleCheck =
+          rawSkipStale === 'true' || rawSkipStale === '1' || rawSkipStale === 'yes';
+
         const newHoldingId = addHolding({
           ticker,
           name,
@@ -170,7 +185,9 @@ export function CsvImportModal({ onClose }: CsvImportModalProps) {
           assetType: mappedAssetType,
           inPortfolio: true,
           category: mappedCategory,
-          portfolioId: DEFAULT_PORTFOLIO_ID,
+          portfolioId,
+          ...(currency ? { currency } : {}),
+          ...(skipStaleCheck ? { skipStaleCheck: true } : {}),
         });
         // Auto-log the matching buy transaction so the ledger stays
         // 1:1 with holdings (see Phase 3 / migration 3 invariant).
@@ -185,10 +202,11 @@ export function CsvImportModal({ onClose }: CsvImportModalProps) {
           shares,
           pricePerShare: buyPrice,
           total: shares * buyPrice,
-          portfolioId: DEFAULT_PORTFOLIO_ID,
+          portfolioId,
           holdingId: newHoldingId,
           assetType: mappedAssetType,
           category: mappedCategory,
+          ...(currency ? { currency } : {}),
         });
         imported++;
       } else {

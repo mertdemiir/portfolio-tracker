@@ -43,7 +43,7 @@ export function WhatChangedTodayCard({ onNavigate }: WhatChangedTodayCardProps) 
   }
 
   return (
-    <div className="bg-surface-card card-radius border border-b-default p-5 mb-6">
+    <div className="mv2-card mv2-card-pad mb-6">
       <div className="flex items-center gap-2 mb-4">
         <Activity className="w-4 h-4 text-accent" aria-hidden="true" />
         <h3 className="text-sm font-semibold text-t-primary">What changed today</h3>

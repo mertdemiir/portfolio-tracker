@@ -3,7 +3,7 @@ import { AreaChart, Area, ResponsiveContainer, YAxis, ReferenceLine } from 'rech
 import { usePortfolioContext } from '../context/PortfolioContext';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { formatCurrency, formatSignedCurrency, formatPercent, formatCompactCurrency } from '../utils/formatters';
-import type { TimeRange } from '../types';
+import type { TimeRange, PortfolioSnapshot } from '../types';
 
 const RANGES: TimeRange[] = ['1M', '3M', '6M', '1Y', 'ALL'];
 
@@ -14,6 +14,47 @@ const PERIOD_LABEL: Record<TimeRange, string> = {
   '1Y': 'past year',
   'ALL': 'all-time',
 };
+
+const RANGE_DAYS_DEFAULT: Record<TimeRange, number> = {
+  '1M': 30,
+  '3M': 90,
+  '6M': 180,
+  '1Y': 365,
+  'ALL': Infinity,
+};
+
+/**
+ * Pure slice + delta computation, exported so tests can exercise the
+ * range math without mounting a Recharts tree. Returns the sliced
+ * snapshot data and derived stats for the given time range.
+ */
+export function sliceSnapshotsForRange(
+  snapshots: PortfolioSnapshot[],
+  range: TimeRange,
+): {
+  sliced: { value: number; date: string }[];
+  deltaAmt: number;
+  deltaPct: number;
+  low: number;
+  high: number;
+} {
+  if (snapshots.length === 0) {
+    return { sliced: [], deltaAmt: 0, deltaPct: 0, low: 0, high: 0 };
+  }
+  const sorted = [...snapshots].sort((a, b) => a.date.localeCompare(b.date));
+  const days = range === 'ALL' ? sorted.length : Math.min(RANGE_DAYS_DEFAULT[range], sorted.length);
+  const slicedRaw = sorted.slice(-days);
+  const first = slicedRaw[0]?.netWorthValue ?? 0;
+  const last = slicedRaw.at(-1)?.netWorthValue ?? 0;
+  const values = slicedRaw.map((s) => s.netWorthValue ?? s.totalValue);
+  return {
+    sliced: slicedRaw.map((s) => ({ value: s.netWorthValue ?? s.totalValue, date: s.date })),
+    deltaAmt: last - first,
+    deltaPct: first > 0 ? ((last - first) / first) * 100 : 0,
+    low: values.length > 0 ? Math.min(...values) : 0,
+    high: values.length > 0 ? Math.max(...values) : 0,
+  };
+}
 
 interface TryToggleProps {
   active: boolean;
@@ -59,31 +100,12 @@ export function HeroCard({ tryToggle }: HeroCardProps = {}) {
 
   const [range, setRange] = useLocalStorage<TimeRange>('chart-time-range', 'ALL');
 
-  // Slice snapshots to the chosen range.
-  const { sliced, deltaAmt, deltaPct, low, high } = useMemo(() => {
-    if (snapshots.length === 0) {
-      return { sliced: [], deltaAmt: 0, deltaPct: 0, low: 0, high: 0 };
-    }
-    const rangeDays: Record<TimeRange, number> = {
-      '1M': 30,
-      '3M': 90,
-      '6M': 180,
-      '1Y': 365,
-      'ALL': snapshots.length,
-    };
-    const days = Math.min(rangeDays[range], snapshots.length);
-    const slicedRaw = [...snapshots].sort((a, b) => a.date.localeCompare(b.date)).slice(-days);
-    const first = slicedRaw[0]?.netWorthValue ?? 0;
-    const last = slicedRaw.at(-1)?.netWorthValue ?? 0;
-    const values = slicedRaw.map((s) => s.netWorthValue ?? s.totalValue);
-    return {
-      sliced: slicedRaw.map((s) => ({ value: s.netWorthValue ?? s.totalValue, date: s.date })),
-      deltaAmt: last - first,
-      deltaPct: first > 0 ? ((last - first) / first) * 100 : 0,
-      low: values.length > 0 ? Math.min(...values) : 0,
-      high: values.length > 0 ? Math.max(...values) : 0,
-    };
-  }, [snapshots, range]);
+  // Slice snapshots to the chosen range — math lives in the pure helper
+  // sliceSnapshotsForRange so tests can exercise it without Recharts.
+  const { sliced, deltaAmt, deltaPct, low, high } = useMemo(
+    () => sliceSnapshotsForRange(snapshots, range),
+    [snapshots, range],
+  );
 
   // Cost basis reference line — pulled from the active filtered summary.
   const costBasis = filteredPortfolioSummary.totalCostBasis.amount;

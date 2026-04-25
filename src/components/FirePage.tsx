@@ -197,7 +197,26 @@ function VariantCard({
 
 // ─── Custom Chart Tooltip ───────────────────────────────────────────────────
 
-function ProjectionTooltip({ active, payload, label, cc }: any) {
+/**
+ * Recharts passes a sparse object to custom Tooltip components. We model
+ * just the fields we use; the cc prop is the chart-color object from
+ * getChartColors(theme).
+ */
+type ChartColors = ReturnType<typeof getChartColors>;
+interface RechartsTooltipPayloadItem {
+  value: number;
+  name?: string;
+  color?: string;
+  dataKey?: string;
+}
+interface RechartsTooltipProps {
+  active?: boolean;
+  payload?: RechartsTooltipPayloadItem[];
+  label?: string | number;
+  cc: ChartColors;
+}
+
+function ProjectionTooltip({ active, payload, label, cc }: RechartsTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
     <div
@@ -205,7 +224,7 @@ function ProjectionTooltip({ active, payload, label, cc }: any) {
       style={{ backgroundColor: cc.tooltipBg, borderColor: cc.tooltipBorder, color: cc.tooltipText }}
     >
       <p className="font-semibold mb-1">Age {typeof label === 'number' ? label.toFixed(1) : label}</p>
-      {payload.map((p: any, i: number) => (
+      {payload.map((p, i) => (
         <p key={i} className="tabular-nums" style={{ color: p.color }}>
           {p.name}: {formatCompactCurrency(p.value)}
         </p>
@@ -214,7 +233,7 @@ function ProjectionTooltip({ active, payload, label, cc }: any) {
   );
 }
 
-function MonteCarloTooltip({ active, payload, label, cc }: any) {
+function MonteCarloTooltip({ active, payload, label, cc }: RechartsTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
     <div
@@ -223,8 +242,8 @@ function MonteCarloTooltip({ active, payload, label, cc }: any) {
     >
       <p className="font-semibold mb-1">Year {label}</p>
       {payload
-        .filter((p: any) => p.dataKey === 'p50')
-        .map((p: any, i: number) => (
+        .filter((p) => p.dataKey === 'p50')
+        .map((p, i) => (
           <p key={i} className="tabular-nums">
             Median: {formatCompactCurrency(p.value)}
           </p>

@@ -98,8 +98,10 @@ export function KpiBand() {
  * Period return: NW change over the chosen range, plus a naive
  * annualized projection. Returns nulls when there's not enough
  * snapshot history (< 2 in-range snapshots).
+ *
+ * Exported for unit testing — the rest of the module is render code.
  */
-function computePeriodReturn(
+export function computePeriodReturn(
   snapshots: PortfolioSnapshot[],
   range: TimeRange,
 ): { periodReturnPct: number | null; annualizedPct: number | null } {

@@ -87,11 +87,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const { theme, themePreference, setTheme, accentColor, setAccentColor } = useTheme();
   const [baseCurrency, setBaseCurrency] = useLocalStorage<string>('base-currency', 'USD');
   const { targetAllocations, setTargetAllocation, removeTargetAllocation } = useTargetAllocations();
-  // Defaults FALSE for Phase 3 ship — substrate is in place, but the flip
-  // is opt-in until parallel-run logs are clean.
+  // Defaults TRUE as of v1.7.0 — Phase 3 source-of-truth flip.
+  // Migrations 4, 5, 6 reconciled storage with the ledger, and migration 7
+  // re-verifies on every boot. Existing users who explicitly toggled this
+  // off keep their preference; new installs and unset values get true.
   const [useTxnSourceOfTruth, setUseTxnSourceOfTruth] = useLocalStorage<boolean>(
     'use-txn-source-of-truth',
-    false,
+    true,
   );
 
   // Custom categories — owned here since they're a settings concern that

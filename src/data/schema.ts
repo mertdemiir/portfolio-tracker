@@ -98,8 +98,18 @@ export const APP_META_KEY = 'app-meta';
  *       and can't be swallowed by a prior sell. Idempotent: re-
  *       running on already-reconciled data wipes and re-adds the
  *       same synthetic.
+ *   6 — v1.4.5. Migration 5 only triggered on shares mismatch. Holdings
+ *       where shares already matched but buyPrice diverged (e.g. user's
+ *       stored holding.buyPrice differs from the real-txn weighted-avg)
+ *       were skipped. Migration 6 supersedes migration 5 with a complete
+ *       reconcile per non-cash holding: wipes ALL prior synthetics, then
+ *       fixes shares with one synthetic (if needed) and fixes buyPrice
+ *       with a synthetic-buy + synthetic-sell pair (net 0 share change
+ *       but adjusts the weighted-average buyPrice). After migration 6
+ *       runs, every non-cash holding's deriveHolding output exactly
+ *       matches its stored shares + buyPrice. Idempotent.
  */
-export const CURRENT_SCHEMA_VERSION = 5;
+export const CURRENT_SCHEMA_VERSION = 6;
 
 const EMPTY_META: AppMeta = {
   schemaVersion: 0,

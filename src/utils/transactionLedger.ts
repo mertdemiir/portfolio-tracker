@@ -56,6 +56,16 @@ export interface DerivedHolding {
   buyFxRate?: number;
   realizedPnl: number;
   matchedTxnCount: number;
+  /**
+   * Sum of buy.shares across all buys in the *open cycle* (the post-most-
+   * recent-reset segment of the chronological walk). Differs from `shares`
+   * when there are partial sells that didn't trigger a reset. Exposed so
+   * callers (notably migration 6's price-fix math) can solve for a
+   * weighted-average-preserving synthetic price.
+   */
+  totalBuyShares: number;
+  /** Sum of buy.shares × buy.pricePerShare across the open cycle's buys. */
+  totalBuyCost: number;
 }
 
 /**
@@ -187,5 +197,7 @@ export function deriveHolding(
     buyFxRate,
     realizedPnl,
     matchedTxnCount: contributing.length,
+    totalBuyShares,
+    totalBuyCost,
   };
 }
